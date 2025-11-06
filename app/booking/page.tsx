@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface FormData {
   branch: string;
@@ -17,6 +18,10 @@ interface SelectOption {
 }
 
 export default function BookingPage() {
+  const router = useRouter();
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
+  
   const [formData, setFormData] = useState<FormData>({
     branch: '',
     service: '',
@@ -25,6 +30,20 @@ export default function BookingPage() {
     date: '',
     selectedTime: ''
   });
+
+  // Check authentication and get user role
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem('isLoggedIn');
+    const role = localStorage.getItem('userRole');
+    const user = localStorage.getItem('username');
+    
+    if (!isLoggedIn) {
+      router.push('/');
+    } else {
+      setUserRole(role);
+      setUsername(user);
+    }
+  }, [router]);
 
   // Sample data - replace with your actual data sources
   const branches: SelectOption[] = [
@@ -87,14 +106,54 @@ export default function BookingPage() {
     // Reset form or redirect as needed
   };
 
+  const handleLogout = (): void => {
+    // Clear all session data
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('username');
+    
+    console.log('Logged out successfully');
+    
+    // Redirect to login page
+    router.push('/login');
+  };
+
+  const handleAdminPanel = (): void => {
+    // Navigate to admin panel
+    console.log('Navigating to admin panel...');
+    router.push('/admin');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Book an Appointment</h1>
-          <p className="text-gray-600 mb-8">Fill in the details below to schedule your visit</p>
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">Book an Appointment</h1>
+              <p className="text-gray-600">
+                {username ? `Welcome, ${username}!` : 'Fill in the details below to schedule your visit'}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {userRole === 'admin' && (
+                <button
+                  onClick={handleAdminPanel}
+                  className="px-4 py-2 bg-gray-700 text-white rounded-lg font-medium hover:bg-gray-800 transition shadow-md"
+                >
+                  Admin Panel
+                </button>
+              )}
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition shadow-md"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
 
-          <div className="space-y-6">
+          <div className="space-y-6 mt-8">
             {/* Branch */}
             <div>
               <label htmlFor="branch" className="block text-sm font-medium text-gray-700 mb-2">

@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
         "Authorization": `Bearer ${accessToken}`,
         "Accept": "application/json",
         "Content-Type": "application/json"
-      },
+      }, 
       body: ""
     });
 
