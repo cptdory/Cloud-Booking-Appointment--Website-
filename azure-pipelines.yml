@@ -1,0 +1,40 @@
+# Next.js build + deploy on Azure Static Web Apps
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  NODE_ENV: production
+
+steps:
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '20.x'
+    displayName: 'Install Node.js 20.x'
+
+  - script: npm ci
+    displayName: 'Install dependencies'
+
+  - script: npm run build
+    displayName: 'Build Next.js app'
+    env:
+      NODE_ENV: $(NODE_ENV)
+
+  - script: npm run export
+    displayName: 'Export static files'
+    condition: succeeded()
+    env:
+      NODE_ENV: $(NODE_ENV)
+
+  - task: AzureStaticWebApp@0
+    inputs:
+      app_location: "/"               # adjust if your Next.js app is in a subfolder
+      api_location: ""                # leave blank (no API folder)
+      output_location: "out"          # Next.js static export folder
+    displayName: 'Deploy to Azure Static Web App'
+    env:
+      azure_static_web_apps_api_token: $(AZURE_STATIC_WEB_APPS_API_TOKEN)
