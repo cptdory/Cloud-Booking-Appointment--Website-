@@ -13,11 +13,11 @@ variables:
 steps:
   - task: NodeTool@0
     inputs:
-      versionSpec: '20.x'
-    displayName: 'Install Node.js 20.x'
+      versionSpec: '24.x'  # match your local version
+    displayName: 'Install Node.js 24.x'
 
-  - script: npm ci
-    displayName: 'Install dependencies'
+  - script: npm ci --include=dev
+    displayName: 'Install dependencies (including devDeps)'
 
   - script: npm run build
     displayName: 'Build Next.js app'
@@ -27,8 +27,9 @@ steps:
   - task: AzureStaticWebApp@0
     inputs:
       app_location: "/"
-      api_location: ""          # Leave empty if you don’t have Azure Functions
-      output_location: ".next"  # <-- use .next for SSR builds
+      api_location: ""
+      output_location: ".next"
     displayName: 'Deploy to Azure Static Web App'
     env:
       azure_static_web_apps_api_token: $(AZURE_STATIC_WEB_APPS_API_TOKEN)
+
