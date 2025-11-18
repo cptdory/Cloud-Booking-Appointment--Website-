@@ -33,7 +33,7 @@ export default function BookingPage() {
     selectedTime: ''
   });
 
-  // ✅ Authentication check
+  // Authentication check
   useEffect(() => {
     const isLoggedIn = localStorage.getItem('isLoggedIn');
     const role = localStorage.getItem('userRole');
@@ -47,7 +47,7 @@ export default function BookingPage() {
     }
   }, [router]);
 
-  // ✅ Fetch branches dynamically from your API
+  // Fetch branches dynamically from your API
   useEffect(() => {
     const fetchBranches = async () => {
       try {
