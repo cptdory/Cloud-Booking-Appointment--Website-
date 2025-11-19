@@ -28,6 +28,7 @@ export default function BookingPage() {
   const router = useRouter();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [customerNo, setCustomerNo] = useState<string>("");
   const [branches, setBranches] = useState<SelectOption[]>([]);
   const [services, setServices] = useState<SelectOption[]>([]);
   const [staff, setStaff] = useState<SelectOption[]>([]);
@@ -49,23 +50,40 @@ export default function BookingPage() {
     room: "",
     date: "",
     selectedTime: "",
-    customerNo: "C00080",
+    customerNo: "",
     bookingNote: "",
   });
 
   // Authentication check
-  useEffect(() => {
-    const isLoggedIn = localStorage.getItem("isLoggedIn");
-    const role = localStorage.getItem("userRole");
-    const user = localStorage.getItem("username");
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
-    if (!isLoggedIn) {
-      router.push("/");
-    } else {
-      setUserRole(role);
-      setUsername(user);
-    }
+  useEffect(() => {
+    fetch("/api/auth/me", { cache: "no-store" }) // <– IMPORTANT: disable caching
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.authenticated) {
+          router.replace("/"); // <– replace, not push
+        } else {
+          setUsername(data.user.name);
+          setUserRole(data.user.role);
+          setCustomerNo(data.user.customerNo);
+        }
+      })
+      .catch(() => {
+        router.replace("/");
+      })
+      .finally(() => {
+        setCheckingAuth(false);
+      });
   }, [router]);
+const handleLogout = async () => {
+  await fetch("/api/auth/logout", {
+    method: "POST",
+  });
+
+  // Hard refresh to clear all cached React pages
+  window.location.href = "/";
+};
 
   // Fetch branches
   useEffect(() => {
@@ -93,7 +111,6 @@ export default function BookingPage() {
     fetchBranches();
   }, []);
 
-  // Fetch branch details when branch is selected
   // Fetch branch details when branch is selected
   useEffect(() => {
     const fetchBranchDetails = async () => {
@@ -282,14 +299,18 @@ export default function BookingPage() {
     }
   };
 
-  const handleLogout = (): void => {
-    localStorage.clear();
-    router.push("/");
-  };
-
   const handleAdminPanel = (): void => {
     router.push("/admin");
   };
+
+  useEffect(() => {
+    if (customerNo) {
+      setFormData((prev) => ({
+        ...prev,
+        customerNo: customerNo,
+      }));
+    }
+  }, [customerNo]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
@@ -481,11 +502,8 @@ export default function BookingPage() {
                 type="text"
                 id="customerNo"
                 value={formData.customerNo}
-                onChange={(e) =>
-                  handleInputChange("customerNo", e.target.value)
-                }
-                className="w-full px-4 py-3 border border-gray-300 text-gray-900 rounded-lg  focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                required
+                readOnly
+                className="w-full px-4 py-3 border border-gray-300 text-gray-900 rounded-lg bg-gray-100 cursor-not-allowed"
               />
             </div>
 

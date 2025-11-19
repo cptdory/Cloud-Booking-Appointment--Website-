@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
+import Link from "next/link";
 interface User {
   username: string;
   password: string;
-  role: 'admin' | 'user';
+  role: "admin" | "user";
 }
 
 export default function LoginPage() {
@@ -19,7 +19,7 @@ export default function LoginPage() {
   // Hardcoded users with roles
   const users: User[] = [
     { username: "admin", password: "admin123", role: "admin" },
-    { username: "user", password: "user123", role: "user" }
+    { username: "user", password: "user123", role: "user" },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,23 +27,27 @@ export default function LoginPage() {
     setError("");
     setIsLoading(true);
 
-    // Simulate a small delay for better UX
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      const res = await fetch("/api/auth/login-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          _emailOrCustomerNo: username,
+          password: password,
+        }),
+      });
 
-    // Find matching user
-    const user = users.find(
-      (u) => u.username === username && u.password === password
-    );
+      const data = await res.json();
 
-    if (user) {
-      // Store login state and role in localStorage
-      localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("userRole", user.role);
-      localStorage.setItem("username", user.username);
-      
-      router.push("/booking"); // Redirect to booking page
-    } else {
-      setError("Invalid username or password");
+      if (!res.ok) {
+        setError(data.error);
+        setIsLoading(false);
+        return;
+      }
+
+      router.push("/book");
+    } catch (err) {
+      setError("Something went wrong");
     }
 
     setIsLoading(false);
@@ -71,10 +75,10 @@ export default function LoginPage() {
                 htmlFor="username"
                 className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
               >
-                Username
+                Email or Customer No
               </label>
               <input
-                id="username"
+                id="emailOrCustomerNo"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -98,7 +102,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === "Enter") {
                     handleSubmit(e as any);
                   }
                 }}
@@ -128,6 +132,9 @@ export default function LoginPage() {
 
           {/* Footer */}
           <div className="mt-6 space-y-2">
+            <div className="text-center text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+            <Link href="/create-new-account">Create New Account</Link>
+            </div>
             <div className="text-center text-sm font-semibold text-zinc-700 dark:text-zinc-300">
               Demo Credentials:
             </div>

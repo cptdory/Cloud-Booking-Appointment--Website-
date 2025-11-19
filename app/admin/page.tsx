@@ -50,14 +50,6 @@ const STAFF_COLORS: { [key: string]: string } = {
   "S2": "bg-green-500", 
   "S3": "bg-purple-500",
   "S4": "bg-orange-500",
-  "S5": "bg-pink-500",
-  "STAFF1": "bg-blue-500",
-  "STAFF2": "bg-green-500",
-  "STAFF3": "bg-purple-500",
-  "JOHN": "bg-blue-500",
-  "JANE": "bg-pink-500",
-  "MIKE": "bg-green-500",
-  "SARAH": "bg-purple-500",
   // Default colors for unknown staff
   "default": "bg-gray-500"
 };

@@ -25,11 +25,11 @@ export default function SideBar() {
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("userRole");
     localStorage.removeItem("username");
-    router.push("/");
+    router.push("/auth/login");
   };
 
   const handleBackToBooking = (): void => {
-    router.push("/booking");
+    router.push("/");
   };
 
   const menuItems = [
