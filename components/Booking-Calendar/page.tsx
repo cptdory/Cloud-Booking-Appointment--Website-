@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -61,14 +61,9 @@ interface CalendarEvent {
   textColor: string;
 }
 
-// Hardcoded staff colors with good text contrast
-const STAFF_COLORS: { [key: string]: { background: string; text: string } } = {
-  "S1": { background: "#3788d8", text: "#ffffff" },
-  "S2": { background: "#10b981", text: "#ffffff" },
-  "S3": { background: "#8b5cf6", text: "#ffffff" },
-  "S4": { background: "#f59e0b", text: "#000000" },
-  "default": { background: "#6b7280", text: "#ffffff" }
-};
+// Default color for all staff (can be changed to any color you prefer)
+const DEFAULT_COLOR = "#3788d8";
+const DEFAULT_TEXT_COLOR = "#ffffff";
 
 export default function BookingCalendar() {
   const router = useRouter();
@@ -79,6 +74,58 @@ export default function BookingCalendar() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentDateRange, setCurrentDateRange] = useState<{ start: Date; end: Date } | null>(null);
+  const [staffColors, setStaffColors] = useState<{ [key: string]: { background: string; text: string } }>({});
+
+  // Fetch staff colors from API
+  const fetchStaffColors = useCallback(async (staffCodes: string[]) => {
+    try {
+      const uniqueStaffCodes = [...new Set(staffCodes)].filter(code => code && code !== "");
+      
+      if (uniqueStaffCodes.length === 0) return;
+
+      const response = await fetch('/api/booking/get-staff-colors', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          staffCodes: uniqueStaffCodes
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.staffColors) {
+          setStaffColors(prev => ({
+            ...prev,
+            ...data.staffColors
+          }));
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to fetch staff colors:', error);
+      // Don't set error state here as this is non-critical
+    }
+  }, []);
+
+  // Get color for staff member - priority: API colors -> default color
+  const getStaffColor = useCallback((staffCode: string, staffName: string): { background: string; text: string } => {
+    // Try API colors first by staff code
+    if (staffCode && staffColors[staffCode.toUpperCase()]) {
+      return staffColors[staffCode.toUpperCase()];
+    }
+    
+    // Try API colors by staff name
+    if (staffName && staffColors[staffName.toUpperCase()]) {
+      return staffColors[staffName.toUpperCase()];
+    }
+    
+    // Use default color for all staff without specific colors
+    return {
+      background: DEFAULT_COLOR,
+      text: DEFAULT_TEXT_COLOR
+    };
+  }, [staffColors]);
 
   // Check if user is admin and fetch bookings
   useEffect(() => {
@@ -99,42 +146,6 @@ export default function BookingCalendar() {
       end: dateInfo.end
     });
     fetchBookingEntries(dateInfo.start, dateInfo.end);
-  };
-
-  // Get color for staff member with good contrast
-  const getStaffColor = (staffCode: string, staffName: string): { background: string; text: string } => {
-    // Try staff code first
-    if (staffCode && STAFF_COLORS[staffCode.toUpperCase()]) {
-      return STAFF_COLORS[staffCode.toUpperCase()];
-    }
-    
-    // Try staff name
-    if (staffName && STAFF_COLORS[staffName.toUpperCase()]) {
-      return STAFF_COLORS[staffName.toUpperCase()];
-    }
-    
-    // Fallback: generate consistent color based on staff code/name
-    const staffKey = staffCode || staffName || "default";
-    const colorOptions = [
-      { background: "#3788d8", text: "#ffffff" },
-      { background: "#10b981", text: "#ffffff" },
-      { background: "#8b5cf6", text: "#ffffff" },
-      { background: "#f59e0b", text: "#000000" },
-      { background: "#ef4444", text: "#ffffff" },
-      { background: "#06b6d4", text: "#000000" },
-      { background: "#84cc16", text: "#000000" },
-      { background: "#f97316", text: "#000000" },
-      { background: "#ec4899", text: "#ffffff" },
-      { background: "#14b8a6", text: "#000000" }
-    ];
-    
-    let hash = 0;
-    for (let i = 0; i < staffKey.length; i++) {
-      hash = staffKey.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    
-    const colorIndex = Math.abs(hash) % colorOptions.length;
-    return colorOptions[colorIndex];
   };
 
   // Fetch booking entries from Business Central API based on date range
@@ -173,6 +184,15 @@ export default function BookingCalendar() {
       const transformedEvents = transformBookingEntriesToEvents(data);
       setEvents(transformedEvents);
       
+      // Extract unique staff codes and fetch their colors
+      const staffCodes = transformedEvents
+        .map(event => event.extendedProps.staffCode)
+        .filter(code => code && code !== "");
+      
+      if (staffCodes.length > 0) {
+        fetchStaffColors(staffCodes);
+      }
+      
     } catch (err) {
       console.error('Error fetching booking entries:', err);
       setError(err instanceof Error ? err.message : 'Failed to load bookings');
@@ -188,21 +208,21 @@ export default function BookingCalendar() {
     }
 
     try {
-const entries: BookingEntry[] = JSON.parse(apiResponse.value);
+      const entries: BookingEntry[] = JSON.parse(apiResponse.value);
 
-return entries.map((entry: BookingEntry) => {
-  const staffColor = getStaffColor(entry.StaffCode, entry.StaffName);
+      return entries.map((entry: BookingEntry) => {
+        const staffColor = getStaffColor(entry.StaffCode, entry.StaffName);
 
-  // Combine date and time for FullCalendar
-  const startDateTime = `${entry.BookingStartDate}T${entry.BookingStartTime}`;
+        // Combine date and time for FullCalendar
+        const startDateTime = `${entry.BookingStartDate}T${entry.BookingStartTime}`;
 
-  // Fix: If BookingEndDate is 0001-01-01 or empty, use BookingStartDate instead
-  const endDate =
-    entry.BookingEndDate && entry.BookingEndDate !== "0001-01-01"
-      ? entry.BookingEndDate
-      : entry.BookingStartDate;
+        // Fix: If BookingEndDate is 0001-01-01 or empty, use BookingStartDate instead
+        const endDate =
+          entry.BookingEndDate && entry.BookingEndDate !== "0001-01-01"
+            ? entry.BookingEndDate
+            : entry.BookingStartDate;
 
-  const endDateTime = `${endDate}T${entry.BookingEndTime || entry.BookingStartTime}`;
+        const endDateTime = `${endDate}T${entry.BookingEndTime || entry.BookingStartTime}`;
 
         return {
           id: entry.EntryNo.toString(),
@@ -229,6 +249,26 @@ return entries.map((entry: BookingEntry) => {
       console.error('Error parsing booking entries:', error);
       return [];
     }
+  };
+
+  // Get unique staff members for legend
+  const getUniqueStaff = () => {
+    const staffMap = new Map();
+    events.forEach(event => {
+      const staffCode = event.extendedProps.staffCode;
+      const staffName = event.extendedProps.staff;
+      if (staffCode) {
+        staffMap.set(staffCode, {
+          name: staffName,
+          color: getStaffColor(staffCode, staffName)
+        });
+      }
+    });
+    return Array.from(staffMap.entries()).map(([code, data]) => ({
+      code,
+      name: data.name,
+      color: data.color
+    }));
   };
 
   // Handle event click
@@ -258,6 +298,8 @@ return entries.map((entry: BookingEntry) => {
     );
   }
 
+  const uniqueStaff = getUniqueStaff();
+
   return (
     <div className="container mx-auto p-6 max-w-7xl space-y-6">
       {/* Error Alert */}
@@ -270,37 +312,47 @@ return entries.map((entry: BookingEntry) => {
       )}
 
       {/* Staff Legend */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Staff Colors</CardTitle>
-          <CardDescription>
-            {currentDateRange && (
-              <>Showing appointments from {currentDateRange.start.toLocaleDateString()} to {currentDateRange.end.toLocaleDateString()}</>
-            )}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-3">
-            {Object.entries(STAFF_COLORS).map(([staffCode, colors]) => (
-              <Badge 
-                key={staffCode} 
-                variant="outline" 
-                className="px-3 py-1.5"
-              >
-                <div 
-                  className="w-3 h-3 rounded-full mr-2" 
-                  style={{ backgroundColor: colors.background }}
-                />
-                {staffCode}
-              </Badge>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {uniqueStaff.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Staff</CardTitle>
+            <CardDescription>
+              {Object.keys(staffColors).length > 0 ? (
+                "Colors from Business Central"
+              ) : (
+                "Using default color"
+              )}
+              {currentDateRange && (
+                <> - Showing appointments from {currentDateRange.start.toLocaleDateString()} to {currentDateRange.end.toLocaleDateString()}</>
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-3">
+              {uniqueStaff.map((staff) => (
+                <Badge 
+                  key={staff.code} 
+                  variant="outline" 
+                  className="px-3 py-1.5"
+                >
+                  <div 
+                    className="w-3 h-3 rounded-full mr-2" 
+                    style={{ backgroundColor: staff.color.background }}
+                  />
+                  {staff.name || staff.code}
+                  {staffColors[staff.code] && (
+                    <span className="ml-1 text-xs">(Custom)</span>
+                  )}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Calendar Container */}
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-6 relative">
           <FullCalendar
             ref={calendarRef}
             plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
@@ -312,7 +364,7 @@ return entries.map((entry: BookingEntry) => {
             initialView="dayGridMonth"
             events={events}
             eventClick={handleEventClick}
-            datesSet={handleDatesSet} // This is the key addition
+            datesSet={handleDatesSet}
             height="auto"
             navLinks={true}
             editable={false}
@@ -346,7 +398,6 @@ return entries.map((entry: BookingEntry) => {
               meridiem: 'short'
             }}
             loading={(isLoading) => {
-              // Show loading indicator when fetching new data
               if (isLoading && events.length > 0) {
                 setLoading(true);
               }

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 
 let memoryCache: { access_token: string; expires_at: number } | null = null;
 
-// Helper: Fetch/refresh Access Token
 async function getAccessToken() {
   const isVercel = !!process.env.VERCEL;
   if (isVercel && memoryCache && Date.now() < memoryCache.expires_at) {
@@ -22,22 +21,20 @@ async function getAccessToken() {
   if (isVercel && data.access_token) {
     memoryCache = {
       access_token: data.access_token,
-      expires_at: Date.now() + 1000 * 60 * 30, // cache 30 min
+      expires_at: Date.now() + 1000 * 60 * 30,
     };
   }
 
   return data.access_token;
 }
 
-export async function POST(req: Request) {
+export async function GET(request: Request) {
   try {
-    const body = await req.json();
-    console.log("Request body:", JSON.stringify(body, null, 2));
+    const { searchParams } = new URL(request.url);
+    const code = searchParams.get("code");
 
-    const { _BookingSetupCode, _BookingParameterId_Staff, _ServiceId, _StaffId, _StaffCode } = body;
-
-    if (!_BookingSetupCode || !_BookingParameterId_Staff || !_ServiceId || !_StaffId) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    if (!code) {
+      return NextResponse.json({ error: "Missing code parameter" }, { status: 400 });
     }
 
     if (!process.env.TENANT_ID) {
@@ -49,24 +46,16 @@ export async function POST(req: Request) {
     const environment = "SandboxDev2";
     const company = "SQUADLETHICS";
 
-    const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_CreateAssignServiceStaff?Company=${encodeURIComponent(company)}`;
+    const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/Company('${company}')/BookingServiceStaffRela?$filter=BookingSetupCode eq '${code}'`;
 
     const res = await fetch(url, {
-      method: "POST",
+      method: "GET",
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        _BookingSetupCode,
-        _BookingParameterId_Staff,
-        _ServiceId,
-        _StaffId,
-        _StaffCode,
-      }),
     });
 
-    // Parse response safely
     let data: any = null;
     const text = await res.text();
     try {
@@ -77,12 +66,12 @@ export async function POST(req: Request) {
 
     if (!res.ok) {
       console.error("BC API error:", data || text);
-      throw new Error(data?.error?.message || "Failed to assign service staff");
+      throw new Error(data?.error?.message || "Failed to fetch assignments");
     }
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json(data);
   } catch (err: any) {
-    console.error("POST /api/create-booking-service-staff-rela failed:", err);
+    console.error("GET /api/get-service-staff-assignments failed:", err);
     return NextResponse.json({ error: err.message || "Internal Server Error" }, { status: 500 });
   }
 }

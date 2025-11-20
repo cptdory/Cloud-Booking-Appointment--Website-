@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Calendar, Users, Info, ListCheck, Building, BedDouble, BriefcaseBusiness, ContactRound } from "lucide-react";
+import { Calendar, Users, Info, ListCheck, Building, BedDouble, BriefcaseBusiness, ContactRound, Clock } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -55,7 +55,7 @@ export function AppSidebar({ ...props }) {
         { title: "Calendar", url: "/calendar", icon: Calendar },
         { title: "Booking Page", url: "/booking", icon: ListCheck },
         { title: "Customer", url: "/customers", icon: Users },
-        { title: "Business Information", url: "/business", icon: Info },
+        { title: "Business Information", url: "/business-information", icon: Info },
       ]);
 
       // If URL has ?code=XYZ → auto-select the team
@@ -86,31 +86,43 @@ export function AppSidebar({ ...props }) {
     const json = await res.json();
     if (!json.value || json.value.length === 0) return;
 
-    const params = json.value[0].BookingParameter;
+    const setupData = json.value[0];
+    const params = setupData.BookingParameter;
+    const businessHours = setupData.BookingBusinessHours || [];
 
-    setDynamicNav(
-      params.map((p: any) => {
-        const lower = p.BookingParameterCode.toLowerCase();
+    // Create parameter navigation items
+    const parameterNav = params.map((p: any) => {
+      const lower = p.BookingParameterCode.toLowerCase();
 
-        // Choose icon based on parameter code
-        let icon;
-        if (lower.includes("staff")) {
-          icon = ContactRound; 
-        } else if (lower.includes("bed")) {
-           icon = BedDouble; 
-        } else if (lower.includes("service")) {
-          icon = BriefcaseBusiness; 
-        } else {
-          icon = Info; // fallback icon
-        }
+      // Choose icon based on parameter code
+      let icon;
+      if (lower.includes("staff")) {
+        icon = ContactRound; 
+      } else if (lower.includes("bed")) {
+         icon = BedDouble; 
+      } else if (lower.includes("service")) {
+        icon = BriefcaseBusiness; 
+      } else {
+        icon = Info; // fallback icon
+      }
 
-        return {
-          title: p.BookingParameterCode,
-          url: `/${lower}?code=${teamCode}&parameter_id=${p.BookingParameterId}`,
-          icon: icon,
-        };
-      })
-    );
+      return {
+        title: p.BookingParameterCode,
+        url: `/${lower}?code=${teamCode}&parameter_id=${p.BookingParameterId}`,
+        icon: icon,
+      };
+    });
+
+    // Add Business Hours to dynamic nav if not empty
+    if (businessHours.length > 0) {
+      parameterNav.push({
+        title: "Business Hours",
+        url: `/business-hours?code=${teamCode}`,
+        icon: Clock,
+      });
+    }
+
+    setDynamicNav(parameterNav);
   };
 
   // When user selects a new team

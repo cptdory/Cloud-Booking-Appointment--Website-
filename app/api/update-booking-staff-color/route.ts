@@ -32,11 +32,9 @@ async function getAccessToken() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    console.log("Request body:", JSON.stringify(body, null, 2));
+    const { _BookingSetupCode, _BookingParameterId, _BookingParameterValueId, _StaffColor } = body;
 
-    const { _BookingSetupCode, _BookingParameterId_Staff, _ServiceId, _StaffId, _StaffCode } = body;
-
-    if (!_BookingSetupCode || !_BookingParameterId_Staff || !_ServiceId || !_StaffId) {
+    if (!_BookingSetupCode || !_BookingParameterId || !_BookingParameterValueId || !_StaffColor) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -49,7 +47,7 @@ export async function POST(req: Request) {
     const environment = "SandboxDev2";
     const company = "SQUADLETHICS";
 
-    const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_CreateAssignServiceStaff?Company=${encodeURIComponent(company)}`;
+    const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_UpdateBookingStaffAuthDetails?Company=${encodeURIComponent(company)}`;
 
     const res = await fetch(url, {
       method: "POST",
@@ -58,15 +56,13 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        _BookingSetupCode,
-        _BookingParameterId_Staff,
-        _ServiceId,
-        _StaffId,
-        _StaffCode,
+        _BookingSetupCode: _BookingSetupCode,
+        _BookingParameterId: _BookingParameterId,
+        _BookingParameterValueId: _BookingParameterValueId,
+        _StaffColor: _StaffColor,
       }),
     });
 
-    // Parse response safely
     let data: any = null;
     const text = await res.text();
     try {
@@ -77,12 +73,12 @@ export async function POST(req: Request) {
 
     if (!res.ok) {
       console.error("BC API error:", data || text);
-      throw new Error(data?.error?.message || "Failed to assign service staff");
+      throw new Error(data?.error?.message || "Failed to update staff color");
     }
 
     return NextResponse.json({ success: true, data });
   } catch (err: any) {
-    console.error("POST /api/create-booking-service-staff-rela failed:", err);
+    console.error("POST /api/update-booking-staff-color failed:", err);
     return NextResponse.json({ error: err.message || "Internal Server Error" }, { status: 500 });
   }
 }

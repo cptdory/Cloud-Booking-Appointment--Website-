@@ -20,7 +20,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Edit, Trash2, Plus } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Edit, Trash2, Plus, Key, Palette } from "lucide-react";
 
 export default function StaffPage() {
   const [values, setValues] = useState<any[]>([]);
@@ -45,6 +53,20 @@ export default function StaffPage() {
   });
   const [creatingSaving, setCreatingSaving] = useState(false);
 
+  // Color Dialog state
+  const [colorDialogOpen, setColorDialogOpen] = useState(false);
+  const [colorStaff, setColorStaff] = useState<any | null>(null);
+  const [currentColor, setCurrentColor] = useState<string>("");
+  const [selectedColor, setSelectedColor] = useState<string>("");
+  const [updatingColor, setUpdatingColor] = useState(false);
+
+  // Password Dialog state
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [passwordStaff, setPasswordStaff] = useState<any | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+
   // read url params
   const search =
     typeof window !== "undefined"
@@ -52,6 +74,19 @@ export default function StaffPage() {
       : new URLSearchParams("");
   const code = search.get("code") || "";
   const parameterId = search.get("parameter_id") || "";
+
+  const colorOptions = [
+    { value: "Blue", label: "Blue", color: "bg-blue-500" },
+    { value: "Red", label: "Red", color: "bg-red-500" },
+    { value: "Green", label: "Green", color: "bg-green-500" },
+    { value: "Yellow", label: "Yellow", color: "bg-yellow-500" },
+    { value: "Purple", label: "Purple", color: "bg-purple-500" },
+    { value: "Pink", label: "Pink", color: "bg-pink-500" },
+    { value: "Orange", label: "Orange", color: "bg-orange-500" },
+    { value: "Teal", label: "Teal", color: "bg-teal-500" },
+    { value: "Indigo", label: "Indigo", color: "bg-indigo-500" },
+    { value: "Gray", label: "Gray", color: "bg-gray-500" },
+  ];
 
   const loadValues = async () => {
     if (!code || !parameterId) return;
@@ -83,6 +118,135 @@ export default function StaffPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, parameterId]);
 
+  // Get current staff color
+  const getStaffColor = async (staff: any) => {
+    try {
+      const body = {
+        _BookingSetupCode: code,
+        _BookingParameterId: parameterId,
+        _BookingParameterValueId: String(staff.BookingParameterValueId),
+      };
+
+      const res = await fetch("/api/get-booking-staff-color", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.value && json.value.length > 0) {
+        return json.value[0].StaffColor || "Gray";
+      }
+      return "Gray";
+    } catch (err) {
+      console.error("Failed to get staff color:", err);
+      return "Gray";
+    }
+  };
+
+  // Open color dialog
+  const openColorDialog = async (staff: any) => {
+    setColorStaff(staff);
+    setColorDialogOpen(true);
+    setUpdatingColor(true);
+    
+    try {
+      const currentStaffColor = await getStaffColor(staff);
+      setCurrentColor(currentStaffColor);
+      setSelectedColor(currentStaffColor);
+    } catch (err) {
+      console.error("Failed to load current color:", err);
+      setCurrentColor("Gray");
+      setSelectedColor("Gray");
+    } finally {
+      setUpdatingColor(false);
+    }
+  };
+
+  // Update staff color
+  const handleUpdateColor = async () => {
+    if (!colorStaff || !selectedColor) return;
+    setUpdatingColor(true);
+
+    try {
+      const body = {
+        _BookingSetupCode: code,
+        _BookingParameterId: parameterId,
+        _BookingParameterValueId: String(colorStaff.BookingParameterValueId),
+        _StaffColor: selectedColor,
+      };
+
+      const res = await fetch("/api/update-booking-staff-color", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.message || "Failed to update color");
+
+      alert("Staff color updated successfully!");
+      setColorDialogOpen(false);
+      setColorStaff(null);
+      setSelectedColor("");
+      setCurrentColor("");
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to update color");
+    } finally {
+      setUpdatingColor(false);
+    }
+  };
+
+  // Open password dialog
+  const openPasswordDialog = (staff: any) => {
+    setPasswordStaff(staff);
+    setPasswordDialogOpen(true);
+    setNewPassword("");
+    setConfirmPassword("");
+  };
+
+  // Update staff password
+  const handleUpdatePassword = async () => {
+    if (!passwordStaff || !newPassword) return;
+    
+    if (newPassword !== confirmPassword) {
+      alert("Passwords do not match!");
+      return;
+    }
+
+    setUpdatingPassword(true);
+
+    try {
+      const body = {
+        _BookingSetupCode: code,
+        _BookingParameterId: parameterId,
+        _BookingParameterValueId: String(passwordStaff.BookingParameterValueId),
+        _PortalPassword: newPassword,
+      };
+
+      const res = await fetch("/api/update-booking-staff-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.message || "Failed to update password");
+
+      alert("Staff password updated successfully!");
+      setPasswordDialogOpen(false);
+      setPasswordStaff(null);
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to update password");
+    } finally {
+      setUpdatingPassword(false);
+    }
+  };
+
   // Edit functions
   const openEdit = (item: any) => {
     setEditItem({
@@ -107,8 +271,8 @@ export default function StaffPage() {
         _BookingParameterValueDuration: String(
           editItem.BookingParameterValueDuration
         ),
-        _BookingParameterValueStaff: "No",
-        _BookingParameterValueService: "Yes",
+        _BookingParameterValueStaff: "Yes",
+        _BookingParameterValueService: "No",
       };
 
       const res = await fetch("/api/update-booking-parameter-value", {
@@ -173,8 +337,8 @@ export default function StaffPage() {
         _BookingParameterValueDuration: String(
           newItem.BookingParameterValueDuration
         ),
-        _BookingParameterValueStaff: "No",
-        _BookingParameterValueService: "Yes",
+        _BookingParameterValueStaff: "Yes",
+        _BookingParameterValueService: "No",
       };
 
       const res = await fetch("/api/create-booking-parameter-value", {
@@ -276,7 +440,7 @@ export default function StaffPage() {
                     <TableHead className="w-20">ID</TableHead>
                     <TableHead>Code</TableHead>
                     <TableHead>Description</TableHead>
-                    <TableHead className="w-32 text-center">Actions</TableHead>
+                    <TableHead className="w-40 text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
 
@@ -292,13 +456,27 @@ export default function StaffPage() {
                       </TableCell>
                       <TableCell>{v.BookingParamterValueDescription}</TableCell>
                       <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-1">
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => openEdit(v)}
                           >
                             <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openColorDialog(v)}
+                          >
+                            <Palette className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openPasswordDialog(v)}
+                          >
+                            <Key className="w-4 h-4" />
                           </Button>
                           <Button
                             size="sm"
@@ -315,10 +493,10 @@ export default function StaffPage() {
                   {values.length === 0 && (
                     <TableRow>
                       <TableCell
-                        colSpan={5}
+                        colSpan={4}
                         className="text-center py-6 text-muted-foreground"
                       >
-                        No services found
+                        No staff found
                       </TableCell>
                     </TableRow>
                   )}
@@ -328,6 +506,7 @@ export default function StaffPage() {
           )}
         </CardContent>
       </Card>
+
       {/* Edit Dialog */}
       <Dialog
         open={editing}
@@ -390,7 +569,141 @@ export default function StaffPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog (simple) */}
+      {/* Color Dialog */}
+      <Dialog
+        open={colorDialogOpen}
+        onOpenChange={(open) => !open && setColorDialogOpen(false)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Staff Color</DialogTitle>
+          </DialogHeader>
+
+          {colorStaff && (
+            <div className="grid gap-4">
+              <div>
+                <Label>Staff</Label>
+                <Input
+                  value={colorStaff.BookingParameterValueCode}
+                  disabled
+                />
+              </div>
+
+              <div>
+                <Label>Current Color</Label>
+                {currentColor && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <div 
+                      className={`w-4 h-4 rounded-full ${
+                        colorOptions.find(c => c.value === currentColor)?.color || 'bg-gray-500'
+                      }`}
+                    />
+                    <span className="capitalize">{currentColor}</span>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <Label>New Color</Label>
+                <Select
+                  value={selectedColor}
+                  onValueChange={setSelectedColor}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a color" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {colorOptions.map((color) => (
+                      <SelectItem key={color.value} value={color.value}>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded-full ${color.color}`} />
+                          <span>{color.label}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex justify-end gap-2 mt-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => setColorDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleUpdateColor} 
+                  disabled={updatingColor || !selectedColor}
+                >
+                  {updatingColor ? "Updating..." : "Update Color"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Dialog */}
+      <Dialog
+        open={passwordDialogOpen}
+        onOpenChange={(open) => !open && setPasswordDialogOpen(false)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Staff Password</DialogTitle>
+          </DialogHeader>
+
+          {passwordStaff && (
+            <div className="grid gap-4">
+              <div>
+                <Label>Staff</Label>
+                <Input
+                  value={passwordStaff.BookingParameterValueCode}
+                  disabled
+                />
+              </div>
+
+              <div>
+                <Label>New Password</Label>
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                />
+              </div>
+
+              <div>
+                <Label>Confirm Password</Label>
+                <Input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 mt-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => setPasswordDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleUpdatePassword} 
+                  disabled={updatingPassword || !newPassword || !confirmPassword}
+                >
+                  {updatingPassword ? "Updating..." : "Update Password"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
       <Dialog
         open={!!deleteItem}
         onOpenChange={(open) => {
