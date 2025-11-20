@@ -31,7 +31,7 @@ export function middleware(request) {
   if (isPublicPath) {
     // If user is already authenticated and tries to access signin, redirect to dashboard
     if (sessionToken && (pathname === '/signin' || pathname === '/signup')) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+      return NextResponse.redirect(new URL('/calendar', request.url));
     }
     return NextResponse.next();
   }

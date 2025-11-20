@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
 import {
   User,
   Mail,
@@ -23,7 +24,15 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  Lock,Eye, EyeOff
 } from "lucide-react";
+
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/tabs";
 
 interface UserProfile {
   name: string;
@@ -67,13 +76,18 @@ export default function AccountForm() {
     customerNo: "",
   });
 
-  // Fetch user profile data
+  // Password tab states
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  // Fetch user profile
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
         setLoading(true);
 
-        // First check authentication
         const authRes = await fetch("/api/auth/me", { cache: "no-store" });
         const authData = await authRes.json();
 
@@ -82,7 +96,6 @@ export default function AccountForm() {
           return;
         }
 
-        // Fetch user profile - send both fields
         const profileRes = await fetch("/api/get-customer", {
           method: "POST",
           headers: {
@@ -94,10 +107,7 @@ export default function AccountForm() {
           }),
         });
 
-        if (!profileRes.ok) {
-          throw new Error("Failed to fetch profile");
-        }
-
+        if (!profileRes.ok) throw new Error("Failed to fetch profile");
         const profileData = await profileRes.json();
 
         const userData: UserProfile = {
@@ -114,7 +124,7 @@ export default function AccountForm() {
         setFormData(userData);
         setOriginalData(userData);
       } catch (error) {
-        console.error("Error fetching profile:", error);
+        console.error("Error loading profile:", error);
         setMessage({ type: "error", text: "Failed to load profile data" });
       } finally {
         setLoading(false);
@@ -128,18 +138,13 @@ export default function AccountForm() {
     field: keyof UserProfile,
     value: string | number
   ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-    // Clear message when user starts editing
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (message) setMessage(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Basic validation
     if (!formData.name.trim()) {
       setMessage({ type: "error", text: "Name is required" });
       return;
@@ -150,10 +155,9 @@ export default function AccountForm() {
       return;
     }
 
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      setMessage({ type: "error", text: "Please enter a valid email address" });
+      setMessage({ type: "error", text: "Invalid email format" });
       return;
     }
 
@@ -161,38 +165,22 @@ export default function AccountForm() {
     setMessage(null);
 
     try {
-      const response = await fetch("/api/update-customer", {
+      const res = await fetch("/api/update-customer", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          phoneNo: formData.phoneNo,
-          email: formData.email,
-          address: formData.address,
-          address2: formData.address2,
-          age: formData.age,
-          birthDate: formData.birthDate,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to update profile");
-      }
-
-      const result = await response.json();
+      if (!res.ok) throw new Error("Profile update failed");
 
       setMessage({ type: "success", text: "Profile updated successfully!" });
       setOriginalData(formData);
 
-      // Clear success message after 3 seconds
       setTimeout(() => setMessage(null), 3000);
     } catch (error) {
-      console.error("Error updating profile:", error);
       setMessage({
         type: "error",
-        text: "Failed to update profile. Please try again.",
+        text: "Failed to update profile. Try again.",
       });
     } finally {
       setSaving(false);
@@ -204,17 +192,55 @@ export default function AccountForm() {
     setMessage(null);
   };
 
-  const hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData);
+  const hasChanges =
+    JSON.stringify(formData) !== JSON.stringify(originalData);
+
+  const handlePasswordChange = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setMessage({ type: "error", text: "All password fields are required" });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setMessage({ type: "error", text: "New passwords do not match" });
+      return;
+    }
+
+    setChangingPassword(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Password change failed");
+
+      setMessage({ type: "success", text: "Password updated successfully!" });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error) {
+      setMessage({
+        type: "error",
+        text: "Failed to change password. Try again.",
+      });
+    } finally {
+      setChangingPassword(false);
+    }
+  };
 
   if (loading) {
     return (
       <div className="container mx-auto p-6 max-w-4xl">
         <Card>
           <CardContent className="flex items-center justify-center py-12">
-            <div className="text-center space-y-4">
-              <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
-              <p className="text-muted-foreground">Loading your profile...</p>
-            </div>
+            <Loader2 className="w-12 h-12 animate-spin text-primary" />
           </CardContent>
         </Card>
       </div>
@@ -228,12 +254,12 @@ export default function AccountForm() {
         <CardHeader>
           <CardTitle className="text-3xl">Account Settings</CardTitle>
           <CardDescription>
-            Manage your personal information and preferences
+            Manage your personal information and account preferences
           </CardDescription>
         </CardHeader>
       </Card>
 
-      {/* Alert Messages */}
+      {/* Alert */}
       {message && (
         <Alert variant={message.type === "error" ? "destructive" : "default"}>
           {message.type === "success" ? (
@@ -245,196 +271,220 @@ export default function AccountForm() {
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit}>
-        {/* Personal Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5 text-primary" />
-              Personal Information
-            </CardTitle>
-            <CardDescription>Update your personal details</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Customer Number (Read-only) */}
-            {formData.customerNo && (
+      {/* TABS */}
+      <Tabs defaultValue="profile" className="w-full">
+        <TabsList className="grid grid-cols-2 w-full">
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="password">Change Password</TabsTrigger>
+        </TabsList>
+
+        {/* PROFILE TAB */}
+        <TabsContent value="profile">
+          <form onSubmit={handleSubmit}>
+            {/* Personal Info */}
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  Personal Information
+                </CardTitle>
+              </CardHeader>
+
+              <CardContent className="space-y-6">
+                {formData.customerNo && (
+                  <div className="space-y-2">
+                    <Label>Customer Number</Label>
+                    <Input
+                      readOnly
+                      value={formData.customerNo}
+                      className="bg-muted font-semibold"
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label>Full Name *</Label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) =>
+                      handleInputChange("name", e.target.value)
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Email *</Label>
+                  <Input
+                    value={formData.email}
+                    onChange={(e) =>
+                      handleInputChange("email", e.target.value)
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Phone Number</Label>
+                  <Input
+                    value={formData.phoneNo}
+                    onChange={(e) =>
+                      handleInputChange("phoneNo", e.target.value)
+                    }
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Age</Label>
+                    <Input
+                      type="number"
+                      value={formData.age}
+                      onChange={(e) =>
+                        handleInputChange("age", parseInt(e.target.value) || 0)
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Birth Date</Label>
+                    <Input
+                      type="date"
+                      value={formData.birthDate}
+                      onChange={(e) =>
+                        handleInputChange("birthDate", e.target.value)
+                      }
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Address */}
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5" />
+                  Address Information
+                </CardTitle>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Address Line 1</Label>
+                  <Input
+                    value={formData.address}
+                    onChange={(e) =>
+                      handleInputChange("address", e.target.value)
+                    }
+                  />
+                </div>
+
+                <div>
+                  <Label>Address Line 2</Label>
+                  <Input
+                    value={formData.address2}
+                    onChange={(e) =>
+                      handleInputChange("address2", e.target.value)
+                    }
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Actions */}
+            <Card className="mt-6">
+              <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    type="submit"
+                    disabled={saving || !hasChanges}
+                    className="flex-1"
+                  >
+                    {saving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>Save Changes</>
+                    )}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancel}
+                    disabled={saving || !hasChanges}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+
+                {!hasChanges && (
+                  <p className="text-sm text-muted-foreground text-center mt-3">
+                    No changes to save
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </form>
+        </TabsContent>
+
+        {/* PASSWORD TAB */}
+        <TabsContent value="password">
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="w-5 h-5 text-primary" />
+                Change Password
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="customerNo" className="flex items-center gap-2">
-                  <Hash className="w-4 h-4" />
-                  Customer Number
-                </Label>
+                <Label>Current Password</Label>
                 <Input
-                  id="customerNo"
-                  type="text"
-                  value={formData.customerNo}
-                  readOnly
-                  className="bg-muted font-semibold"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
                 />
               </div>
-            )}
 
-            {/* Name */}
-            <div className="space-y-2">
-              <Label htmlFor="name" className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Full Name *
-              </Label>
-              <Input
-                id="name"
-                type="text"
-                value={formData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
-                placeholder="Enter your full name"
-                required
-              />
-            </div>
-
-            {/* Email */}
-            <div className="space-y-2">
-              <Label htmlFor="email" className="flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                Email Address *
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-                placeholder="your.email@example.com"
-                required
-              />
-            </div>
-
-            {/* Phone Number */}
-            <div className="space-y-2">
-              <Label htmlFor="phoneNo" className="flex items-center gap-2">
-                <Phone className="w-4 h-4" />
-                Phone Number
-              </Label>
-              <Input
-                id="phoneNo"
-                type="tel"
-                value={formData.phoneNo}
-                onChange={(e) => handleInputChange("phoneNo", e.target.value)}
-                placeholder="+1 (555) 000-0000"
-              />
-            </div>
-
-            {/* Age and Birth Date */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="age" className="flex items-center gap-2">
-                  <Hash className="w-4 h-4" />
-                  Age
-                </Label>
+                <Label>New Password</Label>
                 <Input
-                  id="age"
-                  type="number"
-                  value={formData.age || ""}
-                  onChange={(e) =>
-                    handleInputChange("age", parseInt(e.target.value) || 0)
-                  }
-                  placeholder="Enter your age"
-                  min="0"
-                  max="150"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="birthDate" className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Birth Date
-                </Label>
+                <Label>Confirm New Password</Label>
                 <Input
-                  id="birthDate"
-                  type="date"
-                  value={formData.birthDate}
-                  onChange={(e) =>
-                    handleInputChange("birthDate", e.target.value)
-                  }
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                 />
               </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Address Information */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-primary" />
-              Address Information
-            </CardTitle>
-            <CardDescription>Update your location details</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Address Line 1 */}
-            <div className="space-y-2">
-              <Label htmlFor="address">Address Line 1</Label>
-              <Input
-                id="address"
-                type="text"
-                value={formData.address}
-                onChange={(e) => handleInputChange("address", e.target.value)}
-                placeholder="Street address, P.O. box, company name"
-              />
-            </div>
-
-            {/* Address Line 2 */}
-            <div className="space-y-2">
-              <Label htmlFor="address2">Address Line 2</Label>
-              <Input
-                id="address2"
-                type="text"
-                value={formData.address2}
-                onChange={(e) => handleInputChange("address2", e.target.value)}
-                placeholder="Apartment, suite, unit, building, floor, etc."
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Action Buttons */}
-        <Card className="mt-6">
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-3">
               <Button
-                type="submit"
-                disabled={saving || !hasChanges}
-                className="flex-1"
+                className="w-full mt-4"
+                disabled={changingPassword}
+                onClick={handlePasswordChange}
               >
-                {saving ? (
+                {changingPassword ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    Saving Changes...
+                    Updating...
                   </>
                 ) : (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Save Changes
-                  </>
+                  "Update Password"
                 )}
               </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancel}
-                disabled={saving || !hasChanges}
-                className="flex-1 sm:flex-initial"
-              >
-                Cancel
-              </Button>
-            </div>
-
-            {!hasChanges && (
-              <p className="text-sm text-muted-foreground text-center mt-3">
-                No changes to save
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -25,7 +25,7 @@ interface BookingEntry {
   BookingNote: string;
   BookingStatus: string;
   BookingSetupCode: string;
-  ServiceType: string;
+  ServiceName: string;
   StaffCode: string;
   StaffName: string;
   TimeOff: boolean;
@@ -216,7 +216,7 @@ return entries.map((entry: BookingEntry) => {
             location: entry.Address2 || '-',
             staff: entry.StaffName || entry.StaffCode,
             staffCode: entry.StaffCode,
-            service: entry.ServiceType || '-',
+            service: entry.ServiceName || '-',
             customer: entry.Name2 || entry.Name || entry.CustomerNo,
             status: entry.BookingStatus,
             branch: entry.BookingSetupCode,
