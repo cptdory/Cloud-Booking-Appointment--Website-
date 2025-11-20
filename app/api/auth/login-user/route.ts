@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     const emailOrCustomerNo = body._emailOrCustomerNo;
     const password = body.password;
 
-    if (!emailOrCustomerNo || !password) {
+    if (!emailOrCustomerNo) {
       return NextResponse.json(
         { error: "Missing credentials" },
         { status: 400 }
