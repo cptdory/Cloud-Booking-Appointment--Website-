@@ -5,10 +5,8 @@ let memoryCache: { access_token: string; expires_at: number } | null = null;
 async function getAccessToken() {
   const isVercel = !!process.env.VERCEL;
 
-  if (isVercel) {
-    if (memoryCache && Date.now() < memoryCache.expires_at) {
-      return memoryCache.access_token;
-    }
+  if (isVercel && memoryCache && Date.now() < memoryCache.expires_at) {
+    return memoryCache.access_token;
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
@@ -35,11 +33,14 @@ async function authLogin(accessToken: string, body: any, retry = true): Promise<
 
   const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_LoginAuth?Company=${company}`;
 
+  // Prepare request body based on login type
   const requestBody = {
     _PortalUsername: String(body._PortalUsername || ""),
     _PortalPassword: String(body._PortalPassword || ""),
-    _IsAdminLogin: String(body._IsAdminLogin || "")
+    _IsAdminLogin: String(body._IsAdminLogin || "false") // Ensure it's always a string
   };
+
+  console.log('BC Login Request:', { url, body: requestBody });
 
   const res = await fetch(url, {
     method: "POST",
@@ -52,26 +53,33 @@ async function authLogin(accessToken: string, body: any, retry = true): Promise<
   });
 
   if ((res.status === 401 || res.status === 403) && retry) {
+    // Token might be expired, refresh and retry once
     const newToken = await getAccessToken();
     return await authLogin(newToken, body, false);
   }
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Failed request (${res.status}): ${res.statusText} - ${text}`);
+    console.error('BC Login Error:', { status: res.status, statusText: res.statusText, text });
+    throw new Error(`Failed request (${res.status}): ${res.statusText}`);
   }
 
-  return await res.json();
+  const result = await res.json();
+  console.log('BC Login Response:', result);
+  return result;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    console.log('Received login request:', body);
+    
     const accessToken = await getAccessToken();
     const result = await authLogin(accessToken, body);
 
     return NextResponse.json(result);
   } catch (error: any) {
+    console.error('Login API Error:', error);
     return NextResponse.json(
       { error: "Failed to login", message: error.message },
       { status: 500 }

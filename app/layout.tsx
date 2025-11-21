@@ -9,13 +9,14 @@ import { Suspense } from "react";
 import { Providers } from "./providers";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { SiteHeader } from "@/components/site-header"; // Import the SiteHeader
 
 const inter = Inter({ subsets: ["latin"] });
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  const hideSidebar = ["/", "/login", "/signin", "/signup"].includes(pathname);
+  const hideSidebar = ["/", "/login", "/signin", "/signup", "/signup/admin"].includes(pathname);
 
   return hideSidebar ? (
     <>
@@ -26,7 +27,11 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        {children}
+        {/* Add SiteHeader here */}
+        <SiteHeader />
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
         <ScrollToTop />
       </SidebarInset>
     </SidebarProvider>

@@ -30,10 +30,13 @@ export function NavUser({
     name: string;
     email: string;
     avatar: string;
+    role: "admin" | "customer";
+    staffCode?: string;
   };
 }) {
   const router = useRouter();
   const { isMobile } = useSidebar();
+  
   const handleLogout = async () => {
     await fetch("/api/auth/logout", {
       method: "POST",
@@ -48,6 +51,16 @@ export function NavUser({
     // Hard refresh to clear all cached React pages
     window.location.href = "/signin";
   };
+
+  // Display different info based on role
+  const displayName = user.role === "admin" && user.staffCode 
+    ? `${user.name} (${user.staffCode})`
+    : user.name;
+
+  const displayEmail = user.role === "admin" 
+    ? "Administrator"
+    : user.email;
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -55,51 +68,60 @@ export function NavUser({
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="data-[state=open]:bg-blue-700 data-[state=open]:text-white text-blue-100 hover:bg-blue-700 hover:text-white"
             >
-              <Avatar className="h-8 w-8 rounded-lg">
+              <Avatar className="h-8 w-8 rounded-lg border-2 border-blue-300">
                 <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                <AvatarFallback className="rounded-lg bg-blue-600 text-white">
+                  {user.role === "admin" ? "A" : "C"}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
-                <span className="truncate text-xs">{user.email}</span>
+                <span className="truncate font-medium text-white">{displayName}</span>
+                <span className="truncate text-xs text-blue-200">{displayEmail}</span>
               </div>
-              <ChevronsUpDown className="ml-auto size-4" />
+              <ChevronsUpDown className="ml-auto size-4 text-blue-300" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg bg-blue-800 border-blue-600 text-white"
             side={isMobile ? "bottom" : "right"}
             align="end"
             sideOffset={4}
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
+                <Avatar className="h-8 w-8 rounded-lg border-2 border-blue-300">
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                  <AvatarFallback className="rounded-lg bg-blue-600 text-white">
+                    {user.role === "admin" ? "A" : "C"}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
-                  <span className="truncate text-xs">{user.email}</span>
+                  <span className="truncate font-medium text-white">{displayName}</span>
+                  <span className="truncate text-xs text-blue-200">{displayEmail}</span>
+                  <span className="truncate text-xs text-blue-300 capitalize">
+                    {user.role}
+                  </span>
                 </div>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="bg-blue-600" />
             
             <DropdownMenuGroup>
               <Link href="/account">
-                <DropdownMenuItem>
-                <BadgeCheck />
-                Account
-              </DropdownMenuItem>
+                <DropdownMenuItem className="text-blue-100 hover:bg-blue-700 hover:text-white focus:bg-blue-700 focus:text-white">
+                  <BadgeCheck className="text-blue-300" />
+                  Account
+                </DropdownMenuItem>
               </Link>
-              
             </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut />
+            <DropdownMenuSeparator className="bg-blue-600" />
+            <DropdownMenuItem 
+              onClick={handleLogout}
+              className="text-blue-100 hover:bg-blue-700 hover:text-white focus:bg-blue-700 focus:text-white"
+            >
+              <LogOut className="text-blue-300" />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

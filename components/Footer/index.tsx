@@ -5,7 +5,7 @@ import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer className="relative z-10 border-t bg-white dark:bg-gray-900">
+    <footer className="relative z-10 border-t border-gray-800 bg-gradient-to-b from-gray-900 to-gray-800 dark:from-black dark:to-gray-900">
       <div className="container py-12 md:py-16 lg:py-20">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-4">
 
@@ -17,7 +17,7 @@ export default function Footer() {
                 alt="logo"
                 width={140}
                 height={30}
-                className="dark:hidden"
+                className="dark:hidden invert" // Invert logo for dark background
               />
               <Image
                 src="/images/logo/logo-2.svg"
@@ -28,15 +28,15 @@ export default function Footer() {
               />
             </Link>
 
-            <p className="mt-4 text-sm text-muted-foreground">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-              Integer lobortis.
+            <p className="mt-4 text-sm text-gray-300 dark:text-gray-400">
+              Streamline your appointment scheduling with our powerful booking system. 
+              Efficient, reliable, and built to simplify your workflow.
             </p>
 
             {/* Social Icons */}
-            <div className="mt-6 flex space-x-4 text-muted-foreground">
+            <div className="mt-6 flex space-x-4 text-gray-400 dark:text-gray-500">
               {/* Facebook */}
-              <Link href="/" className="hover:text-primary">
+              <Link href="/" className="hover:text-white dark:hover:text-gray-300 transition-colors">
                 <svg
                   width="18"
                   height="18"
@@ -48,7 +48,7 @@ export default function Footer() {
               </Link>
 
               {/* X / Twitter-like icon */}
-              <Link href="/" className="hover:text-primary">
+              <Link href="/" className="hover:text-white dark:hover:text-gray-300 transition-colors">
                 <svg
                   width="18"
                   height="18"
@@ -64,14 +64,14 @@ export default function Footer() {
               </Link>
 
               {/* YouTube */}
-              <Link href="/" className="hover:text-primary">
+              <Link href="/" className="hover:text-white dark:hover:text-gray-300 transition-colors">
                 <svg width="18" height="14" viewBox="0 0 18 14" className="fill-current">
                   <path d="M17.5058 2.07119C17.3068 1.2488 16.7099 0.609173 15.9423 0.395963C14.5778 0 9.0627 0 9.0627 0C9.0627 0 3.54766 0 2.18311 0.395963C1.41555 0.609173 0.818561 1.2488 0.619565 2.07119C0.25 3.56366 0.25 6.60953 0.25 6.60953C0.25 6.60953 0.25 9.68585 0.619565 11.1479C0.818561 11.9703 1.41555 12.6099 2.18311 12.8231C3.54766 13.2191 9.0627 13.2191 9.0627 13.2191C9.0627 13.2191 14.5778 13.2191 15.9423 12.8231C16.7099 12.6099 17.3068 11.9703 17.5058 11.1479C17.8754 9.68585 17.8754 6.60953 17.8754 6.60953C17.8754 6.60953 17.8754 3.56366 17.5058 2.07119Z" />
                 </svg>
               </Link>
 
               {/* LinkedIn */}
-              <Link href="/" className="hover:text-primary">
+              <Link href="/" className="hover:text-white dark:hover:text-gray-300 transition-colors">
                 <svg width="17" height="16" viewBox="0 0 17 16" className="fill-current">
                   <path d="M15.2196 0H1.99991C1.37516 0 0.875366 0.497491 0.875366 1.11936V14.3029C0.875366 14.8999 1.37516 15.4222 1.99991 15.4222H15.1696C15.7943 15.4222 16.2941 14.9247 16.2941 14.3029V1.09448C16.3441 0.497491 15.8443 0 15.2196 0Z" />
                 </svg>
@@ -81,39 +81,75 @@ export default function Footer() {
 
           {/* Useful Links */}
           <div>
-            <h3 className="mb-6 text-lg font-semibold">Useful Links</h3>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link className="hover:text-primary" href="/blog">Blog</Link></li>
-              <li><Link className="hover:text-primary" href="/">Pricing</Link></li>
-              <li><Link className="hover:text-primary" href="/about">About</Link></li>
+            <h3 className="mb-6 text-lg font-semibold text-white dark:text-gray-200">Useful Links</h3>
+            <ul className="space-y-3 text-sm text-gray-400 dark:text-gray-500">
+              <li>
+                <Link className="hover:text-white dark:hover:text-gray-300 font-medium transition-colors" href="/blog">
+                  Blog
+                </Link>
+              </li>
+              <li>
+                <Link className="hover:text-white dark:hover:text-gray-300 font-medium transition-colors" href="/">
+                  Pricing
+                </Link>
+              </li>
+              <li>
+                <Link className="hover:text-white dark:hover:text-gray-300 font-medium transition-colors" href="/about">
+                  About
+                </Link>
+              </li>
             </ul>
           </div>
 
           {/* Terms */}
           <div>
-            <h3 className="mb-6 text-lg font-semibold">Terms</h3>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link className="hover:text-primary" href="/">TOS</Link></li>
-              <li><Link className="hover:text-primary" href="/">Privacy Policy</Link></li>
-              <li><Link className="hover:text-primary" href="/">Refund Policy</Link></li>
+            <h3 className="mb-6 text-lg font-semibold text-white dark:text-gray-200">Terms</h3>
+            <ul className="space-y-3 text-sm text-gray-400 dark:text-gray-500">
+              <li>
+                <Link className="hover:text-white dark:hover:text-gray-300 font-medium transition-colors" href="/">
+                  TOS
+                </Link>
+              </li>
+              <li>
+                <Link className="hover:text-white dark:hover:text-gray-300 font-medium transition-colors" href="/">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link className="hover:text-white dark:hover:text-gray-300 font-medium transition-colors" href="/">
+                  Refund Policy
+                </Link>
+              </li>
             </ul>
           </div>
 
           {/* Support */}
           <div>
-            <h3 className="mb-6 text-lg font-semibold">Support & Help</h3>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link className="hover:text-primary" href="/contact">Open Support Ticket</Link></li>
-              <li><Link className="hover:text-primary" href="/">Terms of Use</Link></li>
-              <li><Link className="hover:text-primary" href="/about">About</Link></li>
+            <h3 className="mb-6 text-lg font-semibold text-white dark:text-gray-200">Support & Help</h3>
+            <ul className="space-y-3 text-sm text-gray-400 dark:text-gray-500">
+              <li>
+                <Link className="hover:text-white dark:hover:text-gray-300 font-medium transition-colors" href="/contact">
+                  Open Support Ticket
+                </Link>
+              </li>
+              <li>
+                <Link className="hover:text-white dark:hover:text-gray-300 font-medium transition-colors" href="/">
+                  Terms of Use
+                </Link>
+              </li>
+              <li>
+                <Link className="hover:text-white dark:hover:text-gray-300 font-medium transition-colors" href="/about">
+                  About
+                </Link>
+              </li>
             </ul>
           </div>
 
         </div>
 
         {/* Divider */}
-        <div className="mt-12 border-t pt-6">
-          <p className="text-center text-sm text-muted-foreground">
+        <div className="mt-12 border-t border-gray-700 dark:border-gray-800 pt-6">
+          <p className="text-center text-sm text-gray-400 dark:text-gray-500">
             © 2025 Cloudsteps Information Technology Solutions — All Rights Reserved.
           </p>
         </div>

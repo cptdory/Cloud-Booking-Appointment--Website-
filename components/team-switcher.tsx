@@ -26,7 +26,7 @@ export function TeamSwitcher({
   activeTeam: any;
   onTeamSelect: (team: any) => void;
 }) {
-  const { isMobile } = useSidebar();
+  const { isMobile, state } = useSidebar();
 
   if (!activeTeam) return null;
 
@@ -37,18 +37,27 @@ export function TeamSwitcher({
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="data-[state=open]:bg-blue-700 data-[state=open]:text-white text-blue-100 hover:bg-blue-700 hover:text-white"
             >
-              <div className="bg-sidebar-primary flex items-center justify-center rounded-lg size-8">
-                <activeTeam.logo className="size-4" />
+              {/* Logo container that works in both expanded and collapsed states */}
+              <div className={`bg-blue-600 flex items-center justify-center rounded-lg ${
+                state === "collapsed" ? "size-8 mx-auto" : "size-8"
+              }`}>
+                <activeTeam.logo className="size-4 text-white" />
               </div>
 
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{activeTeam.name}</span>
-                <span className="truncate text-xs">{activeTeam.plan}</span>
+              {/* Text content that hides when collapsed */}
+              <div className={`grid flex-1 text-left text-sm leading-tight ${
+                state === "collapsed" ? "hidden" : "block"
+              }`}>
+                <span className="truncate font-medium text-white">{activeTeam.name}</span>
+                <span className="truncate text-xs text-blue-200">{activeTeam.plan}</span>
               </div>
 
-              <ChevronsUpDown className="ml-auto" />
+              {/* Chevron that hides when collapsed */}
+              <ChevronsUpDown className={`text-blue-300 ${
+                state === "collapsed" ? "hidden" : "ml-auto"
+              }`} />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
 
@@ -56,9 +65,9 @@ export function TeamSwitcher({
             align="start"
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
-            className="min-w-56 rounded-lg"
+            className="min-w-56 rounded-lg bg-blue-800 border-blue-600 text-white"
           >
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
+            <DropdownMenuLabel className="text-xs text-blue-300">
               Branches
             </DropdownMenuLabel>
 
@@ -66,10 +75,10 @@ export function TeamSwitcher({
               <DropdownMenuItem
                 key={team.name}
                 onClick={() => onTeamSelect(team)}
-                className="gap-2 p-2"
+                className="gap-2 p-2 text-blue-100 hover:bg-blue-700 hover:text-white focus:bg-blue-700 focus:text-white"
               >
-                <div className="flex size-6 items-center justify-center rounded-md border">
-                  <team.logo className="size-3.5" />
+                <div className="flex size-6 items-center justify-center rounded-md border border-blue-400 bg-blue-600">
+                  <team.logo className="size-3.5 text-white" />
                 </div>
                 {team.name}
               </DropdownMenuItem>

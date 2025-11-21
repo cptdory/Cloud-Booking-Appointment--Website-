@@ -32,12 +32,12 @@ async function getAccessToken() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { _CustomerNo, _PortalPassword } = body;
+    const { _BookingSetupCode, _BookingParameterId, _BookingParameterValueId, _PortalPassword } = body;
 
     // Validate required fields based on your sample body
-    if (!_CustomerNo || !_PortalPassword) {
+    if (!_BookingSetupCode || !_PortalPassword) {
       return NextResponse.json({ 
-        error: "Missing required fields: _CustomerNo and _PortalPassword are required" 
+        error: "Missing required fields" 
       }, { status: 400 });
     }
 
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     const company = "SQUADLETHICS";
 
     // Updated URL to match what your Business Central likely expects
-    const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_UpdateCustomerPassword?Company=${encodeURIComponent(company)}`;
+    const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_UpdateBookingStaffAuthPassword?Company=${encodeURIComponent(company)}`;
 
     const res = await fetch(url, {
       method: "POST",
@@ -61,7 +61,9 @@ export async function POST(req: Request) {
         Accept: "application/json",
       },
       body: JSON.stringify({
-        _CustomerNo: _CustomerNo,
+        _BookingSetupCode: _BookingSetupCode,
+        _BookingParameterId: _BookingParameterId,
+        _BookingParameterValueId: _BookingParameterValueId,
         _PortalPassword: _PortalPassword,
       }),
     });

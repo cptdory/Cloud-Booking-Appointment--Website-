@@ -21,67 +21,135 @@ interface BookingSetup {
   Description: string;
 }
 
+interface UserData {
+  role: "admin" | "customer";
+  name: string;
+  email: string;
+  staffCode?: string;
+  customerNo?: string;
+  currentBookingSetup?: {
+    code: string;
+    parameterId: number;
+    parameterValueId: number;
+  };
+}
+
 export function AppSidebar({ ...props }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  const selectedCode = searchParams.get("code") || ""; // ⭐ read URL code
+  const selectedCode = searchParams.get("code") || "";
 
   const [teams, setTeams] = React.useState<any[]>([]);
   const [staticNav, setStaticNav] = React.useState<any[]>([]);
   const [dynamicNav, setDynamicNav] = React.useState<any[]>([]);
   const [activeTeam, setActiveTeam] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
+  const [userData, setUserData] = React.useState<UserData | null>(null);
 
-  // Load team list only ONCE
+  // Load user data and teams
   React.useEffect(() => {
-    async function loadTeams() {
-      const res = await fetch("/api/get-booking-setup-list");
-      const json = await res.json();
+    async function loadInitialData() {
+      try {
+        // Get user data from session
+        const userRes = await fetch("/api/auth/me");
+        const userData = await userRes.json();
+        
+        if (userData.authenticated && userData.user) {
+          setUserData({
+            role: userData.user.role,
+            name: userData.user.name,
+            email: userData.user.email,
+            staffCode: userData.user.staffCode,
+            customerNo: userData.user.customerNo,
+            currentBookingSetup: userData.user.currentBookingSetup
+          });
+        }
 
-      let setups: BookingSetup[] = [];
-      if (typeof json.value === "string") setups = JSON.parse(json.value);
-      else setups = json.value;
+        // Load teams only for admin users or users who can switch teams
+        if (userData.authenticated && userData.user.role === "admin") {
+          await loadTeams(userData.user);
+        } else {
+          // For customers, set minimal navigation
+          setStaticNav([
+            { title: "Booking Page", url: "/booking", icon: ListCheck },
+          ]);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("Failed to load initial data:", error);
+        setLoading(false);
+      }
+    }
 
-      const mappedTeams = setups.map((s) => ({
-        name: s.Code,
-        logo: Building,
-        plan: s.Description,
-      }));
+    loadInitialData();
+  }, []);
 
-      setTeams(mappedTeams);
+  // Load teams for admin users
+  const loadTeams = async (user: any) => {
+    const res = await fetch("/api/get-booking-setup-list");
+    const json = await res.json();
 
-      setStaticNav([
-        { title: "Calendar", url: "/calendar", icon: Calendar },
-        { title: "Booking Page", url: "/booking", icon: ListCheck },
-        { title: "Customer", url: "/customers", icon: Users },
-        { title: "Business Information", url: "/business-information", icon: Info },
-      ]);
+    let setups: BookingSetup[] = [];
+    if (typeof json.value === "string") setups = JSON.parse(json.value);
+    else setups = json.value;
 
-      // If URL has ?code=XYZ → auto-select the team
-      if (selectedCode) {
+    const mappedTeams = setups.map((s) => ({
+      name: s.Code,
+      logo: Building,
+      plan: s.Description,
+    }));
+
+    setTeams(mappedTeams);
+
+    // Set navigation based on user type and permissions
+    const userStaticNav = [
+      { title: "Calendar", url: "/calendar", icon: Calendar },
+      { title: "Booking Page", url: "/booking", icon: ListCheck },
+      { title: "Customer", url: "/customers", icon: Users },
+      { title: "Business Information", url: "/business-information", icon: Info },
+    ];
+
+    setStaticNav(userStaticNav);
+
+    // Determine active team based on user type and URL
+    if (user.role === "admin") {
+      // Check if user has a specific team context from login
+      const hasSpecificTeamContext = user.currentBookingSetup && 
+        user.currentBookingSetup.code !== "" && 
+        user.currentBookingSetup.parameterId !== 0;
+
+      if (hasSpecificTeamContext) {
+        // Admin with specific team context - use that team
+        const userTeam = mappedTeams.find(t => t.name === user.currentBookingSetup.code);
+        if (userTeam) {
+          setActiveTeam(userTeam);
+          router.replace(`?code=${userTeam.name}`);
+          await loadDynamicNav(userTeam.name);
+        }
+      } else if (selectedCode) {
+        // URL has specific code
         const found = mappedTeams.find((t) => t.name === selectedCode);
         if (found) {
           setActiveTeam(found);
-          loadDynamicNav(found.name);
+          await loadDynamicNav(found.name);
         }
       } else {
-        // Default first team
+        // Full admin - can choose any team, default to first
         if (mappedTeams.length > 0) {
           setActiveTeam(mappedTeams[0]);
           router.replace(`?code=${mappedTeams[0].name}`);
-          loadDynamicNav(mappedTeams[0].name);
+          await loadDynamicNav(mappedTeams[0].name);
         }
       }
-
-      setLoading(false);
     }
 
-    loadTeams();
-  }, []);
+    setLoading(false);
+  };
 
   // Load dynamic parameters
   const loadDynamicNav = async (teamCode: string) => {
+    if (userData?.role !== "admin") return;
+
     const res = await fetch(`/api/get-booking-setup?code=${teamCode}`);
     const json = await res.json();
     if (!json.value || json.value.length === 0) return;
@@ -103,7 +171,7 @@ export function AppSidebar({ ...props }) {
       } else if (lower.includes("service")) {
         icon = BriefcaseBusiness; 
       } else {
-        icon = Info; // fallback icon
+        icon = Info;
       }
 
       return {
@@ -125,42 +193,80 @@ export function AppSidebar({ ...props }) {
     setDynamicNav(parameterNav);
   };
 
-  // When user selects a new team
+  // When user selects a new team (admin only)
   const handleTeamClick = (team: any) => {
+    if (userData?.role !== "admin") return;
+
     setActiveTeam(team);
-
     router.push(`?code=${team.name}`, { scroll: false });
-
     loadDynamicNav(team.name);
   };
 
-  // Inject ?code= into static nav links
+  // Prepare navigation with code parameter
   const staticNavWithCode = staticNav.map((item) => ({
     ...item,
-    url: `${item.url}?code=${activeTeam?.name || ""}`,
+    url: `${item.url}?code=${activeTeam?.name || selectedCode || ""}`,
   }));
 
-  return (
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-        {!loading && (
-          <TeamSwitcher
-            teams={teams}
-            activeTeam={activeTeam}
-            onTeamSelect={handleTeamClick}
-          />
-        )}
-      </SidebarHeader>
+  // Determine user display info
+  const getUserDisplayInfo = () => {
+    if (!userData) {
+      return {
+        name: "Loading...",
+        email: "Loading...",
+        avatar: "/avatars/shadcn.jpg",
+        role: "customer" as const
+      };
+    }
 
-      <SidebarContent>
+    if (userData.role === "admin") {
+      return {
+        name: userData.name,
+        email: "Administrator",
+        avatar: "/avatars/shadcn.jpg",
+        role: "admin" as const,
+        staffCode: userData.staffCode
+      };
+    } else {
+      return {
+        name: userData.name,
+        email: userData.email,
+        avatar: "/avatars/shadcn.jpg",
+        role: "customer" as const
+      };
+    }
+  };
+
+  const userDisplayInfo = getUserDisplayInfo();
+
+  return (
+    <Sidebar 
+      collapsible="icon" 
+      className="bg-blue-900 border-blue-700 text-white"
+      {...props}
+    >
+      {/* Show team switcher only for admin users */}
+      {userData?.role === "admin" && (
+        <SidebarHeader className="bg-blue-800 border-b border-blue-700">
+          {!loading && (
+            <TeamSwitcher
+              teams={teams}
+              activeTeam={activeTeam}
+              onTeamSelect={handleTeamClick}
+            />
+          )}
+        </SidebarHeader>
+      )}
+
+      <SidebarContent className="bg-blue-900">
         {!loading && (
           <NavMain
             groups={[
               {
-                label: "Management",
+                label: userData?.role === "admin" ? "Management" : "Booking",
                 items: staticNavWithCode,
               },
-              ...(dynamicNav.length > 0
+              ...(dynamicNav.length > 0 && userData?.role === "admin"
                 ? [
                     {
                       label: "Booking Parameters",
@@ -173,14 +279,8 @@ export function AppSidebar({ ...props }) {
         )}
       </SidebarContent>
 
-      <SidebarFooter>
-        <NavUser
-          user={{
-            name: activeTeam?.name || "User",
-            email: activeTeam?.plan || "Email",
-            avatar: "/avatars/shadcn.jpg",
-          }}
-        />
+      <SidebarFooter className="bg-blue-800 border-t border-blue-700">
+        <NavUser user={userDisplayInfo} />
       </SidebarFooter>
 
       <SidebarRail />

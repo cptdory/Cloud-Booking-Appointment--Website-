@@ -38,7 +38,7 @@ export default function Header() {
     <header
       className={`w-full z-50 transition-all ${
         sticky
-          ? "fixed bg-white/80 dark:bg-gray-900 backdrop-blur-md shadow"
+          ? "fixed bg-white/90 backdrop-blur-md shadow-lg border-b border-blue-200 dark:bg-gray-900/90 dark:border-gray-700"
           : "absolute bg-transparent"
       }`}
     >
@@ -72,8 +72,8 @@ export default function Header() {
                     href={item.path}
                     className={`px-4 py-2 text-sm font-medium transition ${
                       pathname === item.path
-                        ? "text-blue-600"
-                        : "text-gray-700 dark:text-gray-300 hover:text-blue-600"
+                        ? "text-blue-600 font-semibold"
+                        : "text-blue-800 hover:text-blue-600 dark:text-gray-300 dark:hover:text-white"
                     }`}
                   >
                     {item.title}
@@ -88,13 +88,13 @@ export default function Header() {
         <div className="hidden lg:flex items-center gap-4">
 
           <Link href="/signin">
-            <Button variant="ghost" className="text-gray-700 dark:text-white">
+            <Button variant="ghost" className="text-blue-800 hover:text-blue-600 hover:bg-blue-50 dark:text-white dark:hover:bg-gray-800">
               Sign In
             </Button>
           </Link>
 
           <Link href="/signup">
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white font-medium">
               Sign Up
             </Button>
           </Link>
@@ -106,12 +106,12 @@ export default function Header() {
         <div className="lg:hidden">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline" className="px-3 py-2">
+              <Button variant="outline" className="px-3 py-2 border-blue-300 text-blue-800 dark:border-gray-600 dark:text-white">
                 ☰
               </Button>
             </SheetTrigger>
 
-            <SheetContent side="right" className="w-[260px]">
+            <SheetContent side="right" className="w-[260px] bg-white dark:bg-gray-900 border-blue-200 dark:border-gray-700">
               <div className="flex flex-col gap-6 mt-8">
 
                 {menuData.map((item, idx) =>
@@ -119,10 +119,10 @@ export default function Header() {
                     <Link
                       key={idx}
                       href={item.path}
-                      className={`text-lg ${
+                      className={`text-lg font-medium ${
                         pathname === item.path
                           ? "text-blue-600 font-semibold"
-                          : "text-gray-700 dark:text-gray-300"
+                          : "text-blue-800 hover:text-blue-600 dark:text-gray-300 dark:hover:text-white"
                       }`}
                     >
                       {item.title}
@@ -133,14 +133,14 @@ export default function Header() {
                 <Link href="/signin">
                   <Button
                     variant="ghost"
-                    className="w-full text-gray-800 dark:text-white"
+                    className="w-full text-blue-800 hover:text-blue-600 hover:bg-blue-50 dark:text-white dark:hover:bg-gray-800"
                   >
                     Sign In
                   </Button>
                 </Link>
 
                 <Link href="/signup">
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium">
                     Sign Up
                   </Button>
                 </Link>
