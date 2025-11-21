@@ -1,87 +1,87 @@
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 
+// In /api/auth/login-user route.ts - Replace the current logic:
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const emailOrCustomerNo = body._emailOrCustomerNo;
-    const password = body.password;
+    const { _PortalUsername, _PortalPassword, _IsAdminLogin } = body;
 
-    if (!emailOrCustomerNo) {
+    if (!_PortalUsername || !_PortalPassword) {
       return NextResponse.json(
         { error: "Missing credentials" },
         { status: 400 }
       );
     }
 
+    // Call Business Central login API
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     const res = await fetch(`${baseUrl}/api/auth/login-bc`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ _emailOrCustomerNo: emailOrCustomerNo }),
+      body: JSON.stringify({ 
+        _PortalUsername, 
+        _PortalPassword, 
+        _IsAdminLogin 
+      }),
     });
 
     if (!res.ok) {
+      const errorData = await res.json();
       return NextResponse.json(
-        { error: "Invalid login credentials. Please try again." },
-        { status: 401 }
+        { error: errorData.error || "Login failed" },
+        { status: res.status }
       );
     }
 
     const data = await res.json();
-    const bcData = JSON.parse(data.value)[0];
-
-    if (!bcData) {
+    
+    // Check if login was successful based on BC response
+    // This depends on what your BC API actually returns
+    const loginResult = JSON.parse(data.value)[0];
+    
+    // Assuming BC returns a success flag or customer data
+    if (!loginResult || !loginResult.CustomerNo) {
       return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
-    }
-
-    // Password check
-    if (password !== bcData.PortalPassword) {
-      return NextResponse.json(
-        { error: "Invalid password" },
+        { error: "Invalid credentials" },
         { status: 401 }
       );
     }
 
-    // JWT payload
+    // Create JWT token
     const tokenData = {
-      customerNo: bcData.CustomerNo,
-      name: bcData.Name,
-      email: bcData.EMail,
+      customerNo: loginResult.CustomerNo,
+      name: loginResult.Name,
+      email: loginResult.EMail,
       role: "user",
     };
 
-    // Create signed token
     const token = jwt.sign(
       tokenData,
       process.env.JWT_SECRET || "dev_secret",
       { expiresIn: "1d" }
     );
 
-    // Response
+    // Set cookie and return response
     const response = NextResponse.json({
       success: true,
       message: "Logged in successfully",
       user: tokenData,
     });
 
-    // Set HttpOnly cookie
     response.cookies.set("session_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24, // 1 day
+      maxAge: 60 * 60 * 24,
       path: "/",
     });
 
     return response;
 
   } catch (error: any) {
-    console.error("Error:", error);
+    console.error("Login error:", error);
     return NextResponse.json(
-      { error: error.message },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

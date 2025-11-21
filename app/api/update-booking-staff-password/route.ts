@@ -32,10 +32,13 @@ async function getAccessToken() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { _BookingSetupCode, _BookingParameterId, _BookingParameterValueId, _PortalPassword } = body;
+    const { _CustomerNo, _PortalPassword } = body;
 
-    if (!_BookingSetupCode || !_BookingParameterId || !_BookingParameterValueId || !_PortalPassword) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    // Validate required fields based on your sample body
+    if (!_CustomerNo || !_PortalPassword) {
+      return NextResponse.json({ 
+        error: "Missing required fields: _CustomerNo and _PortalPassword are required" 
+      }, { status: 400 });
     }
 
     if (!process.env.TENANT_ID) {
@@ -47,24 +50,25 @@ export async function POST(req: Request) {
     const environment = "SandboxDev2";
     const company = "SQUADLETHICS";
 
-    const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_UpdateBookingStaffAuthPassword?Company=${encodeURIComponent(company)}`;
+    // Updated URL to match what your Business Central likely expects
+    const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_UpdateCustomerPassword?Company=${encodeURIComponent(company)}`;
 
     const res = await fetch(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
+        Accept: "application/json",
       },
       body: JSON.stringify({
-        _BookingSetupCode: _BookingSetupCode,
-        _BookingParameterId: _BookingParameterId,
-        _BookingParameterValueId: _BookingParameterValueId,
+        _CustomerNo: _CustomerNo,
         _PortalPassword: _PortalPassword,
       }),
     });
 
     let data: any = null;
     const text = await res.text();
+    
     try {
       data = text ? JSON.parse(text) : null;
     } catch (err) {
@@ -73,12 +77,23 @@ export async function POST(req: Request) {
 
     if (!res.ok) {
       console.error("BC API error:", data || text);
-      throw new Error(data?.error?.message || "Failed to update staff password");
+      const errorMessage = data?.error?.message || data?.message || `Business Central API returned ${res.status}: ${res.statusText}`;
+      return NextResponse.json({ 
+        error: "Failed to update customer password",
+        details: errorMessage
+      }, { status: res.status });
     }
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ 
+      success: true, 
+      message: "Password updated successfully",
+      data 
+    });
+    
   } catch (err: any) {
     console.error("POST /api/update-booking-staff-password failed:", err);
-    return NextResponse.json({ error: err.message || "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ 
+      error: err.message || "Internal Server Error" 
+    }, { status: 500 });
   }
 }

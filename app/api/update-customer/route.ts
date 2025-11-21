@@ -31,7 +31,7 @@ async function updateCustomerInBC(accessToken: string, customerData: any, retry 
   const environment = "SandboxDev2";
   const company = "SQUADLETHICS";
 
-  const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_UpdateCustomer?Company=${company}`;
+  const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_UpdateCustomerDetails?Company=${company}`;
 
   // Format the birth date to match your Postman example (MM/DD/YYYY)
   const formatBirthDate = (dateString: string) => {
@@ -43,14 +43,13 @@ async function updateCustomerInBC(accessToken: string, customerData: any, retry 
   const requestBody = {
     _CustomerNo: customerData.customerNo,
     _Name: customerData.name,
-    _Name2: customerData.name2 || "", // Optional field
+    _Name2: "", 
     _PhoneNo: customerData.phoneNo,
     _Email: customerData.email,
     _Address: customerData.address,
     _Address2: customerData.address2,
     _Age: customerData.age?.toString() || "0",
     _BirthDate: formatBirthDate(customerData.birthDate),
-    _PortalPassword: customerData.portalPassword || "" // Include if you want to update password
   };
 
   console.log("Updating customer in Business Central:", requestBody);
@@ -130,7 +129,6 @@ export async function PUT(request: NextRequest) {
       address2: body.address2 || "",
       age: body.age || 0,
       birthDate: body.birthDate || "",
-      portalPassword: body.portalPassword // Only include if updating password
     };
 
     const result = await updateCustomerInBC(accessToken, customerData);

@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     // minimal validation
-    if (!body._BookingSetupCode || !body._BookingParameterId || !body._BookingParameterValueId) {
+    if (!body._BookingSetupCode || !body._BookingParameterId || !body._BookingParameterValueId ||!body._BookingParameterValueCode) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
     }
 
@@ -56,6 +56,7 @@ export async function POST(req: Request) {
         _BookingSetupCode: body._BookingSetupCode,
         _BookingParameterId: String(body._BookingParameterId),
         _BookingParameterValueId: String(body._BookingParameterValueId),
+        _BookingParameterValueCode: String(body._BookingParameterValueCode),
         _BookingParamenterValueDesc: body._BookingParamenterValueDesc,
         _BookingParameterValueDuration: String(body._BookingParameterValueDuration),
         _BookingParameterValueStaff: body._BookingParameterValueStaff ?? "No",

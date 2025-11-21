@@ -120,7 +120,9 @@ export default function ServicesPage() {
   const loadAssignments = async () => {
     if (!code) return;
     try {
-      const res = await fetch(`/api/get-service-staff-assignments?code=${code}`);
+      const res = await fetch(
+        `/api/get-service-staff-assignments?code=${code}`
+      );
       if (res.ok) {
         const json = await res.json();
         setAssignments(json.value || []);
@@ -157,6 +159,7 @@ export default function ServicesPage() {
         _BookingSetupCode: code,
         _BookingParameterId: parameterId,
         _BookingParameterValueId: String(editItem.BookingParameterValueId),
+        _BookingParameterValueCode: String(editItem.BookingParameterValueCode),
         _BookingParamenterValueDesc: editItem.BookingParamterValueDescription,
         _BookingParameterValueDuration: String(
           editItem.BookingParameterValueDuration
@@ -313,7 +316,8 @@ export default function ServicesPage() {
       });
 
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.message || "Failed to delete assignment");
+      if (!res.ok)
+        throw new Error(json?.message || "Failed to delete assignment");
 
       alert("Assignment deleted successfully!");
       setAssignmentToDelete(null);
@@ -336,8 +340,8 @@ export default function ServicesPage() {
         );
         return {
           ...assignment,
-          staffName: staff?.BookingParameterValueCode || 'Unknown',
-          staffDescription: staff?.BookingParamterValueDescription || ''
+          staffName: staff?.BookingParameterValueCode || "Unknown",
+          staffDescription: staff?.BookingParamterValueDescription || "",
         };
       });
   };
@@ -441,7 +445,9 @@ export default function ServicesPage() {
 
                 <TableBody>
                   {values.map((v: any) => {
-                    const assignedStaff = getAssignedStaffForService(v.BookingParameterValueId.toString());
+                    const assignedStaff = getAssignedStaffForService(
+                      v.BookingParameterValueId.toString()
+                    );
                     return (
                       <TableRow
                         key={v.BookingParameterValueId}
@@ -451,7 +457,9 @@ export default function ServicesPage() {
                         <TableCell className="font-medium">
                           {v.BookingParameterValueCode}
                         </TableCell>
-                        <TableCell>{v.BookingParamterValueDescription}</TableCell>
+                        <TableCell>
+                          {v.BookingParamterValueDescription}
+                        </TableCell>
                         <TableCell className="text-right">
                           {v.BookingParameterValueDuration}
                         </TableCell>
@@ -459,7 +467,7 @@ export default function ServicesPage() {
                           <div className="flex flex-wrap gap-1">
                             {assignedStaff.length > 0 ? (
                               assignedStaff.map((assignment) => (
-                                <Badge 
+                                <Badge
                                   key={`${assignment.ServiceId}-${assignment.StaffId}`}
                                   variant="secondary"
                                   className="flex items-center gap-1"
@@ -470,19 +478,24 @@ export default function ServicesPage() {
                                     size="sm"
                                     variant="ghost"
                                     className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                                    onClick={() => setAssignmentToDelete({
-                                      serviceId: assignment.ServiceId,
-                                      staffId: assignment.StaffId,
-                                      serviceCode: v.BookingParameterValueCode,
-                                      staffCode: assignment.staffName
-                                    })}
+                                    onClick={() =>
+                                      setAssignmentToDelete({
+                                        serviceId: assignment.ServiceId,
+                                        staffId: assignment.StaffId,
+                                        serviceCode:
+                                          v.BookingParameterValueCode,
+                                        staffCode: assignment.staffName,
+                                      })
+                                    }
                                   >
                                     <X className="w-3 h-3" />
                                   </Button>
                                 </Badge>
                               ))
                             ) : (
-                              <span className="text-muted-foreground text-sm">No staff assigned</span>
+                              <span className="text-muted-foreground text-sm">
+                                No staff assigned
+                              </span>
                             )}
                           </div>
                         </TableCell>

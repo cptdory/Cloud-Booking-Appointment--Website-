@@ -267,12 +267,13 @@ export default function StaffPage() {
         _BookingSetupCode: code,
         _BookingParameterId: parameterId,
         _BookingParameterValueId: String(editItem.BookingParameterValueId),
+        _BookingParameterValueCode: String(editItem.BookingParameterValueCode),
         _BookingParamenterValueDesc: editItem.BookingParamterValueDescription,
         _BookingParameterValueDuration: String(
           editItem.BookingParameterValueDuration
         ),
-        _BookingParameterValueStaff: "Yes",
-        _BookingParameterValueService: "No",
+        _BookingParameterValueStaff: "No",
+        _BookingParameterValueService: "Yes",
       };
 
       const res = await fetch("/api/update-booking-parameter-value", {

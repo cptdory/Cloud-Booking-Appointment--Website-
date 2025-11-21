@@ -103,6 +103,7 @@ export default function BedPage() {
         _BookingSetupCode: code,
         _BookingParameterId: parameterId,
         _BookingParameterValueId: String(editItem.BookingParameterValueId),
+        _BookingParameterValueCode: String(editItem.BookingParameterValueCode),
         _BookingParamenterValueDesc: editItem.BookingParamterValueDescription,
         _BookingParameterValueDuration: String(
           editItem.BookingParameterValueDuration

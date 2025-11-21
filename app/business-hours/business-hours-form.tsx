@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -35,6 +35,32 @@ const DAYS_OF_WEEK = [
 
 const TIME_INCREMENT_OPTIONS = [15, 30, 60, 90, 120];
 
+// Convert 12h time to 24h format for input[type="time"]
+function convertTo24HourFormat(time12h: string): string {
+  if (!time12h) return "09:00";
+  
+  // If it's already in 24h format (from API response)
+  if (time12h.includes(':')) {
+    const [hours, minutes] = time12h.split(':');
+    if (minutes && minutes.length === 2) {
+      return `${hours.padStart(2, '0')}:${minutes}`;
+    }
+  }
+  
+  // If it's in 12h format "10:00 AM"
+  const [time, period] = time12h.split(' ');
+  if (!time || !period) return "09:00";
+  
+  let [hours, minutes] = time.split(':');
+  if (period.toUpperCase() === 'PM' && hours !== '12') {
+    hours = (parseInt(hours) + 12).toString();
+  } else if (period.toUpperCase() === 'AM' && hours === '12') {
+    hours = '00';
+  }
+  
+  return `${hours.padStart(2, '0')}:${minutes || '00'}`;
+}
+
 export function BusinessHoursForm({
   open,
   onOpenChange,
@@ -44,11 +70,34 @@ export function BusinessHoursForm({
 }: BusinessHoursFormProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    dayOfWeek: businessHour?.DayOfWeek || "",
-    startTime: businessHour?.StarTime.substring(0, 5) || "09:00",
-    endTime: businessHour?.EndTime.substring(0, 5) || "17:00",
-    timeIncrement: businessHour?.TimeIncrement.toString() || "30",
+    dayOfWeek: "",
+    startTime: "09:00",
+    endTime: "17:00",
+    timeIncrement: "30",
   });
+
+  // Reset form when businessHour changes or dialog opens/closes
+  useEffect(() => {
+    if (open) {
+      if (businessHour) {
+        // Editing mode - set current values (convert from 12h to 24h for input)
+        setFormData({
+          dayOfWeek: businessHour.DayOfWeek,
+          startTime: convertTo24HourFormat(businessHour.StarTime),
+          endTime: convertTo24HourFormat(businessHour.EndTime),
+          timeIncrement: businessHour.TimeIncrement.toString(),
+        });
+      } else {
+        // Create mode - reset to defaults
+        setFormData({
+          dayOfWeek: "",
+          startTime: "09:00",
+          endTime: "17:00",
+          timeIncrement: "30",
+        });
+      }
+    }
+  }, [open, businessHour]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,10 +109,6 @@ export function BusinessHoursForm({
     setLoading(true);
 
     try {
-      // Convert time to Business Central format (add seconds)
-      const startTimeWithSeconds = `${formData.startTime}:00`;
-      const endTimeWithSeconds = `${formData.endTime}:00`;
-
       const res = await fetch("/api/business-hours", {
         method: "POST",
         headers: {
@@ -74,19 +119,24 @@ export function BusinessHoursForm({
           data: {
             bookingSetupCode,
             dayOfWeek: formData.dayOfWeek,
-            startTime: startTimeWithSeconds,
-            endTime: endTimeWithSeconds,
-            timeIncrement: formData.timeIncrement,
+            startTime: formData.startTime,
+            endTime: formData.endTime,
+            timeIncrement: parseInt(formData.timeIncrement),
           },
         }),
       });
 
-      if (!res.ok) throw new Error("Failed to save");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to save");
+      }
 
       toast.success(`Business hours ${businessHour ? "updated" : "created"} successfully`);
       onSuccess();
-    } catch (error) {
-      toast.error(`Failed to ${businessHour ? "update" : "create"} business hours`);
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error('Error saving business hours:', error);
+      toast.error(error.message || `Failed to ${businessHour ? "update" : "create"} business hours`);
     } finally {
       setLoading(false);
     }
@@ -127,6 +177,11 @@ export function BusinessHoursForm({
                 ))}
               </SelectContent>
             </Select>
+            {businessHour && (
+              <p className="text-xs text-muted-foreground">
+                Day cannot be changed when editing
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

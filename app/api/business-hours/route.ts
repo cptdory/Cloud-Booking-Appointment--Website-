@@ -74,6 +74,15 @@ async function callBusinessCentralAPI(endpoint: string, body: any) {
   }
 }
 
+// Convert 24h time to 12h format with AM/PM
+function convertTo12HourFormat(time24: string): string {
+  const [hours, minutes] = time24.split(':');
+  const hourNum = parseInt(hours);
+  const period = hourNum >= 12 ? 'PM' : 'AM';
+  const displayHour = hourNum % 12 || 12;
+  return `${displayHour}:${minutes} ${period}`;
+}
+
 export async function POST(req: Request) {
   try {
     const { action, data } = await req.json();
@@ -83,15 +92,19 @@ export async function POST(req: Request) {
     let endpoint = "";
     let body = {};
 
+    // Convert times to 12-hour format with AM/PM
+    const startTime12h = convertTo12HourFormat(data.startTime.substring(0, 5));
+    const endTime12h = convertTo12HourFormat(data.endTime.substring(0, 5));
+
     switch (action) {
       case "create":
         endpoint = "BookingAppointment_CreateBookingBusinessHour";
         body = {
           _BookingSetupCode: data.bookingSetupCode,
           _BookingBusinessHoursDayOfWeek: data.dayOfWeek,
-          _BookingBusinessHoursStartTime: data.startTime,
-          _BookingBusinessHoursEndTime: data.endTime,
-          _BookingBusinessHoursTimeIncrement: data.timeIncrement,
+          _BookingBusinessHoursStartTime: startTime12h,
+          _BookingBusinessHoursEndTime: endTime12h,
+          _BookingBusinessHoursTimeIncrement: data.timeIncrement.toString(),
         };
         break;
 
@@ -100,9 +113,9 @@ export async function POST(req: Request) {
         body = {
           _BookingSetupCode: data.bookingSetupCode,
           _BookingBusinessHoursDayOfWeek: data.dayOfWeek,
-          _BookingBusinessHoursStartTime: data.startTime,
-          _BookingBusinessHoursEndTime: data.endTime,
-          _BookingBusinessHoursTimeIncrement: data.timeIncrement,
+          _BookingBusinessHoursStartTime: startTime12h,
+          _BookingBusinessHoursEndTime: endTime12h,
+          _BookingBusinessHoursTimeIncrement: data.timeIncrement.toString(),
         };
         break;
 
@@ -117,6 +130,8 @@ export async function POST(req: Request) {
       default:
         return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
+
+    console.log('Sending to Business Central:', body);
 
     const result = await callBusinessCentralAPI(endpoint, body);
     console.log('Business Central API result:', result);

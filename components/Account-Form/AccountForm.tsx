@@ -24,15 +24,12 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
-  Lock,Eye, EyeOff
+  Lock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface UserProfile {
   name: string;
@@ -103,7 +100,6 @@ export default function AccountForm() {
           },
           body: JSON.stringify({
             customerNo: authData.user.customerNo,
-            email: authData.user.email,
           }),
         });
 
@@ -192,48 +188,60 @@ export default function AccountForm() {
     setMessage(null);
   };
 
-  const hasChanges =
-    JSON.stringify(formData) !== JSON.stringify(originalData);
+  const hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData);
 
-  const handlePasswordChange = async () => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setMessage({ type: "error", text: "All password fields are required" });
+const handlePasswordChange = async () => {
+  if (!newPassword || !confirmPassword) {
+    setMessage({ type: "error", text: "New password and confirmation required" });
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    setMessage({ type: "error", text: "New passwords do not match" });
+    return;
+  }
+
+  setChangingPassword(true);
+  setMessage(null);
+
+  try {
+    // Get customer number
+    const authRes = await fetch("/api/auth/me", { cache: "no-store" });
+    const authData = await authRes.json();
+
+    if (!authData.authenticated) {
+      router.replace("/signin");
       return;
     }
 
-    if (newPassword !== confirmPassword) {
-      setMessage({ type: "error", text: "New passwords do not match" });
-      return;
-    }
+    const customerNo = authData.user.customerNo;
 
-    setChangingPassword(true);
-    setMessage(null);
+    // Send request to your Next.js API route
+    const res = await fetch("/api/update-customer-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        _CustomerNo: customerNo,          // ✅ REQUIRED BY BC
+        _PortalPassword: newPassword,     // ✅ REQUIRED BY BC
+      }),
+    });
 
-    try {
-      const res = await fetch("/api/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          currentPassword,
-          newPassword,
-        }),
-      });
+    if (!res.ok) throw new Error("Password change failed");
 
-      if (!res.ok) throw new Error("Password change failed");
+    setMessage({ type: "success", text: "Password updated successfully!" });
+    setNewPassword("");
+    setConfirmPassword("");
+  } catch (error) {
+    setMessage({
+      type: "error",
+      text: "Failed to change password. Try again.",
+    });
+  } finally {
+    setChangingPassword(false);
+  }
+};
 
-      setMessage({ type: "success", text: "Password updated successfully!" });
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-    } catch (error) {
-      setMessage({
-        type: "error",
-        text: "Failed to change password. Try again.",
-      });
-    } finally {
-      setChangingPassword(false);
-    }
-  };
+
 
   if (loading) {
     return (
@@ -306,9 +314,7 @@ export default function AccountForm() {
                   <Label>Full Name *</Label>
                   <Input
                     value={formData.name}
-                    onChange={(e) =>
-                      handleInputChange("name", e.target.value)
-                    }
+                    onChange={(e) => handleInputChange("name", e.target.value)}
                   />
                 </div>
 
@@ -316,9 +322,7 @@ export default function AccountForm() {
                   <Label>Email *</Label>
                   <Input
                     value={formData.email}
-                    onChange={(e) =>
-                      handleInputChange("email", e.target.value)
-                    }
+                    onChange={(e) => handleInputChange("email", e.target.value)}
                   />
                 </div>
 
@@ -440,15 +444,6 @@ export default function AccountForm() {
             </CardHeader>
 
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Current Password</Label>
-                <Input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                />
-              </div>
-
               <div className="space-y-2">
                 <Label>New Password</Label>
                 <Input

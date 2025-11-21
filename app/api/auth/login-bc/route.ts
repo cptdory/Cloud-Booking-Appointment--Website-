@@ -33,10 +33,12 @@ async function authLogin(accessToken: string, body: any, retry = true): Promise<
   const environment = "SandboxDev2";
   const company = "SQUADLETHICS";
 
-  const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_GetCustomer?Company=${company}`;
+  const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_LoginAuth?Company=${company}`;
 
   const requestBody = {
-    _CustomerNoOrEmailAddress: String(body._emailOrCustomerNo || "")
+    _PortalUsername: String(body._PortalUsername || ""),
+    _PortalPassword: String(body._PortalPassword || ""),
+    _IsAdminLogin: String(body._IsAdminLogin || "")
   };
 
   const res = await fetch(url, {
