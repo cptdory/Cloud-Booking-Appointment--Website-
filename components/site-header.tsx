@@ -1,20 +1,31 @@
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import ThemeToggler from "./Header/ThemeToggler"
 
 export function SiteHeader() {
   return (
-    <header className="flex h-16 shrink-0 items-center gap-2 border-b border-blue-700 bg-blue-800 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-16">
-      <div className="flex w-full items-center gap-3 px-6"> {/* Increased padding and gap */}
+    <header className="flex h-16 items-center justify-between border-b border-blue-700 bg-blue-800 px-6">
+      
+      {/* LEFT SIDE */}
+      <div className="flex items-center gap-3">
         <SidebarTrigger className="text-white hover:bg-blue-700 rounded-md p-2 transition-colors" />
+
         <Separator
           orientation="vertical"
           className="h-6 bg-blue-600"
         />
-        {/* Optional: Add page title or breadcrumbs */}
-        <div className="flex items-center gap-2">
-          <h1 className="text-lg font-semibold text-white">CITS - Booking System</h1>
-        </div>
+
+        <h1 className="text-lg font-semibold text-white">
+          CITS - Booking System
+        </h1>
       </div>
+
+      {/* RIGHT SIDE */}
+      <div className="flex items-center gap-3">
+        <ThemeToggler />
+        {/* Future: <UserNav /> <Notifications /> etc. */}
+      </div>
+
     </header>
   )
 }

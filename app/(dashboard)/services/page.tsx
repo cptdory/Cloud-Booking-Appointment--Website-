@@ -37,11 +37,15 @@ export default function ServicesPage() {
 
   // Staff assignments
   const [staffList, setStaffList] = useState<any[]>([]);
-  const [assignments, setAssignments] = useState<any[]>([]);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<any | null>(null);
   const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
   const [assigning, setAssigning] = useState(false);
+
+  // View Assigned Staff Dialog state
+  const [viewStaffDialogOpen, setViewStaffDialogOpen] = useState(false);
+  const [assignedStaff, setAssignedStaff] = useState<any[]>([]);
+  const [loadingAssignedStaff, setLoadingAssignedStaff] = useState(false);
 
   // Edit Dialog state
   const [editing, setEditing] = useState(false);
@@ -61,15 +65,6 @@ export default function ServicesPage() {
   });
   const [creatingSaving, setCreatingSaving] = useState(false);
 
-  // Delete assignment state
-  const [deletingAssignment, setDeletingAssignment] = useState(false);
-  const [assignmentToDelete, setAssignmentToDelete] = useState<{
-    serviceId: string;
-    staffId: string;
-    serviceCode: string;
-    staffCode: string;
-  } | null>(null);
-
   // read url params
   const search =
     typeof window !== "undefined"
@@ -83,7 +78,9 @@ export default function ServicesPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/booking-setup/get-booking-setup?code=${code}`);
+      const res = await fetch(
+        `/api/booking-setup/get-booking-setup?code=${code}`
+      );
       const json = await res.json();
       if (!json.value || json.value.length === 0) {
         setValues([]);
@@ -105,7 +102,9 @@ export default function ServicesPage() {
 
   const loadStaff = async () => {
     if (!code) return;
-    const res = await fetch(`/api/booking-setup/get-booking-setup?code=${code}`);
+    const res = await fetch(
+      `/api/booking-setup/get-booking-setup?code=${code}`
+    );
     const json = await res.json();
     if (!json.value || json.value.length === 0) return;
 
@@ -117,25 +116,90 @@ export default function ServicesPage() {
     setStaffList(staffParam?.BookingParameterValue || []);
   };
 
-  const loadAssignments = async () => {
+  // Load assigned staff for a service
+  const loadAssignedStaff = async (serviceId: number) => {
     if (!code) return;
+    setLoadingAssignedStaff(true);
     try {
-      const res = await fetch(
-        `/api/booking-service-staff-rela/get-booking-service-staff-rela?code=${code}`
+      const response = await fetch(
+        "/api/booking-service-staff-rela/get-booking-service-staff-rela",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            _BookingSetupCode: code,
+            _ServiceId: serviceId.toString(),
+          }),
+        }
       );
-      if (res.ok) {
-        const json = await res.json();
-        setAssignments(json.value || []);
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch assigned staff");
       }
-    } catch (err) {
-      console.error("Failed to load assignments:", err);
+
+      const data = await response.json();
+
+      // Fix: Parse the string value as JSON
+      let staffArray = [];
+      if (typeof data.value === "string") {
+        try {
+          staffArray = JSON.parse(data.value);
+        } catch (parseError) {
+          console.error("Error parsing staff data:", parseError);
+          staffArray = [];
+        }
+      } else if (Array.isArray(data.value)) {
+        staffArray = data.value;
+      }
+
+      setAssignedStaff(staffArray);
+    } catch (err: any) {
+      console.error("Error loading assigned staff:", err);
+      alert(err.message || "Failed to load assigned staff");
+    } finally {
+      setLoadingAssignedStaff(false);
     }
+  };
+
+  // Delete assigned staff
+  const deleteAssignedStaff = async (serviceId: number, staffId: number) => {
+    try {
+      const response = await fetch(
+        "/api/booking-service-staff-rela/delete-booking-service-staff-rela",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            _BookingSetupCode: code,
+            _ServiceId: serviceId.toString(),
+            _StaffId: staffId.toString(),
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete staff assignment");
+      }
+
+      // Refresh the assigned staff list
+      await loadAssignedStaff(serviceId);
+      alert("Staff assignment deleted successfully!");
+    } catch (err: any) {
+      console.error("Error deleting assigned staff:", err);
+      alert(err.message || "Failed to delete staff assignment");
+    }
+  };
+
+  // Open view assigned staff dialog
+  const openViewAssignedStaff = async (service: any) => {
+    setSelectedService(service);
+    setViewStaffDialogOpen(true);
+    await loadAssignedStaff(service.BookingParameterValueId);
   };
 
   useEffect(() => {
     loadValues();
     loadStaff();
-    loadAssignments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, parameterId]);
 
@@ -168,11 +232,14 @@ export default function ServicesPage() {
         _BookingParameterValueService: "Yes",
       };
 
-      const res = await fetch("/api/booking-parameter/update-booking-parameter-value", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const res = await fetch(
+        "/api/booking-parameter/update-booking-parameter-value",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
 
       const json = await res.json();
       if (!res.ok) throw new Error(json?.message || "Update failed");
@@ -199,11 +266,14 @@ export default function ServicesPage() {
         _BookingParameterValueId: String(deleteItem.BookingParameterValueId),
       };
 
-      const res = await fetch("/api/booking-parameter/delete-booking-parameter-value", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const res = await fetch(
+        "/api/booking-parameter/delete-booking-parameter-value",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
 
       const json = await res.json();
       if (!res.ok) throw new Error(json?.message || "Delete failed");
@@ -234,11 +304,14 @@ export default function ServicesPage() {
         _BookingParameterValueService: "Yes",
       };
 
-      const res = await fetch("/api/booking-parameter/create-booking-parameter-value", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const res = await fetch(
+        "/api/booking-parameter/create-booking-parameter-value",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
 
       const json = await res.json();
       if (!res.ok) throw new Error(json?.message || "Create failed");
@@ -275,11 +348,14 @@ export default function ServicesPage() {
         _StaffCode: staff?.BookingParameterValueCode || "",
       };
 
-      const res = await fetch("/api/booking-service-staff-rela/create-booking-service-staff-rela", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const res = await fetch(
+        "/api/booking-service-staff-rela/create-booking-service-staff-rela",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
 
       const json = await res.json();
       if (!res.ok) throw new Error(json?.message || "Assignment failed");
@@ -288,62 +364,12 @@ export default function ServicesPage() {
       setAssignDialogOpen(false);
       setSelectedStaffId(null);
       setSelectedService(null);
-      await loadAssignments(); // Refresh assignments
     } catch (err: any) {
       console.error(err);
       alert(err.message || "Failed to assign service");
     } finally {
       setAssigning(false);
     }
-  };
-
-  // Delete assignment function
-  const handleDeleteAssignment = async () => {
-    if (!assignmentToDelete) return;
-    setDeletingAssignment(true);
-
-    try {
-      const body = {
-        _BookingSetupCode: code,
-        _ServiceId: assignmentToDelete.serviceId,
-        _StaffId: assignmentToDelete.staffId,
-      };
-
-      const res = await fetch("/api/booking-service-staff-rela/delete-booking-service-staff-rela", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      const json = await res.json();
-      if (!res.ok)
-        throw new Error(json?.message || "Failed to delete assignment");
-
-      alert("Assignment deleted successfully!");
-      setAssignmentToDelete(null);
-      await loadAssignments(); // Refresh assignments
-    } catch (err: any) {
-      console.error(err);
-      alert(err.message || "Failed to delete assignment");
-    } finally {
-      setDeletingAssignment(false);
-    }
-  };
-
-  // Get assigned staff for a service
-  const getAssignedStaffForService = (serviceId: string) => {
-    return assignments
-      .filter((assignment: any) => assignment.ServiceId === serviceId)
-      .map((assignment: any) => {
-        const staff = staffList.find(
-          (s) => s.BookingParameterValueId.toString() === assignment.StaffId
-        );
-        return {
-          ...assignment,
-          staffName: staff?.BookingParameterValueCode || "Unknown",
-          staffDescription: staff?.BookingParamterValueDescription || "",
-        };
-      });
   };
 
   return (
@@ -438,16 +464,12 @@ export default function ServicesPage() {
                     <TableHead className="text-right w-40">
                       Duration (mins)
                     </TableHead>
-                    <TableHead>Assigned Staff</TableHead>
-                    <TableHead className="w-40 text-center">Actions</TableHead>
+                    <TableHead className="w-60 text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
 
                 <TableBody>
                   {values.map((v: any) => {
-                    const assignedStaff = getAssignedStaffForService(
-                      v.BookingParameterValueId.toString()
-                    );
                     return (
                       <TableRow
                         key={v.BookingParameterValueId}
@@ -462,42 +484,6 @@ export default function ServicesPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           {v.BookingParameterValueDuration}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {assignedStaff.length > 0 ? (
-                              assignedStaff.map((assignment) => (
-                                <Badge
-                                  key={`${assignment.ServiceId}-${assignment.StaffId}`}
-                                  variant="secondary"
-                                  className="flex items-center gap-1"
-                                >
-                                  <Users className="w-3 h-3" />
-                                  {assignment.staffName}
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                                    onClick={() =>
-                                      setAssignmentToDelete({
-                                        serviceId: assignment.ServiceId,
-                                        staffId: assignment.StaffId,
-                                        serviceCode:
-                                          v.BookingParameterValueCode,
-                                        staffCode: assignment.staffName,
-                                      })
-                                    }
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </Button>
-                                </Badge>
-                              ))
-                            ) : (
-                              <span className="text-muted-foreground text-sm">
-                                No staff assigned
-                              </span>
-                            )}
-                          </div>
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-2">
@@ -524,6 +510,14 @@ export default function ServicesPage() {
                               }}
                             >
                               Assign Staff
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openViewAssignedStaff(v)}
+                            >
+                              <Users className="w-4 h-4 mr-1" />
+                              View Staff
                             </Button>
                           </div>
                         </TableCell>
@@ -717,37 +711,95 @@ export default function ServicesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Assignment Confirmation Dialog */}
+      {/* View Assigned Staff Dialog */}
       <Dialog
-        open={!!assignmentToDelete}
-        onOpenChange={(open) => {
-          if (!open) setAssignmentToDelete(null);
-        }}
+        open={viewStaffDialogOpen}
+        onOpenChange={(open) => !open && setViewStaffDialogOpen(false)}
       >
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Remove Staff Assignment</DialogTitle>
+            <DialogTitle>
+              Assigned Staff for {selectedService?.BookingParameterValueCode}
+            </DialogTitle>
           </DialogHeader>
 
-          <div>
-            <p>
-              Are you sure you want to remove staff{" "}
-              <strong>{assignmentToDelete?.staffCode}</strong> from service{" "}
-              <strong>{assignmentToDelete?.serviceCode}</strong>?
-            </p>
-          </div>
+          <div className="grid gap-4">
+            {loadingAssignedStaff ? (
+              <p className="text-muted-foreground">Loading assigned staff...</p>
+            ) : assignedStaff.length === 0 ? (
+              <p className="text-muted-foreground">
+                No staff assigned to this service.
+              </p>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Staff ID</TableHead>
+                      <TableHead>Staff Code</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Array.isArray(assignedStaff) &&
+                      assignedStaff.map((assignment: any) => {
+                        const staff = staffList.find(
+                          (s) =>
+                            s.BookingParameterValueId === assignment.StaffId
+                        );
+                        return (
+                          <TableRow
+                            key={`${assignment.ServiceId}-${assignment.StaffId}`}
+                          >
+                            <TableCell>{assignment.StaffId}</TableCell>
+                            <TableCell className="font-medium">
+                              {assignment.StaffCode}
+                            </TableCell>
+                            <TableCell>
+                              {assignment.StaffName ||
+                                staff?.BookingParamterValueDescription ||
+                                "N/A"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() =>
+                                  deleteAssignedStaff(
+                                    selectedService.BookingParameterValueId,
+                                    assignment.StaffId
+                                  )
+                                }
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
 
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="ghost" onClick={() => setAssignmentToDelete(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteAssignment}
-              disabled={deletingAssignment}
-            >
-              {deletingAssignment ? "Removing..." : "Remove"}
-            </Button>
+            <DialogFooter className="flex justify-end gap-2 mt-4">
+              <Button
+                variant="ghost"
+                onClick={() => setViewStaffDialogOpen(false)}
+              >
+                Close
+              </Button>
+              <Button
+                onClick={() => {
+                  setViewStaffDialogOpen(false);
+                  setSelectedService(selectedService);
+                  setAssignDialogOpen(true);
+                }}
+              >
+                Assign More Staff
+              </Button>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>

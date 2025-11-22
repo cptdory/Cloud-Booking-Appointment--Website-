@@ -63,11 +63,11 @@ export function AppSidebar({ ...props }) {
   // User display info
   const userDisplayInfo = React.useMemo(() => {
     if (!userData) {
-      return { name: "Loading...", email: "Loading...", avatar: "/avatars/shadcn.jpg", role: "customer" as const };
+      return { name: "Loading...", email: "Loading...", avatar: "/avatars/client.png", role: "customer" as const };
     }
     return userData.role === "admin"
-      ? { name: userData.name, email: "Administrator", avatar: "/avatars/shadcn.jpg", role: "admin" as const, staffCode: userData.staffCode }
-      : { name: userData.name, email: userData.email, avatar: "/avatars/shadcn.jpg", role: "customer" as const };
+      ? { name: userData.name, email: "Administrator", avatar: "/avatars/admin.png", role: "admin" as const, staffCode: userData.staffCode }
+      : { name: userData.name, email: userData.email, avatar: "/avatars/client.png", role: "customer" as const };
   }, [userData]);
 
   // Nav groups

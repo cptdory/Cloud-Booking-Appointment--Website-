@@ -183,7 +183,6 @@ export const useSidebarStore = create<SidebarState>()((set, get) => ({
 
       const setupData = json.value[0];
       const params = setupData.BookingParameter || [];
-      const businessHours = setupData.BookingBusinessHours || [];
 
       const parameterNav: NavItem[] = params.map((p: any) => {
         const lower = p.BookingParameterCode.toLowerCase();
@@ -198,10 +197,6 @@ export const useSidebarStore = create<SidebarState>()((set, get) => ({
           icon,
         };
       });
-
-      if (businessHours.length > 0) {
-        parameterNav.push({ title: "Business Hours", url: `/business-hours?code=${teamCode}`, icon: Clock });
-      }
 
       set({ 
         dynamicNav: parameterNav, 

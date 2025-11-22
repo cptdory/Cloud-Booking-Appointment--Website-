@@ -37,6 +37,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, CheckCircle, Info, XCircle } from "lucide-react";
 
 interface FormData {
   branch: string;
@@ -112,9 +114,26 @@ export default function BookingForm() {
   // Data states
   const [branches, setBranches] = useState<Branch[]>([]);
   const [bookingSetup, setBookingSetup] = useState<BookingSetup | null>(null);
-  const [staffAssignments, setStaffAssignments] = useState<StaffAssignment[]>([]);
+  const [staffAssignments, setStaffAssignments] = useState<StaffAssignment[]>(
+    []
+  );
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [availableTimeSlots, setAvailableTimeSlots] = useState<AvailableTimeSlot[]>([]);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<
+    AvailableTimeSlot[]
+  >([]);
+
+  // Alert states
+  const [alert, setAlert] = useState<{
+    show: boolean;
+    title: string;
+    description: string;
+    variant: "default" | "destructive";
+  }>({
+    show: false,
+    title: "",
+    description: "",
+    variant: "default",
+  });
 
   const [loading, setLoading] = useState({
     branches: false,
@@ -137,6 +156,25 @@ export default function BookingForm() {
   });
 
   const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // Show alert function
+  const showAlert = (
+    title: string,
+    description: string,
+    variant: "default" | "destructive" = "default"
+  ) => {
+    setAlert({
+      show: true,
+      title,
+      description,
+      variant,
+    });
+
+    // Auto-hide after 6 seconds
+    setTimeout(() => {
+      setAlert((prev) => ({ ...prev, show: false }));
+    }, 6000);
+  };
 
   // Authentication check
   useEffect(() => {
@@ -174,7 +212,9 @@ export default function BookingForm() {
 
         if (!res.ok) {
           const errorData = await res.json();
-          throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
+          throw new Error(
+            errorData.error || `HTTP error! status: ${res.status}`
+          );
         }
 
         const data = await res.json();
@@ -183,10 +223,13 @@ export default function BookingForm() {
         // Data is already parsed by API route
         const branchesData = data.value || [];
         setBranches(branchesData);
-
       } catch (error: any) {
         console.error("❌ Error fetching branches:", error);
-        alert(`Failed to load branches: ${error.message}`);
+        showAlert(
+          "Failed to Load Branches",
+          error.message || "Please try again later.",
+          "destructive"
+        );
       } finally {
         setLoading((prev) => ({ ...prev, branches: false }));
       }
@@ -228,7 +271,11 @@ export default function BookingForm() {
       setCurrentStep(2);
     } catch (error) {
       console.error("❌ Error fetching branch details:", error);
-      alert("Failed to load branch details");
+      showAlert(
+        "Failed to Load Branch Details",
+        "Please try selecting a different branch or try again later.",
+        "destructive"
+      );
     } finally {
       setLoading((prev) => ({ ...prev, branchDetails: false }));
     }
@@ -238,19 +285,24 @@ export default function BookingForm() {
   const fetchStaffAssignments = async (serviceId: string) => {
     setLoading((prev) => ({ ...prev, staffAssignments: true }));
     try {
-      const res = await fetch("/api/booking-service-staff-rela/get-booking-service-staff-rela", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          _BookingSetupCode: formData.branch,
-          _ServiceId: serviceId,
-        }),
-      });
+      const res = await fetch(
+        "/api/booking-service-staff-rela/get-booking-service-staff-rela",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            _BookingSetupCode: formData.branch,
+            _ServiceId: serviceId,
+          }),
+        }
+      );
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
+        const errorData = await res
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
         throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
       }
 
@@ -268,7 +320,11 @@ export default function BookingForm() {
       setCurrentStep(3);
     } catch (error: any) {
       console.error("❌ Error fetching staff assignments:", error);
-      alert(`Failed to load staff assignments: ${error.message}`);
+      showAlert(
+        "Failed to Load Staff Assignments",
+        error.message || "Please try selecting a different service.",
+        "destructive"
+      );
     } finally {
       setLoading((prev) => ({ ...prev, staffAssignments: false }));
     }
@@ -278,18 +334,20 @@ export default function BookingForm() {
   useEffect(() => {
     const fetchCustomers = async () => {
       if (userRole !== "admin") return;
-      
+
       setLoading((prev) => ({ ...prev, customers: true }));
       try {
         const res = await fetch("/api/customer/get-customers");
         if (!res.ok) {
           const errorData = await res.json();
-          throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
+          throw new Error(
+            errorData.error || `HTTP error! status: ${res.status}`
+          );
         }
-        
+
         const data = await res.json();
         console.log("📦 Customers response:", data);
-        
+
         // Parse customers data
         let customersData = data.value || [];
         if (typeof customersData === "string") {
@@ -302,12 +360,16 @@ export default function BookingForm() {
           name: customer.Name || customer.DisplayName,
           email: customer.EMail || customer.Email,
         }));
-        
+
         console.log("👥 Processed customers:", customerOptions);
         setCustomers(customerOptions);
       } catch (error: any) {
         console.error("❌ Error fetching customers:", error);
-        alert(`Failed to load customers: ${error.message}`);
+        showAlert(
+          "Failed to Load Customers",
+          error.message || "Customer data could not be loaded.",
+          "destructive"
+        );
       } finally {
         setLoading((prev) => ({ ...prev, customers: false }));
       }
@@ -320,7 +382,13 @@ export default function BookingForm() {
 
   // Fetch available time slots when all prerequisites are met
   const fetchAvailableTimeSlots = async () => {
-    if (!formData.branch || !formData.service || !formData.staff || !formData.room || !formData.date) {
+    if (
+      !formData.branch ||
+      !formData.service ||
+      !formData.staff ||
+      !formData.room ||
+      !formData.date
+    ) {
       setAvailableTimeSlots([]);
       return;
     }
@@ -328,35 +396,43 @@ export default function BookingForm() {
     setLoading((prev) => ({ ...prev, timeSlots: true }));
 
     try {
-      const response = await fetch("/api/available-timeslot/get-available-timeslot", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          _BookingSetupCode: formData.branch,
-          _BookingDate: formData.date,
-          _BookingParameterCount: "3",
-          _BookingParameterIDs: "4|5|6",
-          _BookingParameterValueIDs: `${formData.service}|${formData.staff}|${formData.room}`,
-        }),
-      });
+      const response = await fetch(
+        "/api/available-timeslot/get-available-timeslot",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            _BookingSetupCode: formData.branch,
+            _BookingDate: formData.date,
+            _BookingParameterCount: "3",
+            _BookingParameterIDs: "4|5|6",
+            _BookingParameterValueIDs: `${formData.service}|${formData.staff}|${formData.room}`,
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to fetch available time slots");
+        throw new Error(
+          errorData.error || "Failed to fetch available time slots"
+        );
       }
-      
+
       const data = await response.json();
       console.log("📦 Available time slots response:", data);
 
       // Data is already parsed by the API route
       const slotsData = data.value || [];
       setAvailableTimeSlots(slotsData);
-      
     } catch (error: any) {
       console.error("❌ Error fetching time slots:", error);
-      alert(`Failed to load time slots: ${error.message}`);
+      showAlert(
+        "Failed to Load Time Slots",
+        error.message || "Please try selecting a different date or time.",
+        "destructive"
+      );
       setAvailableTimeSlots([]);
     } finally {
       setLoading((prev) => ({ ...prev, timeSlots: false }));
@@ -365,7 +441,14 @@ export default function BookingForm() {
 
   // Load time slots when date is selected and all prerequisites are met
   useEffect(() => {
-    if (currentStep >= 6 && formData.date && formData.branch && formData.service && formData.staff && formData.room) {
+    if (
+      currentStep >= 6 &&
+      formData.date &&
+      formData.branch &&
+      formData.service &&
+      formData.staff &&
+      formData.room
+    ) {
       fetchAvailableTimeSlots();
     }
   }, [formData.date, currentStep]);
@@ -373,7 +456,7 @@ export default function BookingForm() {
   const handleStepSelection = (step: number) => {
     if (step < currentStep) {
       setCurrentStep(step);
-      
+
       // Reset subsequent steps data
       const resetData: Partial<FormData> = {};
       if (step < 2) resetData.branch = "";
@@ -385,9 +468,9 @@ export default function BookingForm() {
         resetData.selectedTime = "";
         setAvailableTimeSlots([]);
       }
-      
-      setFormData(prev => ({ ...prev, ...resetData }));
-      
+
+      setFormData((prev) => ({ ...prev, ...resetData }));
+
       // Reset data states for subsequent steps
       if (step < 2) {
         setBookingSetup(null);
@@ -435,39 +518,59 @@ export default function BookingForm() {
     }));
   };
 
-  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>): Promise<void> => {
+  const handleSubmit = async (
+    e: React.MouseEvent<HTMLButtonElement>
+  ): Promise<void> => {
     e.preventDefault();
 
-    if (!formData.branch || !formData.service || !formData.staff || !formData.room || !formData.date || !formData.selectedTime || !formData.customerNo) {
-      alert("Please fill in all fields");
+    if (
+      !formData.branch ||
+      !formData.service ||
+      !formData.staff ||
+      !formData.room ||
+      !formData.date ||
+      !formData.selectedTime ||
+      !formData.customerNo
+    ) {
+      showAlert(
+        "Missing Information",
+        "Please fill in all required fields before submitting.",
+        "destructive"
+      );
       return;
     }
 
     setLoading((prev) => ({ ...prev, submitting: true }));
 
     try {
-      const response = await fetch("/api/available-timeslot/book-available-timeslot", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          _BookingSetupCode: formData.branch,
-          _BookingDate: formData.date,
-          _BookingStartTime: formData.selectedTime,
-          _BookingParameterCount: 3,
-          _BookingParameterIDs: "4|5|6",
-          _BookingParameterValueIDs: `${formData.service}|${formData.staff}|${formData.room}`,
-          _CustomerNo: formData.customerNo,
-          _BookingNote: formData.bookingNote || "Booking from web app",
-        }),
-      });
+      const response = await fetch(
+        "/api/available-timeslot/book-available-timeslot",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            _BookingSetupCode: formData.branch,
+            _BookingDate: formData.date,
+            _BookingStartTime: formData.selectedTime,
+            _BookingParameterCount: 3,
+            _BookingParameterIDs: "4|5|6",
+            _BookingParameterValueIDs: `${formData.service}|${formData.staff}|${formData.room}`,
+            _CustomerNo: formData.customerNo,
+            _BookingNote: formData.bookingNote || "Booking from web app",
+          }),
+        }
+      );
 
       if (!response.ok) throw new Error("Failed to create booking");
       const result = await response.json();
 
       console.log("✅ Booking created:", result);
-      alert("Booking confirmed successfully!");
+      showAlert(
+        "Booking Confirmed!",
+        "Your appointment has been successfully scheduled."
+      );
 
       // Reset form
       setFormData({
@@ -486,7 +589,11 @@ export default function BookingForm() {
       setStaffAssignments([]);
     } catch (error) {
       console.error("❌ Error creating booking:", error);
-      alert("Failed to create booking. Please try again.");
+      showAlert(
+        "Booking Failed",
+        "Failed to create booking. Please try again.",
+        "destructive"
+      );
     } finally {
       setLoading((prev) => ({ ...prev, submitting: false }));
     }
@@ -504,14 +611,16 @@ export default function BookingForm() {
   }, [customerNo, userRole, currentStep]);
 
   // Get services from booking setup
-  const services = bookingSetup?.BookingParameter?.find(
-    param => param.BookingParameterService
-  )?.BookingParameterValue || [];
+  const services =
+    bookingSetup?.BookingParameter?.find(
+      (param) => param.BookingParameterService
+    )?.BookingParameterValue || [];
 
-  // Get rooms from booking setup  
-  const rooms = bookingSetup?.BookingParameter?.find(
-    param => !param.BookingParameterStaff && !param.BookingParameterService
-  )?.BookingParameterValue || [];
+  // Get rooms from booking setup
+  const rooms =
+    bookingSetup?.BookingParameter?.find(
+      (param) => !param.BookingParameterStaff && !param.BookingParameterService
+    )?.BookingParameterValue || [];
 
   // Show loading while checking authentication
   if (checkingAuth) {
@@ -519,7 +628,9 @@ export default function BookingForm() {
       <div className="container mx-auto p-6 max-w-6xl flex items-center justify-center min-h-64">
         <div className="flex items-center gap-2">
           <Loader2 className="w-6 h-6 animate-spin" />
-          <span className="text-muted-foreground">Checking authentication...</span>
+          <span className="text-muted-foreground">
+            Checking authentication...
+          </span>
         </div>
       </div>
     );
@@ -527,6 +638,22 @@ export default function BookingForm() {
 
   return (
     <div className="container mx-auto p-6 max-w-6xl space-y-6">
+      {/* Alert Component */}
+      {alert.show && (
+        <Alert
+          variant={alert.variant}
+          className="mb-6 animate-in slide-in-from-top duration-300"
+        >
+          {alert.variant === "destructive" && <XCircle className="h-4 w-4" />}
+          {alert.variant === "default" && <Info className="h-4 w-4" />}
+
+          <AlertDescription className="flex flex-col">
+            <span className="font-semibold">{alert.title}</span>
+            <span>{alert.description}</span>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* User Info Banner */}
       <Card className="bg-muted/50">
         <CardContent className="p-4">
@@ -534,9 +661,13 @@ export default function BookingForm() {
             <div className="flex items-center gap-3">
               <User className="w-5 h-5 text-primary" />
               <div>
-                <div className="font-semibold">Welcome, {username || "User"}</div>
+                <div className="font-semibold">
+                  Welcome, {username || "User"}
+                </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Badge variant={userRole === "admin" ? "default" : "secondary"}>
+                  <Badge
+                    variant={userRole === "admin" ? "default" : "secondary"}
+                  >
                     {userRole === "admin" ? "Administrator" : "Customer"}
                   </Badge>
                   {userRole !== "admin" && customerNo && (
@@ -622,10 +753,14 @@ export default function BookingForm() {
             {loading.branches ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                <span className="text-muted-foreground">Loading branches...</span>
+                <span className="text-muted-foreground">
+                  Loading branches...
+                </span>
               </div>
             ) : branches.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No branches available</p>
+              <p className="text-center text-muted-foreground py-8">
+                No branches available
+              </p>
             ) : (
               <RadioGroup
                 value={formData.branch}
@@ -648,7 +783,9 @@ export default function BookingForm() {
                         className="mt-1"
                       />
                       <div className="ml-3 flex-1">
-                        <div className="font-semibold">{branch.Description}</div>
+                        <div className="font-semibold">
+                          {branch.Description}
+                        </div>
                         <div className="text-sm text-muted-foreground">
                           {branch.Location} • ID: {branch.Code}
                         </div>
@@ -675,7 +812,9 @@ export default function BookingForm() {
             {loading.branchDetails ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                <span className="text-muted-foreground">Loading services...</span>
+                <span className="text-muted-foreground">
+                  Loading services...
+                </span>
               </div>
             ) : services.length === 0 ? (
               <p className="text-muted-foreground">No services available</p>
@@ -690,7 +829,8 @@ export default function BookingForm() {
                       key={service.BookingParameterValueId}
                       htmlFor={`service-${service.BookingParameterValueId}`}
                       className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-                        formData.service === service.BookingParameterValueId.toString()
+                        formData.service ===
+                        service.BookingParameterValueId.toString()
                           ? "border-primary bg-primary/5"
                           : "border-border hover:border-primary/50"
                       }`}
@@ -700,9 +840,12 @@ export default function BookingForm() {
                         id={`service-${service.BookingParameterValueId}`}
                       />
                       <div className="ml-3">
-                        <div className="font-medium">{service.BookingParamterValueDescription}</div>
+                        <div className="font-medium">
+                          {service.BookingParamterValueDescription}
+                        </div>
                         <div className="text-sm text-muted-foreground">
-                          {service.BookingParameterValueDuration} mins • {service.BookingParameterValueCode}
+                          {service.BookingParameterValueDuration} mins •{" "}
+                          {service.BookingParameterValueCode}
                         </div>
                       </div>
                     </Label>
@@ -730,7 +873,9 @@ export default function BookingForm() {
                 <span className="text-muted-foreground">Loading staff...</span>
               </div>
             ) : staffAssignments.length === 0 ? (
-              <p className="text-muted-foreground">No staff available for this service</p>
+              <p className="text-muted-foreground">
+                No staff available for this service
+              </p>
             ) : (
               <RadioGroup
                 value={formData.staff}
@@ -753,7 +898,9 @@ export default function BookingForm() {
                       />
                       <div className="ml-3">
                         <div className="font-medium">{staff.StaffName}</div>
-                        <div className="text-sm text-muted-foreground">ID: {staff.StaffCode}</div>
+                        <div className="text-sm text-muted-foreground">
+                          ID: {staff.StaffCode}
+                        </div>
                       </div>
                     </Label>
                   ))}
@@ -787,7 +934,8 @@ export default function BookingForm() {
                       key={room.BookingParameterValueId}
                       htmlFor={`room-${room.BookingParameterValueId}`}
                       className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-                        formData.room === room.BookingParameterValueId.toString()
+                        formData.room ===
+                        room.BookingParameterValueId.toString()
                           ? "border-primary bg-primary/5"
                           : "border-border hover:border-primary/50"
                       }`}
@@ -797,7 +945,9 @@ export default function BookingForm() {
                         id={`room-${room.BookingParameterValueId}`}
                       />
                       <div className="ml-3">
-                        <div className="font-medium">{room.BookingParamterValueDescription}</div>
+                        <div className="font-medium">
+                          {room.BookingParamterValueDescription}
+                        </div>
                         <div className="text-sm text-muted-foreground">
                           {room.BookingParameterValueCode}
                         </div>
@@ -839,7 +989,9 @@ export default function BookingForm() {
             <div className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-primary" />
               <CardTitle>
-                {userRole === "admin" ? "Step 6: Select Customer" : "Step 6: Your Information"}
+                {userRole === "admin"
+                  ? "Step 6: Select Customer"
+                  : "Step 6: Your Information"}
               </CardTitle>
             </div>
           </CardHeader>
@@ -849,19 +1001,26 @@ export default function BookingForm() {
                 {loading.customers ? (
                   <div className="flex items-center justify-center py-4">
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    <span className="text-muted-foreground">Loading customers...</span>
+                    <span className="text-muted-foreground">
+                      Loading customers...
+                    </span>
                   </div>
                 ) : (
                   <Select
                     value={formData.customerNo}
-                    onValueChange={(value) => handleInputChange("customerNo", value)}
+                    onValueChange={(value) =>
+                      handleInputChange("customerNo", value)
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a customer" />
                     </SelectTrigger>
                     <SelectContent>
                       {customers.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.customerNo}>
+                        <SelectItem
+                          key={customer.id}
+                          value={customer.customerNo}
+                        >
                           <div className="flex flex-col">
                             <span className="font-medium">{customer.name}</span>
                             <span className="text-xs text-muted-foreground">
@@ -875,7 +1034,9 @@ export default function BookingForm() {
                   </Select>
                 )}
                 {customers.length === 0 && !loading.customers && (
-                  <p className="text-sm text-muted-foreground mt-2">No customers available</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    No customers available
+                  </p>
                 )}
               </>
             ) : (
@@ -903,20 +1064,36 @@ export default function BookingForm() {
             {loading.timeSlots ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                <span className="text-muted-foreground">Loading available time slots...</span>
+                <span className="text-muted-foreground">
+                  Loading available time slots...
+                </span>
               </div>
             ) : (
               <>
                 {availableTimeSlots.length > 0 && (
                   <div className="flex items-center gap-4 mb-4 p-3 bg-muted rounded-lg text-sm">
-                    <span>Total slots: <strong>{availableTimeSlots.length}</strong></span>
+                    <span>
+                      Total slots: <strong>{availableTimeSlots.length}</strong>
+                    </span>
                     <Separator orientation="vertical" className="h-4" />
                     <span className="text-green-600">
-                      Available: <strong>{availableTimeSlots.filter((slot) => slot.available).length}</strong>
+                      Available:{" "}
+                      <strong>
+                        {
+                          availableTimeSlots.filter((slot) => slot.available)
+                            .length
+                        }
+                      </strong>
                     </span>
                     <Separator orientation="vertical" className="h-4" />
                     <span className="text-destructive">
-                      Booked: <strong>{availableTimeSlots.filter((slot) => !slot.available).length}</strong>
+                      Booked:{" "}
+                      <strong>
+                        {
+                          availableTimeSlots.filter((slot) => !slot.available)
+                            .length
+                        }
+                      </strong>
                     </span>
                   </div>
                 )}
@@ -928,7 +1105,11 @@ export default function BookingForm() {
                       type="button"
                       onClick={() => handleTimeSlotClick(slot.time)}
                       disabled={!slot.available}
-                      variant={formData.selectedTime === slot.time ? "default" : "outline"}
+                      variant={
+                        formData.selectedTime === slot.time
+                          ? "default"
+                          : "outline"
+                      }
                       className="min-w-[100px]"
                     >
                       {slot.time}
@@ -938,10 +1119,14 @@ export default function BookingForm() {
                 </div>
 
                 {!formData.selectedTime && availableTimeSlots.length > 0 && (
-                  <p className="text-sm text-muted-foreground mt-4">Please select a time slot</p>
+                  <p className="text-sm text-muted-foreground mt-4">
+                    Please select a time slot
+                  </p>
                 )}
                 {availableTimeSlots.length === 0 && formData.date && (
-                  <p className="text-sm text-destructive mt-4">No available time slots for selected date</p>
+                  <p className="text-sm text-destructive mt-4">
+                    No available time slots for selected date
+                  </p>
                 )}
               </>
             )}
@@ -962,7 +1147,9 @@ export default function BookingForm() {
             <CardContent>
               <Textarea
                 value={formData.bookingNote}
-                onChange={(e) => handleInputChange("bookingNote", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("bookingNote", e.target.value)
+                }
                 rows={4}
                 placeholder="Any special requirements or notes about your appointment..."
                 className="resize-none"
@@ -975,7 +1162,11 @@ export default function BookingForm() {
               <Button
                 type="button"
                 onClick={handleSubmit}
-                disabled={loading.submitting || !formData.selectedTime || !formData.customerNo}
+                disabled={
+                  loading.submitting ||
+                  !formData.selectedTime ||
+                  !formData.customerNo
+                }
                 className="w-full h-12 text-base"
                 size="lg"
               >
