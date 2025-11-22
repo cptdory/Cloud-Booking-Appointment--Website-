@@ -1,7 +1,7 @@
 "use client";
 
 import { type LucideIcon } from "lucide-react";
-
+import Link from "next/link";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -56,9 +56,9 @@ export function NavMain({
                           asChild
                           className="text-blue-100 hover:bg-blue-700 hover:text-white"
                         >
-                          <a href={subItem.url}>
+                          <Link href={subItem.url}>
                             <span>{subItem.title}</span>
-                          </a>
+                          </Link>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
                     ))}

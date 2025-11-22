@@ -4,6 +4,10 @@ import jwt from "jsonwebtoken";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    
+    // Console the incoming request body
+    console.log('Incoming request body:', JSON.stringify(body, null, 2));
+    
     const { _PortalUsername, _PortalPassword, _IsAdminLogin } = body;
 
     console.log('Login attempt:', { _PortalUsername, _IsAdminLogin });
@@ -57,13 +61,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if login was successful based on your BC API response structure
-    // If BC returns empty staff data, consider it failed
     const isAdmin = String(_IsAdminLogin) === "true";
 
     if (isAdmin) {
       // ADMIN LOGIN: Validate staff data
-      if (!loginResult.StaffCode || !loginResult.StaffName) {
+      if (!loginResult.StaffCode) {
         console.log('Admin validation failed - missing staff fields');
         return NextResponse.json(
           { error: "Invalid admin credentials" },

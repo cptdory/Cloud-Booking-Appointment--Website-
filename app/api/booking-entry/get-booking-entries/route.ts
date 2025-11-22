@@ -1,14 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 let memoryCache: { access_token: string; expires_at: number } | null = null;
 
 async function getAccessToken() {
   const isVercel = !!process.env.VERCEL;
-  
-  if (isVercel) {
-    if (memoryCache && Date.now() < memoryCache.expires_at) {
-      return memoryCache.access_token;
-    }
+
+  if (isVercel && memoryCache && Date.now() < memoryCache.expires_at) {
+    return memoryCache.access_token;
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
@@ -27,19 +25,24 @@ async function getAccessToken() {
   return data.access_token;
 }
 
-export async function GET() {
+export async function POST(request: NextRequest) {
   try {
-    console.log("GET /api/customer/get-customers called");
+    const body = await request.json();
+    console.log("Get entries request body:", body);
+    console.log("Body type:", typeof body);
+    console.log("Body keys:", Object.keys(body));
+    console.log("Body values:", Object.values(body));
+    console.log("Full body stringified:", JSON.stringify(body, null, 2));
+    
     const accessToken = await getAccessToken();
-    console.log("Access token obtained");
-
     const tenantId = process.env.TENANT_ID!;
     const environment = "SandboxDev2";
     const company = "SQUADLETHICS";
 
-    const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_GetCustomers?Company=${company}`;
+    const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_GetBookingEntries?Company=${company}`;
 
     console.log("Calling Business Central API:", url);
+    console.log("Sending to BC API:", JSON.stringify(body, null, 2));
 
     const res = await fetch(url, {
       method: "POST",
@@ -48,7 +51,7 @@ export async function GET() {
         Accept: "application/json",
         "Content-Type": "application/json",
       },
-      body: "",
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
@@ -58,35 +61,19 @@ export async function GET() {
         statusText: res.statusText,
         response: text,
       });
-      throw new Error(`Failed request (${res.status}): ${res.statusText}`);
+      throw new Error(`Failed to fetch booking entries: ${res.status}`);
     }
 
     const json = await res.json();
-    console.log("Business Central API response:", json);
-
-    if (!json?.value) {
-      console.warn("No value in response, returning empty array");
-      return NextResponse.json({ value: [] });
-    }
-
-    // Parse the stringified JSON if needed
-    let value = json.value;
-    if (typeof value === "string") {
-      try {
-        value = JSON.parse(value);
-      } catch {
-        value = [];
-      }
-    }
-
-    const finalData = Array.isArray(value) ? value : [value];
-    console.log("Final customers data:", finalData);
-
-    return NextResponse.json({ value: finalData });
-  } catch (err: any) {
-    console.error("GET error:", err);
+    console.log("Booking entries response received");
+    console.log("Response type:", typeof json);
+    console.log("Response keys:", Object.keys(json));
+    
+    return NextResponse.json(json);
+  } catch (error: any) {
+    console.error('Error fetching booking entries:', error);
     return NextResponse.json(
-      { error: "Failed to fetch customers", message: err.message },
+      { error: 'Failed to fetch booking entries', message: error.message },
       { status: 500 }
     );
   }

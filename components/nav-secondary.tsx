@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { type Icon } from "@tabler/icons-react"
-
+import Link from "next/link"
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -31,10 +31,10 @@ export function NavSecondary({
                 asChild
                 className="text-blue-100 hover:bg-blue-700 hover:text-white"
               >
-                <a href={item.url}>
+                <Link href={item.url}>
                   <item.icon className="text-blue-300" />
                   <span>{item.title}</span>
-                </a>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}

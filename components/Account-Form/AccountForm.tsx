@@ -93,7 +93,7 @@ export default function AccountForm() {
           return;
         }
 
-        const profileRes = await fetch("/api/get-customer", {
+        const profileRes = await fetch("/api/customer/get-customer", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -161,7 +161,7 @@ export default function AccountForm() {
     setMessage(null);
 
     try {
-      const res = await fetch("/api/update-customer", {
+      const res = await fetch("/api/customer/update-customer-details", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -217,7 +217,7 @@ const handlePasswordChange = async () => {
     const customerNo = authData.user.customerNo;
 
     // Send request to your Next.js API route
-    const res = await fetch("/api/update-customer-password", {
+    const res = await fetch("/api/customer/update-customer-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
