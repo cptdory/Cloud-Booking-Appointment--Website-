@@ -5,11 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 
-import {
-  Sheet,
-  SheetTrigger,
-  SheetContent,
-} from "@/components/ui/sheet";
+import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet";
 
 import {
   NavigationMenu,
@@ -27,9 +23,7 @@ export default function Header() {
   const [sticky, setSticky] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setSticky(window.scrollY > 80);
-    };
+    const handleScroll = () => setSticky(window.scrollY > 80);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -45,7 +39,7 @@ export default function Header() {
       <div className="container mx-auto flex items-center justify-between py-4">
         
         {/* Logo */}
-        <Link href="/">
+        <Link href="/" className="flex items-center">
           <Image
             src="/images/logo/logo-2.svg"
             alt="Logo"
@@ -84,11 +78,13 @@ export default function Header() {
           </NavigationMenuList>
         </NavigationMenu>
 
-        {/* Actions */}
+        {/* Desktop Actions */}
         <div className="hidden lg:flex items-center gap-4">
-
           <Link href="/signin">
-            <Button variant="ghost" className="text-blue-800 hover:text-blue-600 hover:bg-blue-50 dark:text-white dark:hover:bg-gray-800">
+            <Button
+              variant="ghost"
+              className="text-blue-800 hover:text-blue-600 hover:bg-blue-50 dark:text-white dark:hover:bg-gray-800"
+            >
               Sign In
             </Button>
           </Link>
@@ -106,46 +102,62 @@ export default function Header() {
         <div className="lg:hidden">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline" className="px-3 py-2 border-blue-300 text-blue-800 dark:border-gray-600 dark:text-white">
+              <Button
+                variant="outline"
+                className="px-3 py-2 border-blue-300 text-blue-800 dark:border-gray-600 dark:text-white"
+              >
                 ☰
               </Button>
             </SheetTrigger>
 
-            <SheetContent side="right" className="w-[260px] bg-white dark:bg-gray-900 border-blue-200 dark:border-gray-700">
-              <div className="flex flex-col gap-6 mt-8">
+            <SheetContent
+              side="right"
+              className="w-[260px] px-6 py-6 bg-white dark:bg-gray-900 border-l border-blue-200 dark:border-gray-700"
+            >
+              <div className="flex flex-col gap-6 mt-4">
 
-                {menuData.map((item, idx) =>
-                  item.path ? (
-                    <Link
-                      key={idx}
-                      href={item.path}
-                      className={`text-lg font-medium ${
-                        pathname === item.path
-                          ? "text-blue-600 font-semibold"
-                          : "text-blue-800 hover:text-blue-600 dark:text-gray-300 dark:hover:text-white"
-                      }`}
+                {/* Nav Links */}
+                <div className="flex flex-col gap-4">
+                  {menuData.map(
+                    (item, idx) =>
+                      item.path && (
+                        <Link
+                          key={idx}
+                          href={item.path}
+                          className={`text-lg font-medium ${
+                            pathname === item.path
+                              ? "text-blue-600 font-semibold"
+                              : "text-blue-800 hover:text-blue-600 dark:text-gray-300 dark:hover:text-white"
+                          }`}
+                        >
+                          {item.title}
+                        </Link>
+                      )
+                  )}
+                </div>
+
+                {/* Auth Buttons */}
+                <div className="flex flex-col gap-3 pt-2 border-t border-blue-100 dark:border-gray-700">
+                  <Link href="/signin">
+                    <Button
+                      variant="ghost"
+                      className="w-full text-blue-800 hover:text-blue-600 hover:bg-blue-50 dark:text-white dark:hover:bg-gray-800"
                     >
-                      {item.title}
-                    </Link>
-                  ) : null
-                )}
+                      Sign In
+                    </Button>
+                  </Link>
 
-                <Link href="/signin">
-                  <Button
-                    variant="ghost"
-                    className="w-full text-blue-800 hover:text-blue-600 hover:bg-blue-50 dark:text-white dark:hover:bg-gray-800"
-                  >
-                    Sign In
-                  </Button>
-                </Link>
+                  <Link href="/signup">
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium">
+                      Sign Up
+                    </Button>
+                  </Link>
+                </div>
 
-                <Link href="/signup">
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium">
-                    Sign Up
-                  </Button>
-                </Link>
-
-                <ThemeToggler />
+                {/* Theme Switcher */}
+                <div className="pt-3 border-t border-blue-100 dark:border-gray-700">
+                  <ThemeToggler />
+                </div>
               </div>
             </SheetContent>
           </Sheet>
