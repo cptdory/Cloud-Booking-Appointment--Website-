@@ -34,30 +34,20 @@ async function getAccessToken() {
 }
 
 export async function POST(req: Request) {
-  console.log("🎨 ===== /api/booking-staff-auth/get-booking-staff-color called =====");
   
   try {
     const body = await req.json();
-    console.log("📥 Received request body:", body);
-    console.log("📥 Request body type:", typeof body);
-    console.log("📥 Request body keys:", Object.keys(body));
-    console.log("📥 Full request body:", JSON.stringify(body, null, 2));
 
-    const { staffCodes, branchCode } = body;
+    const { _BookingParameterValueIds, _BookingSetupCode } = body;
 
-    console.log("🔍 Parsed parameters:", {
-      staffCodes,
-      branchCode
-    });
-
-    if (!staffCodes || !Array.isArray(staffCodes) || staffCodes.length === 0) {
-      console.error("❌ Missing or invalid staffCodes:", staffCodes);
-      return NextResponse.json({ error: "staffCodes array is required" }, { status: 400 });
+    if (!_BookingParameterValueIds || !Array.isArray(_BookingParameterValueIds) || _BookingParameterValueIds.length === 0) {
+      console.error("❌ Missing or invalid _BookingParameterValueIds:", _BookingParameterValueIds);
+      return NextResponse.json({ error: "_BookingParameterValueIds array is required" }, { status: 400 });
     }
 
-    if (!branchCode) {
-      console.error("❌ Missing branchCode");
-      return NextResponse.json({ error: "branchCode is required" }, { status: 400 });
+    if (!_BookingSetupCode) {
+      console.error("❌ Missing _BookingSetupCode");
+      return NextResponse.json({ error: "_BookingSetupCode is required" }, { status: 400 });
     }
 
     if (!process.env.TENANT_ID) {
@@ -74,21 +64,19 @@ export async function POST(req: Request) {
     // Fetch colors for all staff codes
     const staffColors: { [key: string]: { background: string; text: string } } = {};
 
-    console.log(`🎨 Fetching colors for ${staffCodes.length} staff members:`, staffCodes);
-
-    for (const staffCode of staffCodes) {
+    for (const _BookingParameterValueId of _BookingParameterValueIds) {
       try {
-        console.log(`🎨 Fetching color for staff: ${staffCode}`);
+        console.log(`🎨 Fetching color for staff: ${_BookingParameterValueId}`);
         
         const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_GetBookingStaffColor?Company=${encodeURIComponent(company)}`;
 
         const bcRequestBody = {
-          _BookingSetupCode: branchCode,
-          _BookingParameterId: "STAFF_COLOR",
-          _BookingParameterValueId: staffCode,
+          _BookingSetupCode: _BookingSetupCode,
+          _BookingParameterId: "5",
+          _BookingParameterValueId: _BookingParameterValueId,
         };
 
-        console.log(`📤 Sending to Business Central for ${staffCode}:`, JSON.stringify(bcRequestBody, null, 2));
+        console.log(`📤 Sending to Business Central for ${_BookingParameterValueId}:`, JSON.stringify(bcRequestBody, null, 2));
 
         const res = await fetch(url, {
           method: "POST",
@@ -99,21 +87,21 @@ export async function POST(req: Request) {
           body: JSON.stringify(bcRequestBody),
         });
 
-        console.log(`📥 Business Central response for ${staffCode} - status:`, res.status);
+        console.log(`📥 Business Central response for ${_BookingParameterValueId} - status:`, res.status);
 
         let data: any = null;
         const text = await res.text();
         
         try {
           data = text ? JSON.parse(text) : null;
-          console.log(`✅ Successfully parsed JSON response for ${staffCode}:`, data);
+          console.log(`✅ Successfully parsed JSON response for ${_BookingParameterValueId}:`, data);
         } catch (err) {
-          console.warn(`⚠️ Failed to parse BC response for ${staffCode} as JSON:`, text);
+          console.warn(`⚠️ Failed to parse BC response for ${_BookingParameterValueId} as JSON:`, text);
           continue; // Skip this staff code and continue with others
         }
 
         if (!res.ok) {
-          console.warn(`⚠️ Business Central API error for ${staffCode}:`, {
+          console.warn(`⚠️ Business Central API error for ${_BookingParameterValueId}:`, {
             status: res.status,
             statusText: res.statusText,
             data: data,
@@ -123,35 +111,39 @@ export async function POST(req: Request) {
         }
 
         // Assuming the API returns color in format { value: "#3788d8" }
-        if (data && data.value) {
-          const backgroundColor = data.value;
-          // Determine text color based on background brightness
-          const textColor = getContrastColor(backgroundColor);
-          staffColors[staffCode] = {
-            background: backgroundColor,
-            text: textColor
-          };
-          console.log(`🎨 Staff ${staffCode} color:`, staffColors[staffCode]);
-        } else {
-          console.warn(`⚠️ No color value found for staff ${staffCode}`);
-        }
+if (data && data.value) {
+  let backgroundColor = "";
+
+  try {
+    const parsed = JSON.parse(data.value); // Convert string → array/object
+
+    if (Array.isArray(parsed) && parsed[0]?.StaffColor) {
+      backgroundColor = parsed[0].StaffColor;
+    }
+  } catch (e) {
+    console.warn("⚠️ Value is not valid JSON:", data.value);
+  }
+
+  if (backgroundColor) {
+    const textColor = getContrastColor(backgroundColor);
+    staffColors[_BookingParameterValueId] = {
+      background: backgroundColor,
+      text: textColor
+    };
+  } else {
+    console.warn(`⚠️ No StaffColor found for staff ${_BookingParameterValueId}`);
+  }
+}
+
 
       } catch (error) {
-        console.warn(`⚠️ Failed to get color for staff ${staffCode}:`, error);
+        console.warn(`⚠️ Failed to get color for staff ${_BookingParameterValueId}:`, error);
         // Continue with other staff codes
       }
     }
-
-    console.log("✅ Final staff colors object:", staffColors);
-    console.log(`🎨 Successfully retrieved colors for ${Object.keys(staffColors).length} out of ${staffCodes.length} staff members`);
-    console.log("🎨 ===== /api/booking-staff-auth/get-booking-staff-color completed =====");
     
     return NextResponse.json({ staffColors });
   } catch (err: any) {
-    console.error("❌ POST /api/booking-staff-auth/get-booking-staff-color failed:", err);
-    console.error("❌ Error stack:", err.stack);
-    console.error("🎨 ===== /api/booking-staff-auth/get-booking-staff-color failed =====");
-    
     return NextResponse.json({ 
       error: err.message || "Internal Server Error" 
     }, { status: 500 });

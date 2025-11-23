@@ -34,7 +34,9 @@ export default function StaffPage() {
   const [values, setValues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [staffColors, setStaffColors] = useState<{[key: string]: {background: string; text: string}}>({});
+  const [staffColors, setStaffColors] = useState<{
+    [key: string]: { background: string; text: string };
+  }>({});
 
   // Edit Dialog state
   const [editing, setEditing] = useState(false);
@@ -73,7 +75,7 @@ export default function StaffPage() {
     typeof window !== "undefined"
       ? new URLSearchParams(window.location.search)
       : new URLSearchParams("");
-  const code = search.get("code") || "";
+  const _BookingSetupCode = search.get("code") || "";
   const parameterId = search.get("parameter_id") || "";
 
   const colorOptions = [
@@ -90,11 +92,13 @@ export default function StaffPage() {
   ];
 
   const loadValues = async () => {
-    if (!code || !parameterId) return;
+    if (!_BookingSetupCode || !parameterId) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/booking-setup/get-booking-setup?code=${code}`);
+      const res = await fetch(
+        `/api/booking-setup/get-booking-setup?code=${_BookingSetupCode}`
+      );
       const json = await res.json();
       if (!json.value || json.value.length === 0) {
         setValues([]);
@@ -107,7 +111,7 @@ export default function StaffPage() {
       );
       const staffValues = param ? param.BookingParameterValue : [];
       setValues(staffValues);
-      
+
       // Load colors for all staff
       if (staffValues.length > 0) {
         await loadStaffColors(staffValues);
@@ -123,23 +127,30 @@ export default function StaffPage() {
   // Load colors for all staff members
   const loadStaffColors = async (staffList: any[]) => {
     try {
-      const staffCodes = staffList.map(staff => staff.BookingParameterValueCode);
-      
+      const valueIds = staffList.map((staff) =>
+        String(staff.BookingParameterValueId)
+      );
+
       const body = {
-        staffCodes: staffCodes,
-        branchCode: code
+        _BookingParameterValueIds: valueIds,
+        _BookingSetupCode: _BookingSetupCode,
       };
 
-      console.log("🎨 Loading colors for staff:", body);
+      // ✅ Log the body you're sending
+      console.log("📨 Sending color request body:", body);
 
-      const res = await fetch("/api/booking-staff-auth/get-booking-staff-color", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const res = await fetch(
+        "/api/booking-staff-auth/get-booking-staff-color",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
 
       const json = await res.json();
-      console.log("🎨 Color response:", json);
+
+      console.log("🎨 Color API response:", json);
 
       if (res.ok && json.staffColors) {
         setStaffColors(json.staffColors);
@@ -150,8 +161,8 @@ export default function StaffPage() {
   };
 
   // Get color for a specific staff member
-  const getStaffColorStyle = (staffCode: string) => {
-    const color = staffColors[staffCode];
+  const getStaffColorStyle = (valueIds: string) => {
+    const color = staffColors[valueIds];
     if (color) {
       return {
         backgroundColor: color.background,
@@ -159,21 +170,27 @@ export default function StaffPage() {
       };
     }
     return {
-      backgroundColor: '#6b7280', // default gray
-      color: '#ffffff',
+      backgroundColor: "#6b7280", // default gray
+      color: "#ffffff",
     };
   };
 
   // Get color badge for display
-  const getColorBadge = (staffCode: string) => {
-    const color = staffColors[staffCode];
+  const getColorBadge = (valueIds: string) => {
+    const color = staffColors[valueIds];
     if (!color) {
-      return <Badge variant="secondary" className="bg-gray-500 text-white">Gray</Badge>;
+      return (
+        <Badge variant="secondary" className="bg-gray-500 text-white">
+          Gray
+        </Badge>
+      );
     }
 
-    const colorName = colorOptions.find(opt => opt.value === color.background)?.label || 'Custom';
+    const colorName =
+      colorOptions.find((opt) => opt.value === color.background)?.label ||
+      "Custom";
     return (
-      <Badge 
+      <Badge
         className="text-xs font-medium"
         style={{
           backgroundColor: color.background,
@@ -189,14 +206,15 @@ export default function StaffPage() {
   const openColorDialog = async (staff: any) => {
     setColorStaff(staff);
     setColorDialogOpen(true);
-    
-    // Get current color from staffColors state
-    const currentStaffColor = staffColors[staff.BookingParameterValueCode];
+
+    const valueId = String(staff.BookingParameterValueId);
+    const currentStaffColor = staffColors[valueId];
+
     if (currentStaffColor) {
       setCurrentColor(currentStaffColor.background);
       setSelectedColor(currentStaffColor.background);
     } else {
-      setCurrentColor("#6b7280"); // default gray
+      setCurrentColor("#6b7280");
       setSelectedColor("#6b7280");
     }
   };
@@ -208,7 +226,7 @@ export default function StaffPage() {
 
     try {
       const body = {
-        _BookingSetupCode: code,
+        _BookingSetupCode: _BookingSetupCode,
         _BookingParameterId: parameterId,
         _BookingParameterValueId: String(colorStaff.BookingParameterValueId),
         _StaffColor: selectedColor,
@@ -216,22 +234,25 @@ export default function StaffPage() {
 
       console.log("🎨 Updating color with body:", body);
 
-      const res = await fetch("/api/booking-staff-auth/update-booking-staff-auth-details", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const res = await fetch(
+        "/api/booking-staff-auth/update-booking-staff-auth-details",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
 
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to update color");
 
       // Update local state
-      setStaffColors(prev => ({
+      setStaffColors((prev) => ({
         ...prev,
-        [colorStaff.BookingParameterValueCode]: {
+        [colorStaff.BookingParameterValueId]: {
           background: selectedColor,
-          text: getContrastColor(selectedColor)
-        }
+          text: getContrastColor(selectedColor),
+        },
       }));
 
       alert("Staff color updated successfully!");
@@ -249,12 +270,12 @@ export default function StaffPage() {
 
   // Helper function to determine text color based on background brightness
   function getContrastColor(hexColor: string): string {
-    const hex = hexColor.replace('#', '');
+    const hex = hexColor.replace("#", "");
     const r = parseInt(hex.substr(0, 2), 16);
     const g = parseInt(hex.substr(2, 2), 16);
     const b = parseInt(hex.substr(4, 2), 16);
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.5 ? '#000000' : '#ffffff';
+    return luminance > 0.5 ? "#000000" : "#ffffff";
   }
 
   // Open password dialog
@@ -268,7 +289,7 @@ export default function StaffPage() {
   // Update staff password
   const handleUpdatePassword = async () => {
     if (!passwordStaff || !newPassword) return;
-    
+
     if (newPassword !== confirmPassword) {
       alert("Passwords do not match!");
       return;
@@ -278,20 +299,24 @@ export default function StaffPage() {
 
     try {
       const body = {
-        _BookingSetupCode: code,
+        _BookingSetupCode: _BookingSetupCode,
         _BookingParameterId: parameterId,
         _BookingParameterValueId: String(passwordStaff.BookingParameterValueId),
         _PortalPassword: newPassword,
       };
 
-      const res = await fetch("/api/booking-staff-auth/update-booking-staff-auth-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const res = await fetch(
+        "/api/booking-staff-auth/update-booking-staff-auth-password",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
 
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.message || "Failed to update password");
+      if (!res.ok)
+        throw new Error(json?.message || "Failed to update password");
 
       alert("Staff password updated successfully!");
       setPasswordDialogOpen(false);
@@ -323,7 +348,7 @@ export default function StaffPage() {
     setSaving(true);
     try {
       const body = {
-        _BookingSetupCode: code,
+        _BookingSetupCode: _BookingSetupCode,
         _BookingParameterId: parameterId,
         _BookingParameterValueId: String(editItem.BookingParameterValueId),
         _BookingParameterValueCode: String(editItem.BookingParameterValueCode),
@@ -335,11 +360,14 @@ export default function StaffPage() {
         _BookingParameterValueService: "Yes",
       };
 
-      const res = await fetch("/api/booking-parameter/update-booking-parameter-value", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const res = await fetch(
+        "/api/booking-parameter/update-booking-parameter-value",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
 
       const json = await res.json();
       if (!res.ok) throw new Error(json?.message || "Update failed");
@@ -361,16 +389,19 @@ export default function StaffPage() {
     setDeleting(true);
     try {
       const body = {
-        _BookingSetupCode: code,
+        _BookingSetupCode: _BookingSetupCode,
         _BookingParameterId: parameterId,
         _BookingParameterValueId: String(deleteItem.BookingParameterValueId),
       };
 
-      const res = await fetch("/api/booking-parameter/delete-booking-parameter-value", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const res = await fetch(
+        "/api/booking-parameter/delete-booking-parameter-value",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
 
       const json = await res.json();
       if (!res.ok) throw new Error(json?.message || "Delete failed");
@@ -390,7 +421,7 @@ export default function StaffPage() {
     setCreatingSaving(true);
     try {
       const body = {
-        _BookingSetupCode: code,
+        _BookingSetupCode: _BookingSetupCode,
         _BookingParameterId: parameterId,
         _BookingParameterValueCode: newItem.BookingParameterValueCode,
         _BookingParameterValueDesc: newItem.BookingParamterValueDescription,
@@ -401,11 +432,14 @@ export default function StaffPage() {
         _BookingParameterValueService: "No",
       };
 
-      const res = await fetch("/api/booking-parameter/create-booking-parameter-value", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const res = await fetch(
+        "/api/booking-parameter/create-booking-parameter-value",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
 
       const json = await res.json();
       if (!res.ok) throw new Error(json?.message || "Create failed");
@@ -428,7 +462,7 @@ export default function StaffPage() {
   useEffect(() => {
     loadValues();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [code, parameterId]);
+  }, [_BookingSetupCode, parameterId]);
 
   return (
     <div className="flex flex-1 flex-col p-6 md:p-8">
@@ -522,7 +556,7 @@ export default function StaffPage() {
                       </TableCell>
                       <TableCell>{v.BookingParamterValueDescription}</TableCell>
                       <TableCell>
-                        {getColorBadge(v.BookingParameterValueCode)}
+                        {getColorBadge(String(v.BookingParameterValueId))}
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
@@ -656,22 +690,20 @@ export default function StaffPage() {
             <div className="grid gap-4">
               <div>
                 <Label>Staff</Label>
-                <Input
-                  value={colorStaff.BookingParameterValueCode}
-                  disabled
-                />
+                <Input value={colorStaff.BookingParameterValueId} disabled />
               </div>
 
               <div>
                 <Label>Current Color</Label>
                 {currentColor && (
                   <div className="flex items-center gap-2 mt-1">
-                    <div 
+                    <div
                       className="w-6 h-6 rounded-full border"
                       style={{ backgroundColor: currentColor }}
                     />
                     <span className="capitalize">
-                      {colorOptions.find(c => c.value === currentColor)?.label || 'Custom'}
+                      {colorOptions.find((c) => c.value === currentColor)
+                        ?.label || "Custom"}
                     </span>
                   </div>
                 )}
@@ -679,10 +711,7 @@ export default function StaffPage() {
 
               <div>
                 <Label>New Color</Label>
-                <Select
-                  value={selectedColor}
-                  onValueChange={setSelectedColor}
-                >
+                <Select value={selectedColor} onValueChange={setSelectedColor}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a color" />
                   </SelectTrigger>
@@ -690,8 +719,8 @@ export default function StaffPage() {
                     {colorOptions.map((color) => (
                       <SelectItem key={color.value} value={color.value}>
                         <div className="flex items-center gap-2">
-                          <div 
-                            className="w-4 h-4 rounded-full border" 
+                          <div
+                            className="w-4 h-4 rounded-full border"
                             style={{ backgroundColor: color.value }}
                           />
                           <span>{color.label}</span>
@@ -706,11 +735,11 @@ export default function StaffPage() {
                 <div className="p-4 border rounded-lg">
                   <Label className="text-sm font-medium">Preview</Label>
                   <div className="flex items-center gap-2 mt-2">
-                    <div 
+                    <div
                       className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border"
                       style={{
                         backgroundColor: selectedColor,
-                        color: getContrastColor(selectedColor)
+                        color: getContrastColor(selectedColor),
                       }}
                     >
                       Aa
@@ -727,8 +756,8 @@ export default function StaffPage() {
                 >
                   Cancel
                 </Button>
-                <Button 
-                  onClick={handleUpdateColor} 
+                <Button
+                  onClick={handleUpdateColor}
                   disabled={updatingColor || !selectedColor}
                 >
                   {updatingColor ? "Updating..." : "Update Color"}
@@ -786,9 +815,11 @@ export default function StaffPage() {
                 >
                   Cancel
                 </Button>
-                <Button 
-                  onClick={handleUpdatePassword} 
-                  disabled={updatingPassword || !newPassword || !confirmPassword}
+                <Button
+                  onClick={handleUpdatePassword}
+                  disabled={
+                    updatingPassword || !newPassword || !confirmPassword
+                  }
                 >
                   {updatingPassword ? "Updating..." : "Update Password"}
                 </Button>
