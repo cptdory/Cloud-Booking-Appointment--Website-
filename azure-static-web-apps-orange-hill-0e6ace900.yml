@@ -28,5 +28,5 @@ jobs:
     inputs:
       azure_static_web_apps_api_token: $(AZURE_STATIC_WEB_APPS_API_TOKEN_ORANGE_HILL_0E6ACE900)
       app_location: "/"        # root of Next.js
-      api_location: "api"         # EMPTY for Next.js app/api
+      api_location: "app/api"         # EMPTY for Next.js app/api
       output_location: ""      # EMPTY for SSR build
