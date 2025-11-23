@@ -139,7 +139,11 @@ layer(base);
 /*
   ---break---
 */
-  .fc .fc-col-header-cell {
+  .fc .fc-col-header-cell  {
+    background-color: #f1f5f9 !important;
+    color: #1f2937 !important;
+  }
+  .fc-popover{
     background-color: #f1f5f9 !important;
     color: #1f2937 !important;
   }

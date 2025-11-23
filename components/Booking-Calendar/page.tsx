@@ -30,12 +30,10 @@ import {
   Clock,
   User,
   Briefcase,
-  MapPin,
-  Building2,
+  MapPin,Phone,Mail,Cake,
   AlertCircle,
   Loader2,
   Smartphone,
-  Monitor,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -952,9 +950,7 @@ export default function BookingCalendar() {
 
                   {selectedEvent.extendedProps.rawData?.PhoneNo && (
                     <div className="flex items-start gap-3 p-3 rounded-lg">
-                      <div className="w-5 h-5 flex items-center justify-center mt-0.5 flex-shrink-0">
-                        <span className="text-sm">📞</span>
-                      </div>
+                      <Phone className="w-5 h-5 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold">Phone</p>
                         <p className="text-sm">
@@ -966,9 +962,7 @@ export default function BookingCalendar() {
 
                   {selectedEvent.extendedProps.rawData?.EMail && (
                     <div className="flex items-start gap-3 p-3 rounded-lg border">
-                      <div className="w-5 h-5 flex items-center justify-center mt-0.5 flex-shrink-0">
-                        <span className="text-sm">✉️</span>
-                      </div>
+                      <Mail className="w-5 h-5 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold">Email</p>
                         <p className="text-sm truncate">
@@ -980,9 +974,7 @@ export default function BookingCalendar() {
 
                   {(selectedEvent.extendedProps.rawData?.Age ?? 0) > 0 && (
                     <div className="flex items-start gap-3 p-3 rounded-lg">
-                      <div className="w-5 h-5 flex items-center justify-center mt-0.5 flex-shrink-0">
-                        <span className="text-sm">🎂</span>
-                      </div>
+                      <Cake className="w-5 h-5 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold">Age</p>
                         <p className="text-sm">
