@@ -856,7 +856,7 @@ export default function BookingCalendar() {
                   Schedule
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-3 rounded-lg">
+                  <div className="flex items-start gap-3 p-3 rounded-lg border">
                     <Calendar className="w-5 h-5 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold">Date</p>
@@ -911,7 +911,7 @@ export default function BookingCalendar() {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3 p-3 rounded-lg">
+                  <div className="flex items-start gap-3 p-3 rounded-lg border">
                     <User className="w-5 h-5 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold">Staff Member</p>
@@ -935,7 +935,7 @@ export default function BookingCalendar() {
                   Customer Information
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-3 rounded-lg">
+                  <div className="flex items-start gap-3 p-3 rounded-lg border">
                     <User className="w-5 h-5 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold">Customer</p>
@@ -949,7 +949,7 @@ export default function BookingCalendar() {
                   </div>
 
                   {selectedEvent.extendedProps.rawData?.PhoneNo && (
-                    <div className="flex items-start gap-3 p-3 rounded-lg">
+                    <div className="flex items-start gap-3 p-3 rounded-lg border">
                       <Phone className="w-5 h-5 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold">Phone</p>
@@ -973,7 +973,7 @@ export default function BookingCalendar() {
                   )}
 
                   {(selectedEvent.extendedProps.rawData?.Age ?? 0) > 0 && (
-                    <div className="flex items-start gap-3 p-3 rounded-lg">
+                    <div className="flex items-start gap-3 p-3 rounded-lg border">
                       <Cake className="w-5 h-5 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold">Age</p>
@@ -985,7 +985,7 @@ export default function BookingCalendar() {
                   )}
 
                   {selectedEvent.extendedProps.rawData?.Address && (
-                    <div className="flex items-start gap-3 p-3 rounded-lg">
+                    <div className="flex items-start gap-3 p-3 rounded-lg border">
                       <MapPin className="w-5 h-5 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold">Address</p>
