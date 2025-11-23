@@ -27,7 +27,7 @@ steps:
   - task: AzureStaticWebApp@0
     inputs:
       app_location: "/"
-      api_location: ""
+      api_location: "api"
       output_location: ".next"
     displayName: 'Deploy to Azure Static Web App'
     env:

@@ -40,8 +40,8 @@ export async function POST(req: Request) {
     const { _BookingParameterValueIds, _BookingParameterValueId, _BookingSetupCode, _BookingParameterId } = body;
 
     // Validate required fields
-    if (!_BookingSetupCode) {
-      console.error("❌ Missing _BookingSetupCode");
+    if (!_BookingParameterId) {
+      console.error("❌ Missing _BookingParameterId");
       return NextResponse.json({ error: "_BookingSetupCode is required" }, { status: 400 });
     }
 
