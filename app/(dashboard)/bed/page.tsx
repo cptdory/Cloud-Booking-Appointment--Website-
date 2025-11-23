@@ -27,6 +27,10 @@ export default function BedPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Flags (string values)
+  const [isParamStaff, setIsParamStaff] = useState("false");
+  const [isParamService, setIsParamService] = useState("false");
+
   // Edit Dialog state
   const [editing, setEditing] = useState(false);
   const [editItem, setEditItem] = useState<any | null>(null);
@@ -50,31 +54,64 @@ export default function BedPage() {
     typeof window !== "undefined"
       ? new URLSearchParams(window.location.search)
       : new URLSearchParams("");
+
   const code = search.get("code") || "";
   const parameterId = search.get("parameter_id") || "";
 
+  // Load values + flags
   const loadValues = async () => {
     if (!code || !parameterId) return;
+
     setLoading(true);
     setError(null);
+
     try {
-      const res = await fetch(`/api/booking-setup/get-booking-setup?code=${code}`);
+      console.log("▶️ Loading values for:", { code, parameterId });
+
+      const res = await fetch(
+        `/api/booking-setup/get-booking-setup?code=${code}`
+      );
       const json = await res.json();
+
+      console.log("📦 API Response:", json);
+
       if (!json.value || json.value.length === 0) {
+        console.log("⚠️ No booking setup found.");
         setValues([]);
         setLoading(false);
         return;
       }
+
       const setup = json.value[0];
+      console.log("🛠 Setup object:", setup);
+
+      // Find parameter
       const param = setup.BookingParameter.find(
         (p: any) => p.BookingParameterId.toString() === parameterId
       );
+
+      console.log("🔍 Found parameter:", param);
+
+      // Extract flags AS STRING
+      const BookingParameterStaff = String(param?.BookingParameterStaff ?? "false");
+      const BookingParameterService = String(param?.BookingParameterService ?? "false");
+
+      console.log("👥 BookingParameterStaff:", BookingParameterStaff);
+      console.log("🛎️ BookingParameterService:", BookingParameterService);
+
+      // Save flags
+      setIsParamStaff(BookingParameterStaff);
+      setIsParamService(BookingParameterService);
+
+      console.log("📄 Parameter Values:", param?.BookingParameterValue);
+
       setValues(param ? param.BookingParameterValue : []);
     } catch (err: any) {
-      console.error(err);
+      console.error("❌ Error loading values:", err);
       setError("Failed to load services");
     } finally {
       setLoading(false);
+      console.log("✔️ Loading finished");
     }
   };
 
@@ -98,6 +135,7 @@ export default function BedPage() {
   const handleUpdate = async () => {
     if (!editItem) return;
     setSaving(true);
+
     try {
       const body = {
         _BookingSetupCode: code,
@@ -108,15 +146,22 @@ export default function BedPage() {
         _BookingParameterValueDuration: String(
           editItem.BookingParameterValueDuration
         ),
-        _BookingParameterValueStaff: "No",
-        _BookingParameterValueService: "Yes",
+
+        // USE STRING FLAGS
+        _BookingParameterValueStaff: isParamStaff,
+        _BookingParameterValueService: isParamService,
       };
 
-      const res = await fetch("/api/booking-parameter/update-booking-parameter-value", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      console.log("📤 UPDATE BODY:", body);
+
+      const res = await fetch(
+        "/api/booking-parameter/update-booking-parameter-value",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
 
       const json = await res.json();
       if (!res.ok) throw new Error(json?.message || "Update failed");
@@ -143,11 +188,14 @@ export default function BedPage() {
         _BookingParameterValueId: String(deleteItem.BookingParameterValueId),
       };
 
-      const res = await fetch("/api/booking-parameter/delete-booking-parameter-value", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const res = await fetch(
+        "/api/booking-parameter/delete-booking-parameter-value",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
 
       const json = await res.json();
       if (!res.ok) throw new Error(json?.message || "Delete failed");
@@ -165,6 +213,7 @@ export default function BedPage() {
   // Create function
   const handleCreate = async () => {
     setCreatingSaving(true);
+
     try {
       const body = {
         _BookingSetupCode: code,
@@ -174,15 +223,22 @@ export default function BedPage() {
         _BookingParameterValueDuration: String(
           newItem.BookingParameterValueDuration
         ),
-        _BookingParameterValueStaff: "No",
-        _BookingParameterValueService: "Yes",
+
+        // USE STRING FLAGS
+        _BookingParameterValueStaff: isParamStaff,
+        _BookingParameterValueService: isParamService,
       };
 
-      const res = await fetch("/api/booking-parameter/create-booking-parameter-value", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      console.log("📤 CREATE BODY:", body);
+
+      const res = await fetch(
+        "/api/booking-parameter/create-booking-parameter-value",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
 
       const json = await res.json();
       if (!res.ok) throw new Error(json?.message || "Create failed");

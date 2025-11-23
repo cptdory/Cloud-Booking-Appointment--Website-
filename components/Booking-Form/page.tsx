@@ -6,7 +6,6 @@ import {
   MapPin,
   Loader2,
   Calendar,
-  Clock,
   FileText,
   Users,
   Briefcase,
@@ -16,13 +15,7 @@ import {
   ChevronRight,
   ArrowLeft,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -38,13 +31,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle, Info, XCircle } from "lucide-react";
+import { Info, XCircle } from "lucide-react";
 
 interface FormData {
   branch: string;
   service: string;
   staff: string;
-  room: string;
+  [key: string]: string; // For dynamic parameters
   date: string;
   selectedTime: string;
   customerNo: string;
@@ -57,26 +50,28 @@ interface Branch {
   Location: string;
 }
 
+interface BookingParameter {
+  BookingParameterId: number;
+  BookingParameterCode: string;
+  BookingParameterSequence: number;
+  BookingParameterCheckAvailability: boolean;
+  BookingParameterCheckDuration: boolean;
+  BookingParameterStaff: boolean;
+  BookingParameterService: boolean;
+  BookingParameterValue: {
+    BookingParameterValueId: number;
+    BookingParameterValueCode: string;
+    BookingParamterValueDescription: string;
+    BookingParameterValueDuration: number;
+  }[];
+}
+
 interface BookingSetup {
   BookingSetupCode: string;
   BookingSetupDescription: string;
   BookingSetupTimeIncrement: number;
   BookingSetupAllowableTime: number;
-  BookingParameter: {
-    BookingParameterId: number;
-    BookingParameterCode: string;
-    BookingParameterSequence: number;
-    BookingParameterCheckAvailability: boolean;
-    BookingParameterCheckDuration: boolean;
-    BookingParameterStaff: boolean;
-    BookingParameterService: boolean;
-    BookingParameterValue: {
-      BookingParameterValueId: number;
-      BookingParameterValueCode: string;
-      BookingParamterValueDescription: string;
-      BookingParameterValueDuration: number;
-    }[];
-  }[];
+  BookingParameter: BookingParameter[];
   BookingServiceStaffRela: any[];
   BookingServiceDefaultValue: any[];
   BookingBusinessHours: any[];
@@ -148,7 +143,6 @@ export default function BookingForm() {
     branch: "",
     service: "",
     staff: "",
-    room: "",
     date: "",
     selectedTime: "",
     customerNo: "",
@@ -386,12 +380,26 @@ export default function BookingForm() {
       !formData.branch ||
       !formData.service ||
       !formData.staff ||
-      !formData.room ||
       !formData.date
     ) {
       setAvailableTimeSlots([]);
       return;
     }
+
+    // Build parameter IDs and values for dynamic parameters
+    const dynamicParameters = getDynamicParameters();
+    const parameterIds = [
+      "4",
+      "5",
+      ...dynamicParameters.map((p) => p.BookingParameterId.toString()),
+    ].join("|");
+    const parameterValues = [
+      formData.service,
+      formData.staff,
+      ...dynamicParameters.map(
+        (p) => formData[p.BookingParameterId.toString()] || ""
+      ),
+    ].join("|");
 
     setLoading((prev) => ({ ...prev, timeSlots: true }));
 
@@ -406,9 +414,9 @@ export default function BookingForm() {
           body: JSON.stringify({
             _BookingSetupCode: formData.branch,
             _BookingDate: formData.date,
-            _BookingParameterCount: "3",
-            _BookingParameterIDs: "4|5|6",
-            _BookingParameterValueIDs: `${formData.service}|${formData.staff}|${formData.room}`,
+            _BookingParameterCount: (2 + dynamicParameters.length).toString(),
+            _BookingParameterIDs: parameterIds,
+            _BookingParameterValueIDs: parameterValues,
           }),
         }
       );
@@ -442,14 +450,21 @@ export default function BookingForm() {
   // Load time slots when date is selected and all prerequisites are met
   useEffect(() => {
     if (
-      currentStep >= 6 &&
+      currentStep >= 4 &&
       formData.date &&
       formData.branch &&
       formData.service &&
-      formData.staff &&
-      formData.room
+      formData.staff
     ) {
-      fetchAvailableTimeSlots();
+      // Check if all dynamic parameters are selected
+      const dynamicParameters = getDynamicParameters();
+      const allDynamicSelected = dynamicParameters.every(
+        (param) => formData[param.BookingParameterId.toString()]
+      );
+
+      if (allDynamicSelected) {
+        fetchAvailableTimeSlots();
+      }
     }
   }, [formData.date, currentStep]);
 
@@ -461,15 +476,41 @@ export default function BookingForm() {
       const resetData: Partial<FormData> = {};
       if (step < 2) resetData.branch = "";
       if (step < 3) resetData.service = "";
-      if (step < 4) resetData.staff = "";
-      if (step < 5) resetData.room = "";
-      if (step < 6) resetData.date = "";
-      if (step < 7) {
+      if (step < 4) {
+        resetData.staff = "";
+        // Reset dynamic parameters
+        const dynamicParameters = getDynamicParameters();
+        dynamicParameters.forEach((param) => {
+          resetData[param.BookingParameterId.toString()] = "";
+        });
+      }
+      if (step < 5) {
+        resetData.date = "";
         resetData.selectedTime = "";
         setAvailableTimeSlots([]);
       }
 
-      setFormData((prev) => ({ ...prev, ...resetData }));
+      setFormData((prev) => {
+        const updated: FormData = {
+          branch: resetData.branch ?? prev.branch,
+          service: resetData.service ?? prev.service,
+          staff: resetData.staff ?? prev.staff,
+          date: resetData.date ?? prev.date,
+          selectedTime: resetData.selectedTime ?? prev.selectedTime,
+          customerNo: prev.customerNo, // Keep customerNo as it might be pre-filled
+          bookingNote: prev.bookingNote, // Keep booking note
+        };
+
+        // Handle dynamic parameters
+        const dynamicParameters = getDynamicParameters();
+        dynamicParameters.forEach((param) => {
+          const paramId = param.BookingParameterId.toString();
+          updated[paramId] =
+            resetData[paramId] ?? prev[paramId as keyof FormData] ?? "";
+        });
+
+        return updated;
+      });
 
       // Reset data states for subsequent steps
       if (step < 2) {
@@ -488,34 +529,112 @@ export default function BookingForm() {
       [field]: value,
     }));
 
-    // Auto-advance steps based on selection
+    // Auto-advance steps based on selection with correct sequence
     if (field === "branch" && value) {
       fetchBranchDetails(value);
     } else if (field === "service" && value && currentStep === 2) {
-      // Reset staff when service changes
-      setFormData((prev) => ({
-        ...prev,
-        staff: "", // Clear previous staff selection
-        room: "", // Clear room selection as well
-      }));
+      // Reset staff and dynamic parameters when service changes
+      setFormData((prev) => {
+        const updated: FormData = {
+          ...prev,
+          staff: "",
+          service: value,
+        };
+
+        // Reset dynamic parameters
+        const dynamicParameters = getDynamicParameters();
+        dynamicParameters.forEach((param) => {
+          const paramId = param.BookingParameterId.toString();
+          updated[paramId] = "";
+        });
+
+        return updated;
+      });
+
       setStaffAssignments([]); // Clear previous staff assignments
       fetchStaffAssignments(value);
     } else if (field === "staff" && value && currentStep === 3) {
-      setCurrentStep(4); // Move to rooms
-    } else if (field === "room" && value && currentStep === 4) {
-      setCurrentStep(5); // Move to date
-    } else if (field === "date" && value && currentStep === 5) {
-      setCurrentStep(6); // Move to customer
-    } else if (field === "customerNo" && value && currentStep === 6) {
-      setCurrentStep(7); // Move to time slots
+      // Stay on step 3 for dynamic parameters
+    } else if (currentStep === 3) {
+      // Check if this is a dynamic parameter field (numeric string)
+      const dynamicParameters = getDynamicParameters();
+      const isDynamicField = dynamicParameters.some(
+        (param) => param.BookingParameterId.toString() === field
+      );
+
+      if (isDynamicField) {
+        // Check if all dynamic parameters are filled to auto-advance
+        const allDynamicSelected = dynamicParameters.every((param) => {
+          const paramId = param.BookingParameterId.toString();
+          // Use current value for the field being changed, otherwise use formData
+          return paramId === field
+            ? value
+            : formData[paramId as keyof FormData];
+        });
+
+        if (allDynamicSelected) {
+          setCurrentStep(4); // Move to date & time
+        }
+      }
+    } else if (field === "date" && value && currentStep === 4) {
+      // Stay on step 4 - don't auto-advance
+    } else if (field === "selectedTime" && value && currentStep === 4) {
+      setCurrentStep(5); // Move to customer
     }
+  };
+  const handleDynamicParameterChange = (
+    parameterId: number,
+    value: string
+  ): void => {
+    handleInputChange(parameterId.toString() as keyof FormData, value);
   };
 
   const handleTimeSlotClick = (time: string): void => {
+    // Format time to ensure 2-digit hour (09:00 AM instead of 9:00 AM)
+    const formatTime = (time: string): string => {
+      const timeMatch = time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+      if (timeMatch) {
+        let [_, hours, minutes, period] = timeMatch;
+        const formattedHours = hours.padStart(2, "0");
+        return `${formattedHours}:${minutes} ${period.toUpperCase()}`;
+      }
+      return time;
+    };
+
+    const formattedTime = formatTime(time);
+
     setFormData((prev) => ({
       ...prev,
-      selectedTime: time,
+      selectedTime: formattedTime,
     }));
+
+    // Auto-advance to customer step after selecting time
+    setCurrentStep(5);
+  };
+
+  // Get services from booking setup
+  const getServices = () => {
+    return (
+      bookingSetup?.BookingParameter?.find(
+        (param) => param.BookingParameterService
+      )?.BookingParameterValue || []
+    );
+  };
+
+  // Get staff parameter
+  const getStaffParameter = () => {
+    return bookingSetup?.BookingParameter?.find(
+      (param) => param.BookingParameterStaff
+    );
+  };
+
+  // Get dynamic parameters (all parameters except service and staff)
+  const getDynamicParameters = (): BookingParameter[] => {
+    if (!bookingSetup?.BookingParameter) return [];
+
+    return bookingSetup.BookingParameter.filter(
+      (param) => !param.BookingParameterService && !param.BookingParameterStaff
+    ).sort((a, b) => a.BookingParameterSequence - b.BookingParameterSequence);
   };
 
   const handleSubmit = async (
@@ -523,11 +642,17 @@ export default function BookingForm() {
   ): Promise<void> => {
     e.preventDefault();
 
+    // Validate all required fields including dynamic parameters
+    const dynamicParameters = getDynamicParameters();
+    const allDynamicSelected = dynamicParameters.every(
+      (param) => formData[param.BookingParameterId.toString()]
+    );
+
     if (
       !formData.branch ||
       !formData.service ||
       !formData.staff ||
-      !formData.room ||
+      !allDynamicSelected ||
       !formData.date ||
       !formData.selectedTime ||
       !formData.customerNo
@@ -543,6 +668,20 @@ export default function BookingForm() {
     setLoading((prev) => ({ ...prev, submitting: true }));
 
     try {
+      // Build parameter IDs and values for dynamic parameters
+      const parameterIds = [
+        "4",
+        "5",
+        ...dynamicParameters.map((p) => p.BookingParameterId.toString()),
+      ].join("|");
+      const parameterValues = [
+        formData.service,
+        formData.staff,
+        ...dynamicParameters.map(
+          (p) => formData[p.BookingParameterId.toString()] || ""
+        ),
+      ].join("|");
+
       const response = await fetch(
         "/api/available-timeslot/book-available-timeslot",
         {
@@ -554,11 +693,11 @@ export default function BookingForm() {
             _BookingSetupCode: formData.branch,
             _BookingDate: formData.date,
             _BookingStartTime: formData.selectedTime,
-            _BookingParameterCount: 3,
-            _BookingParameterIDs: "4|5|6",
-            _BookingParameterValueIDs: `${formData.service}|${formData.staff}|${formData.room}`,
+            _BookingParameterCount: (2 + dynamicParameters.length).toString(),
+            _BookingParameterIDs: parameterIds,
+            _BookingParameterValueIDs: parameterValues,
             _CustomerNo: formData.customerNo,
-            _BookingNote: formData.bookingNote || "Booking from web app",
+            _BookingNote: formData.bookingNote || "-",
           }),
         }
       );
@@ -572,17 +711,23 @@ export default function BookingForm() {
         "Your appointment has been successfully scheduled."
       );
 
-      // Reset form
-      setFormData({
+      // Reset form - use the same dynamicParameters variable
+      const resetData: FormData = {
         branch: "",
         service: "",
         staff: "",
-        room: "",
         date: "",
         selectedTime: "",
         customerNo: userRole === "admin" ? "" : customerNo,
         bookingNote: "",
+      };
+
+      // Reset dynamic parameters using the existing variable
+      dynamicParameters.forEach((param) => {
+        resetData[param.BookingParameterId.toString()] = "";
       });
+
+      setFormData(resetData);
       setCurrentStep(1);
       setAvailableTimeSlots([]);
       setBookingSetup(null);
@@ -599,28 +744,15 @@ export default function BookingForm() {
     }
   };
 
-  // Set customer number for non-admin users
+  // Set customer number for non-admin users and auto-advance
   useEffect(() => {
-    if (customerNo && userRole !== "admin" && currentStep >= 6) {
+    if (customerNo && userRole !== "admin" && currentStep >= 5) {
       setFormData((prev) => ({
         ...prev,
         customerNo: customerNo,
       }));
-      setCurrentStep(7); // Auto-advance to time slots
     }
   }, [customerNo, userRole, currentStep]);
-
-  // Get services from booking setup
-  const services =
-    bookingSetup?.BookingParameter?.find(
-      (param) => param.BookingParameterService
-    )?.BookingParameterValue || [];
-
-  // Get rooms from booking setup
-  const rooms =
-    bookingSetup?.BookingParameter?.find(
-      (param) => !param.BookingParameterStaff && !param.BookingParameterService
-    )?.BookingParameterValue || [];
 
   // Show loading while checking authentication
   if (checkingAuth) {
@@ -688,22 +820,28 @@ export default function BookingForm() {
       {/* Progress Steps */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            {[1, 2, 3, 4, 5, 6, 7].map((step) => (
-              <div key={step} className="flex items-center">
+          {/* Numbers + Chevrons */}
+          <div className="grid grid-cols-5 gap-0">
+            {[1, 2, 3, 4, 5].map((step) => (
+              <div key={step} className="flex flex-col items-center">
                 <button
                   onClick={() => handleStepSelection(step)}
-                  className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                    currentStep >= step
-                      ? "bg-primary text-primary-foreground cursor-pointer"
-                      : "bg-muted text-muted-foreground cursor-default"
-                  } ${step < currentStep ? "hover:bg-primary/90" : ""}`}
+                  className={`flex items-center justify-center w-8 h-8 rounded-full
+                    ${
+                      currentStep >= step
+                        ? "bg-primary text-primary-foreground cursor-pointer"
+                        : "bg-muted text-muted-foreground cursor-default"
+                    }
+                    ${step < currentStep ? "hover:bg-primary/90" : ""}
+                  `}
                 >
                   {step}
                 </button>
-                {step < 7 && (
+
+                {/* Chevron Below Circle (except last) */}
+                {step < 5 && (
                   <ChevronRight
-                    className={`w-4 h-4 mx-2 ${
+                    className={`w-4 h-4 mt-1 ${
                       currentStep > step ? "text-primary" : "text-muted"
                     }`}
                   />
@@ -711,14 +849,14 @@ export default function BookingForm() {
               </div>
             ))}
           </div>
-          <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+
+          {/* Step Labels */}
+          <div className="grid grid-cols-5 mt-3 text-xs text-muted-foreground text-center">
             <span>Branch</span>
             <span>Service</span>
-            <span>Staff</span>
-            <span>Room</span>
-            <span>Date</span>
+            <span>Staff & Options</span>
+            <span>Date & Time</span>
             <span>Customer</span>
-            <span>Time</span>
           </div>
         </CardContent>
       </Card>
@@ -735,7 +873,7 @@ export default function BookingForm() {
             Previous Step
           </Button>
           <div className="text-sm text-muted-foreground">
-            Step {currentStep} of 7
+            Step {currentStep} of 5
           </div>
         </div>
       )}
@@ -816,7 +954,7 @@ export default function BookingForm() {
                   Loading services...
                 </span>
               </div>
-            ) : services.length === 0 ? (
+            ) : getServices().length === 0 ? (
               <p className="text-muted-foreground">No services available</p>
             ) : (
               <RadioGroup
@@ -824,7 +962,7 @@ export default function BookingForm() {
                 onValueChange={(value) => handleInputChange("service", value)}
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {services.map((service) => (
+                  {getServices().map((service) => (
                     <Label
                       key={service.BookingParameterValueId}
                       htmlFor={`service-${service.BookingParameterValueId}`}
@@ -857,248 +995,218 @@ export default function BookingForm() {
         </Card>
       )}
 
-      {/* Step 3: Staff Selection */}
+      {/* Step 3: Staff & Dynamic Parameters Selection */}
       {currentStep === 3 && (
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-primary" />
-              <CardTitle>Step 3: Select Staff</CardTitle>
+              <CardTitle>Step 3: Select Staff & Options</CardTitle>
             </div>
           </CardHeader>
-          <CardContent>
-            {loading.staffAssignments ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                <span className="text-muted-foreground">Loading staff...</span>
-              </div>
-            ) : staffAssignments.length === 0 ? (
-              <p className="text-muted-foreground">
-                No staff available for this service
-              </p>
-            ) : (
-              <RadioGroup
-                value={formData.staff}
-                onValueChange={(value) => handleInputChange("staff", value)}
-              >
-                <div className="space-y-2">
-                  {staffAssignments.map((staff) => (
-                    <Label
-                      key={staff.StaffId}
-                      htmlFor={`staff-${staff.StaffId}`}
-                      className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-                        formData.staff === staff.StaffId.toString()
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/50"
-                      }`}
-                    >
-                      <RadioGroupItem
-                        value={staff.StaffId.toString()}
-                        id={`staff-${staff.StaffId}`}
-                      />
-                      <div className="ml-3">
-                        <div className="font-medium">{staff.StaffName}</div>
-                        <div className="text-sm text-muted-foreground">
-                          ID: {staff.StaffCode}
-                        </div>
-                      </div>
-                    </Label>
-                  ))}
+          <CardContent className="space-y-6">
+            {/* Staff Selection */}
+            <div>
+              <h3 className="text-lg font-medium mb-4">Select Staff</h3>
+              {loading.staffAssignments ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                  <span className="text-muted-foreground">
+                    Loading staff...
+                  </span>
                 </div>
-              </RadioGroup>
+              ) : staffAssignments.length === 0 ? (
+                <p className="text-muted-foreground">
+                  No staff available for this service
+                </p>
+              ) : (
+                <RadioGroup
+                  value={formData.staff}
+                  onValueChange={(value) => handleInputChange("staff", value)}
+                >
+                  <div className="space-y-2">
+                    {staffAssignments.map((staff) => (
+                      <Label
+                        key={staff.StaffId}
+                        htmlFor={`staff-${staff.StaffId}`}
+                        className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                          formData.staff === staff.StaffId.toString()
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <RadioGroupItem
+                          value={staff.StaffId.toString()}
+                          id={`staff-${staff.StaffId}`}
+                        />
+                        <div className="ml-3">
+                          <div className="font-medium">{staff.StaffName}</div>
+                          <div className="text-sm text-muted-foreground">
+                            ID: {staff.StaffCode}
+                          </div>
+                        </div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              )}
+            </div>
+
+            {/* Dynamic Parameters */}
+            {formData.staff && getDynamicParameters().length > 0 && (
+              <>
+                <Separator />
+                <div>
+                  <h3 className="text-lg font-medium mb-4">
+                    Additional Options
+                  </h3>
+                  <div className="space-y-6">
+                    {getDynamicParameters().map((parameter) => (
+                      <div key={parameter.BookingParameterId}>
+                        <h4 className="font-medium mb-3">
+                          {parameter.BookingParameterCode}
+                        </h4>
+                        <RadioGroup
+                          value={
+                            formData[parameter.BookingParameterId.toString()]
+                          }
+                          onValueChange={(value) =>
+                            handleDynamicParameterChange(
+                              parameter.BookingParameterId,
+                              value
+                            )
+                          }
+                        >
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {parameter.BookingParameterValue.map((value) => (
+                              <Label
+                                key={value.BookingParameterValueId}
+                                htmlFor={`param-${parameter.BookingParameterId}-${value.BookingParameterValueId}`}
+                                className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                                  formData[
+                                    parameter.BookingParameterId.toString()
+                                  ] === value.BookingParameterValueId.toString()
+                                    ? "border-primary bg-primary/5"
+                                    : "border-border hover:border-primary/50"
+                                }`}
+                              >
+                                <RadioGroupItem
+                                  value={value.BookingParameterValueId.toString()}
+                                  id={`param-${parameter.BookingParameterId}-${value.BookingParameterValueId}`}
+                                />
+                                <div className="ml-3">
+                                  <div className="font-medium">
+                                    {value.BookingParamterValueDescription}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {value.BookingParameterValueCode}
+                                    {value.BookingParameterValueDuration > 0 &&
+                                      ` • ${value.BookingParameterValueDuration} mins`}
+                                  </div>
+                                </div>
+                              </Label>
+                            ))}
+                          </div>
+                        </RadioGroup>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
       )}
 
-      {/* Step 4: Room Selection */}
-      {currentStep === 4 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <DoorOpen className="w-5 h-5 text-primary" />
-              <CardTitle>Step 4: Select Room</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {rooms.length === 0 ? (
-              <p className="text-muted-foreground">No rooms available</p>
-            ) : (
-              <RadioGroup
-                value={formData.room}
-                onValueChange={(value) => handleInputChange("room", value)}
-              >
-                <div className="space-y-2">
-                  {rooms.map((room) => (
-                    <Label
-                      key={room.BookingParameterValueId}
-                      htmlFor={`room-${room.BookingParameterValueId}`}
-                      className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-                        formData.room ===
-                        room.BookingParameterValueId.toString()
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/50"
-                      }`}
-                    >
-                      <RadioGroupItem
-                        value={room.BookingParameterValueId.toString()}
-                        id={`room-${room.BookingParameterValueId}`}
-                      />
-                      <div className="ml-3">
-                        <div className="font-medium">
-                          {room.BookingParamterValueDescription}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {room.BookingParameterValueCode}
-                        </div>
-                      </div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 5: Date Selection */}
-      {currentStep === 5 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-primary" />
-              <CardTitle>Step 5: Select Date</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
+{/* Step 4: Date & Time Selection */}
+{currentStep === 4 && (
+  <Card>
+    <CardHeader>
+      <div className="flex items-center gap-2">
+        <Calendar className="w-5 h-5 text-primary" />
+        <CardTitle>Step 4: Select Date & Time</CardTitle>
+      </div>
+    </CardHeader>
+    <CardContent>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Date Selection - Left Side */}
+        <div className="space-y-4">
+          <div>
+            <Label
+              htmlFor="booking-date"
+              className="text-base font-medium mb-2 block"
+            >
+              Select Date
+            </Label>
             <Input
+              id="booking-date"
               type="date"
               value={formData.date}
               onChange={(e) => handleInputChange("date", e.target.value)}
               min={new Date().toISOString().split("T")[0]}
               className="text-base"
             />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 6: Customer Selection */}
-      {currentStep === 6 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary" />
-              <CardTitle>
-                {userRole === "admin"
-                  ? "Step 6: Select Customer"
-                  : "Step 6: Your Information"}
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {userRole === "admin" ? (
-              <>
-                {loading.customers ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    <span className="text-muted-foreground">
-                      Loading customers...
-                    </span>
-                  </div>
-                ) : (
-                  <Select
-                    value={formData.customerNo}
-                    onValueChange={(value) =>
-                      handleInputChange("customerNo", value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a customer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customers.map((customer) => (
-                        <SelectItem
-                          key={customer.id}
-                          value={customer.customerNo}
-                        >
-                          <div className="flex flex-col">
-                            <span className="font-medium">{customer.name}</span>
-                            <span className="text-xs text-muted-foreground">
-                              ID: {customer.customerNo}
-                              {customer.email && ` • ${customer.email}`}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                {customers.length === 0 && !loading.customers && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    No customers available
-                  </p>
-                )}
-              </>
-            ) : (
-              <Input
-                type="text"
-                value={formData.customerNo}
-                readOnly
-                className="bg-muted text-base font-semibold"
-              />
+            {formData.date && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Selected date: {new Date(formData.date).toLocaleDateString()}
+              </p>
             )}
-          </CardContent>
-        </Card>
-      )}
+          </div>
 
-      {/* Step 7: Time Slots */}
-      {currentStep === 7 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-primary" />
-              <CardTitle>Step 7: Select Time Slot</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
+          {/* Quick Stats */}
+          {formData.date && availableTimeSlots.length > 0 && (
+            <Card className="bg-muted/50">
+              <CardContent className="p-4">
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <div className="text-2xl font-bold text-foreground">
+                      {availableTimeSlots.length}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Total</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-green-600">
+                      {
+                        availableTimeSlots.filter(
+                          (slot) => slot.available
+                        ).length
+                      }
+                    </div>
+                    <div className="text-xs text-muted-foreground">Available</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-destructive">
+                      {
+                        availableTimeSlots.filter(
+                          (slot) => !slot.available
+                        ).length
+                      }
+                    </div>
+                    <div className="text-xs text-muted-foreground">Booked</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Time Slot Selection - Right Side */}
+        {formData.date && (
+          <div className="space-y-4">
+            <Label className="text-base font-medium block">
+              Available Time Slots
+            </Label>
+            
             {loading.timeSlots ? (
-              <div className="flex items-center justify-center py-8">
+              <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin mr-2" />
                 <span className="text-muted-foreground">
                   Loading available time slots...
                 </span>
               </div>
-            ) : (
-              <>
-                {availableTimeSlots.length > 0 && (
-                  <div className="flex items-center gap-4 mb-4 p-3 bg-muted rounded-lg text-sm">
-                    <span>
-                      Total slots: <strong>{availableTimeSlots.length}</strong>
-                    </span>
-                    <Separator orientation="vertical" className="h-4" />
-                    <span className="text-green-600">
-                      Available:{" "}
-                      <strong>
-                        {
-                          availableTimeSlots.filter((slot) => slot.available)
-                            .length
-                        }
-                      </strong>
-                    </span>
-                    <Separator orientation="vertical" className="h-4" />
-                    <span className="text-destructive">
-                      Booked:{" "}
-                      <strong>
-                        {
-                          availableTimeSlots.filter((slot) => !slot.available)
-                            .length
-                        }
-                      </strong>
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex flex-wrap gap-2">
+            ) : availableTimeSlots.length > 0 ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-96 overflow-y-auto p-1">
                   {availableTimeSlots.map((slot, index) => (
                     <Button
                       key={`${slot.id}-${index}`}
@@ -1110,33 +1218,141 @@ export default function BookingForm() {
                           ? "default"
                           : "outline"
                       }
-                      className="min-w-[100px]"
+                      className={`
+                        h-12 text-sm font-medium transition-all
+                        ${slot.available 
+                          ? formData.selectedTime === slot.time
+                            ? "bg-green-600 hover:bg-green-700 text-white border-green-600"
+                            : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200 hover:border-green-300"
+                          : "bg-red-50 text-red-400 border-red-200 cursor-not-allowed opacity-60"
+                        }
+                      `}
                     >
-                      {slot.time}
-                      {!slot.available && " ✗"}
+                      <div className="flex flex-col items-center">
+                        <span>{slot.time}</span>
+                        {!slot.available && (
+                          <span className="text-xs">Unavailable</span>
+                        )}
+                      </div>
                     </Button>
                   ))}
                 </div>
 
-                {!formData.selectedTime && availableTimeSlots.length > 0 && (
-                  <p className="text-sm text-muted-foreground mt-4">
-                    Please select a time slot
+                {!formData.selectedTime && (
+                  <p className="text-sm text-muted-foreground text-center">
+                    Please select a time slot to continue
                   </p>
                 )}
-                {availableTimeSlots.length === 0 && formData.date && (
-                  <p className="text-sm text-destructive mt-4">
-                    No available time slots for selected date
-                  </p>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Booking Note and Submit */}
-      {currentStep === 7 && (
+                {formData.selectedTime && (
+                  <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                    <div className="flex items-center justify-center gap-2 text-primary font-medium">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Selected: {formData.selectedTime}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-12 border-2 border-dashed border-muted rounded-lg">
+                <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground font-medium">
+                  No available time slots
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Please try selecting a different date
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Empty State for Time Slots when no date selected */}
+        {!formData.date && (
+          <div className="flex items-center justify-center min-h-[200px] border-2 border-dashed border-muted rounded-lg">
+            <div className="text-center text-muted-foreground">
+              <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>Please select a date to see available time slots</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </CardContent>
+  </Card>
+)}
+
+      {/* Step 5: Customer Selection */}
+      {currentStep === 5 && (
         <>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" />
+                <CardTitle>
+                  {userRole === "admin"
+                    ? "Step 5: Select Customer"
+                    : "Step 5: Your Information"}
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {userRole === "admin" ? (
+                <>
+                  {loading.customers ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      <span className="text-muted-foreground">
+                        Loading customers...
+                      </span>
+                    </div>
+                  ) : (
+                    <Select
+                      value={formData.customerNo}
+                      onValueChange={(value) =>
+                        handleInputChange("customerNo", value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a customer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {customers.map((customer) => (
+                          <SelectItem
+                            key={customer.id}
+                            value={customer.customerNo}
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-medium">
+                                {customer.name}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                ID: {customer.customerNo}
+                                {customer.email && ` • ${customer.email}`}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {customers.length === 0 && !loading.customers && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      No customers available
+                    </p>
+                  )}
+                </>
+              ) : (
+                <Input
+                  type="text"
+                  value={formData.customerNo}
+                  readOnly
+                  className="bg-muted text-base font-semibold"
+                />
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Booking Note and Submit */}
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">

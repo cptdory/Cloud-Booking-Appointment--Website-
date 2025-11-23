@@ -16,72 +16,54 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import {
   User,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  Hash,
   Loader2,
   CheckCircle2,
   AlertCircle,
   Lock,
-  Eye,
-  EyeOff,
+  Palette,
 } from "lucide-react";
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-interface UserProfile {
+interface UserData {
+  role: string;
+  username?: string;
   name: string;
-  phoneNo: string;
   email: string;
-  address: string;
-  address2: string;
-  age: number;
-  birthDate: string;
   customerNo?: string;
+  staffCode?: string;
+  staffName?: string;
+  staffColor?: string;
+  currentBookingSetup?: {
+    code: string;
+    parameterId: number;
+    parameterValueId: number;
+  };
 }
 
 export default function AccountForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
 
-  const [formData, setFormData] = useState<UserProfile>({
-    name: "",
-    phoneNo: "",
-    email: "",
-    address: "",
-    address2: "",
-    age: 0,
-    birthDate: "",
-    customerNo: "",
-  });
-
-  const [originalData, setOriginalData] = useState<UserProfile>({
-    name: "",
-    phoneNo: "",
-    email: "",
-    address: "",
-    address2: "",
-    age: 0,
-    birthDate: "",
-    customerNo: "",
-  });
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Password tab states
-  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
 
-  // Fetch user profile
+  // Staff color state (for admin)
+  const [staffColor, setStaffColor] = useState("");
+  const [changingColor, setChangingColor] = useState(false);
+
+  // Fetch user data and initial staff color
   useEffect(() => {
-    const fetchUserProfile = async () => {
+    const fetchUserData = async () => {
       try {
         setLoading(true);
 
@@ -93,155 +75,214 @@ export default function AccountForm() {
           return;
         }
 
-        const profileRes = await fetch("/api/customer/get-customer", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            customerNo: authData.user.customerNo,
-          }),
-        });
+        setUserData(authData.user);
+        setIsAdmin(authData.user?.role === "admin");
 
-        if (!profileRes.ok) throw new Error("Failed to fetch profile");
-        const profileData = await profileRes.json();
-
-        const userData: UserProfile = {
-          name: profileData.name || "",
-          phoneNo: profileData.phoneNo || "",
-          email: profileData.email || "",
-          address: profileData.address || "",
-          address2: profileData.address2 || "",
-          age: profileData.age || 0,
-          birthDate: profileData.birthDate || "",
-          customerNo: profileData.customerNo || authData.user.customerNo,
-        };
-
-        setFormData(userData);
-        setOriginalData(userData);
+        // If admin, fetch the current staff color
+        if (authData.user?.role === "admin" && authData.user?.currentBookingSetup) {
+          await fetchStaffColor(authData.user.currentBookingSetup);
+        }
       } catch (error) {
-        console.error("Error loading profile:", error);
-        setMessage({ type: "error", text: "Failed to load profile data" });
+        console.error("Error loading data:", error);
+        setMessage({ type: "error", text: "Failed to load data" });
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUserProfile();
+    fetchUserData();
   }, [router]);
 
-  const handleInputChange = (
-    field: keyof UserProfile,
-    value: string | number
-  ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    if (message) setMessage(null);
+  // Function to fetch staff color for a single staff member
+  const fetchStaffColor = async (bookingSetup: { code: string; parameterId: number; parameterValueId: number }) => {
+    try {
+      console.log("🔄 Fetching staff color...");
+      
+      const requestBody = {
+        _BookingSetupCode: bookingSetup.code,
+        _BookingParameterId: bookingSetup.parameterId.toString(),
+        _BookingParameterValueId: bookingSetup.parameterValueId.toString(), // ✅ Use parameterValueId, not staffCode
+      };
+
+      console.log("📤 Sent request body:", JSON.stringify(requestBody, null, 2));
+
+      const res = await fetch("/api/booking-staff-auth/get-booking-staff-color", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log("📥 Response status:", res.status, res.statusText);
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("❌ Failed to fetch staff color:", errorText);
+        return;
+      }
+
+      const data = await res.json();
+      console.log("✅ Staff colors response:", data);
+
+      // Parse the response to get the color
+      if (data.staffColors && data.staffColors[bookingSetup.parameterValueId]) {
+        const newColor = data.staffColors[bookingSetup.parameterValueId].background;
+        console.log("🎨 Found staff color:", newColor);
+        setStaffColor(newColor);
+        setUserData((prev) => prev ? { ...prev, staffColor: newColor } : null);
+      } else {
+        console.warn("⚠️ No StaffColor found in response for parameter value ID:", bookingSetup.parameterValueId);
+        console.log("🔍 Available staff colors:", data.staffColors);
+        // Set default color if none found
+        setStaffColor("#3b82f6");
+      }
+    } catch (error) {
+      console.error("❌ Error fetching staff color:", error);
+      setStaffColor("#3b82f6"); // Fallback color
+    }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!formData.name.trim()) {
-      setMessage({ type: "error", text: "Name is required" });
+  const handlePasswordChange = async () => {
+    if (!newPassword || !confirmPassword) {
+      setMessage({
+        type: "error",
+        text: "New password and confirmation required",
+      });
       return;
     }
 
-    if (!formData.email.trim()) {
-      setMessage({ type: "error", text: "Email is required" });
+    if (newPassword !== confirmPassword) {
+      setMessage({ type: "error", text: "New passwords do not match" });
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setMessage({ type: "error", text: "Invalid email format" });
-      return;
-    }
-
-    setSaving(true);
+    setChangingPassword(true);
     setMessage(null);
 
     try {
-      const res = await fetch("/api/customer/update-customer-details", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+      if (isAdmin && userData?.currentBookingSetup) {
+        // Admin password change for staff
+        const res = await fetch(
+          "/api/booking-staff-auth/update-booking-staff-auth-password",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              _BookingSetupCode: userData.currentBookingSetup.code,
+              _BookingParameterId: userData.currentBookingSetup.parameterId.toString(),
+              _BookingParameterValueId: userData.currentBookingSetup.parameterValueId.toString(),
+              _PortalPassword: newPassword,
+            }), 
+          }
+        );
 
-      if (!res.ok) throw new Error("Profile update failed");
+        if (!res.ok) throw new Error("Password change failed");
 
-      setMessage({ type: "success", text: "Profile updated successfully!" });
-      setOriginalData(formData);
-
-      setTimeout(() => setMessage(null), 3000);
+        setMessage({ type: "success", text: "Password updated successfully!" });
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        setMessage({ type: "error", text: "Password change not available" });
+      }
     } catch (error) {
       setMessage({
         type: "error",
-        text: "Failed to update profile. Try again.",
+        text: "Failed to change password. Try again.",
       });
     } finally {
-      setSaving(false);
+      setChangingPassword(false);
     }
   };
 
-  const handleCancel = () => {
-    setFormData(originalData);
-    setMessage(null);
-  };
-
-  const hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData);
-
-const handlePasswordChange = async () => {
-  if (!newPassword || !confirmPassword) {
-    setMessage({ type: "error", text: "New password and confirmation required" });
-    return;
-  }
-
-  if (newPassword !== confirmPassword) {
-    setMessage({ type: "error", text: "New passwords do not match" });
-    return;
-  }
-
-  setChangingPassword(true);
-  setMessage(null);
-
-  try {
-    // Get customer number
-    const authRes = await fetch("/api/auth/me", { cache: "no-store" });
-    const authData = await authRes.json();
-
-    if (!authData.authenticated) {
-      router.replace("/signin");
+  const handleColorChange = async () => {
+    if (!staffColor || !userData?.currentBookingSetup) {
+      setMessage({ type: "error", text: "Color is required" });
       return;
     }
 
-    const customerNo = authData.user.customerNo;
+    setChangingColor(true);
+    setMessage(null);
 
-    // Send request to your Next.js API route
-    const res = await fetch("/api/customer/update-customer-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        _CustomerNo: customerNo,          // ✅ REQUIRED BY BC
-        _PortalPassword: newPassword,     // ✅ REQUIRED BY BC
-      }),
-    });
+    try {
+      const requestBody = {
+        _BookingSetupCode: userData.currentBookingSetup.code,
+        _BookingParameterId: userData.currentBookingSetup.parameterId.toString(),
+        _BookingParameterValueId: userData.currentBookingSetup.parameterValueId.toString(),
+        _StaffColor: staffColor,
+      };
 
-    if (!res.ok) throw new Error("Password change failed");
+      console.log("📤 Sending staff color update request:", requestBody);
 
-    setMessage({ type: "success", text: "Password updated successfully!" });
-    setNewPassword("");
-    setConfirmPassword("");
-  } catch (error) {
-    setMessage({
-      type: "error",
-      text: "Failed to change password. Try again.",
-    });
-  } finally {
-    setChangingPassword(false);
+      const res = await fetch(
+        "/api/booking-staff-auth/update-booking-staff-auth-details",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+        }
+      );
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("❌ Staff color update failed:", errorText);
+        throw new Error("Color update failed");
+      }
+
+      const responseData = await res.json();
+      console.log("✅ Staff color update successful:", responseData);
+
+      // Refresh the staff color after update
+      await fetchStaffColor(userData.currentBookingSetup);
+
+      setMessage({
+        type: "success",
+        text: "Staff color updated successfully!",
+      });
+
+      setTimeout(() => setMessage(null), 3000);
+    } catch (error) {
+      console.error("❌ Staff color update error:", error);
+      setMessage({
+        type: "error",
+        text: "Failed to update staff color. Try again.",
+      });
+    } finally {
+      setChangingColor(false);
+    }
+  };
+
+  // Color options for the color picker
+  const colorOptions = [
+    { value: "#3b82f6", label: "Blue" },
+    { value: "#ef4444", label: "Red" },
+    { value: "#10b981", label: "Green" },
+    { value: "#f59e0b", label: "Yellow" },
+    { value: "#8b5cf6", label: "Purple" },
+    { value: "#ec4899", label: "Pink" },
+    { value: "#f97316", label: "Orange" },
+    { value: "#14b8a6", label: "Teal" },
+    { value: "#6366f1", label: "Indigo" },
+    { value: "#6b7280", label: "Gray" },
+  ];
+
+  // Also log when component loads and when staffColor changes
+  useEffect(() => {
+    if (isAdmin && staffColor) {
+      console.log("🎨 Current staff color on load:", staffColor);
+      console.log("👤 Current user data:", userData);
+    }
+  }, [isAdmin, staffColor, userData]);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6 max-w-4xl">
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <Loader2 className="w-12 h-12 animate-spin text-primary" />
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
-};
-
-
 
   if (loading) {
     return (
@@ -262,7 +303,9 @@ const handlePasswordChange = async () => {
         <CardHeader>
           <CardTitle className="text-3xl">Account Settings</CardTitle>
           <CardDescription>
-            Manage your personal information and account preferences
+            {isAdmin
+              ? "Manage your staff preferences"
+              : "Manage your personal information and account preferences"}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -279,207 +322,190 @@ const handlePasswordChange = async () => {
         </Alert>
       )}
 
-      {/* TABS */}
-      <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid grid-cols-2 w-full">
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="password">Change Password</TabsTrigger>
-        </TabsList>
+      {/* Admin View - Only Staff Color and Password */}
+      {isAdmin ? (
+        <Tabs defaultValue="color" className="w-full">
+          <TabsList className="grid grid-cols-2 w-full">
+            <TabsTrigger value="color">Staff Color</TabsTrigger>
+            <TabsTrigger value="password">Change Password</TabsTrigger>
+          </TabsList>
 
-        {/* PROFILE TAB */}
-        <TabsContent value="profile">
-          <form onSubmit={handleSubmit}>
-            {/* Personal Info */}
+          {/* STAFF COLOR TAB */}
+          <TabsContent value="color">
             <Card className="mt-6">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <User className="w-5 h-5" />
-                  Personal Information
+                  <Palette className="w-5 h-5 text-primary" />
+                  Staff Color Settings
                 </CardTitle>
+                <CardDescription>
+                  Choose a color that represents you in the booking calendar
+                </CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-6">
-                {formData.customerNo && (
+                {/* Staff Info */}
+                <div className="space-y-4 p-4 bg-muted rounded-lg">
                   <div className="space-y-2">
-                    <Label>Customer Number</Label>
-                    <Input
-                      readOnly
-                      value={formData.customerNo}
-                      className="bg-muted font-semibold"
-                    />
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label>Full Name *</Label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => handleInputChange("name", e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Email *</Label>
-                  <Input
-                    value={formData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Phone Number</Label>
-                  <Input
-                    value={formData.phoneNo}
-                    onChange={(e) =>
-                      handleInputChange("phoneNo", e.target.value)
-                    }
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Age</Label>
-                    <Input
-                      type="number"
-                      value={formData.age}
-                      onChange={(e) =>
-                        handleInputChange("age", parseInt(e.target.value) || 0)
-                      }
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Birth Date</Label>
-                    <Input
-                      type="date"
-                      value={formData.birthDate}
-                      onChange={(e) =>
-                        handleInputChange("birthDate", e.target.value)
-                      }
-                    />
+                    <Label className="text-sm font-medium">
+                      Staff Information
+                    </Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium">Staff Code:</span>{" "}
+                        {userData?.staffCode}
+                      </div>
+                      <div>
+                        <span className="font-medium">Staff Name:</span>{" "}
+                        {userData?.staffName}
+                      </div>
+                      <div>
+                        <span className="font-medium">Current Color:</span>
+                        <span
+                          className="ml-2 px-2 py-1 rounded text-xs border"
+                          style={{
+                            backgroundColor: staffColor + "20",
+                            color: staffColor,
+                            borderColor: staffColor,
+                          }}
+                        >
+                          {staffColor}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
+
+                <div className="space-y-4">
+                  <Label htmlFor="staffColor">Select New Staff Color</Label>
+                  <div className="flex items-center gap-4">
+                    <Input
+                      id="staffColor"
+                      type="color"
+                      value={staffColor}
+                      onChange={(e) => setStaffColor(e.target.value)}
+                      className="w-20 h-10 p-1"
+                    />
+                    <div className="flex-1">
+                      <Input
+                        value={staffColor}
+                        onChange={(e) => setStaffColor(e.target.value)}
+                        placeholder="#3b82f6"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Enter a color code or use the color picker
+                  </p>
+                </div>
+
+                {/* Color Preview */}
+                <div className="space-y-2">
+                  <Label>Preview</Label>
+                  <div
+                    className="w-full h-20 rounded-lg border flex items-center justify-center"
+                    style={{ backgroundColor: staffColor }}
+                  >
+                    <span
+                      className={`text-lg font-medium ${
+                        parseInt(staffColor.replace("#", ""), 16) > 0xffffff / 2
+                          ? "text-black"
+                          : "text-white"
+                      }`}
+                    >
+                      Your Staff Color
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  className="w-full"
+                  disabled={changingColor}
+                  onClick={handleColorChange}
+                >
+                  {changingColor ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Updating Color...
+                    </>
+                  ) : (
+                    "Update Staff Color"
+                  )}
+                </Button>
               </CardContent>
             </Card>
+          </TabsContent>
 
-            {/* Address */}
+          {/* PASSWORD TAB */}
+          <TabsContent value="password">
             <Card className="mt-6">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <MapPin className="w-5 h-5" />
-                  Address Information
+                  <Lock className="w-5 h-5 text-primary" />
+                  Change Password
                 </CardTitle>
+                <CardDescription>
+                  Update your staff portal password
+                </CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-4">
-                <div>
-                  <Label>Address Line 1</Label>
+                <div className="space-y-2">
+                  <Label>New Password</Label>
                   <Input
-                    value={formData.address}
-                    onChange={(e) =>
-                      handleInputChange("address", e.target.value)
-                    }
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
                   />
                 </div>
 
-                <div>
-                  <Label>Address Line 2</Label>
+                <div className="space-y-2">
+                  <Label>Confirm New Password</Label>
                   <Input
-                    value={formData.address2}
-                    onChange={(e) =>
-                      handleInputChange("address2", e.target.value)
-                    }
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
                   />
                 </div>
+
+                <Button
+                  className="w-full mt-4"
+                  disabled={
+                    changingPassword || !newPassword || !confirmPassword
+                  }
+                  onClick={handlePasswordChange}
+                >
+                  {changingPassword ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Password"
+                  )}
+                </Button>
               </CardContent>
             </Card>
-
-            {/* Actions */}
-            <Card className="mt-6">
-              <CardContent className="pt-6">
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button
-                    type="submit"
-                    disabled={saving || !hasChanges}
-                    className="flex-1"
-                  >
-                    {saving ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>Save Changes</>
-                    )}
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleCancel}
-                    disabled={saving || !hasChanges}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-
-                {!hasChanges && (
-                  <p className="text-sm text-muted-foreground text-center mt-3">
-                    No changes to save
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </form>
-        </TabsContent>
-
-        {/* PASSWORD TAB */}
-        <TabsContent value="password">
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Lock className="w-5 h-5 text-primary" />
-                Change Password
-              </CardTitle>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>New Password</Label>
-                <Input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Confirm New Password</Label>
-                <Input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-              </div>
-
-              <Button
-                className="w-full mt-4"
-                disabled={changingPassword}
-                onClick={handlePasswordChange}
-              >
-                {changingPassword ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    Updating...
-                  </>
-                ) : (
-                  "Update Password"
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+        </Tabs>
+      ) : (
+        // Customer View - Show message that profile editing is not available
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="text-center space-y-4">
+              <User className="w-12 h-12 mx-auto text-muted-foreground" />
+              <h3 className="text-lg font-medium">Profile Management</h3>
+              <p className="text-muted-foreground max-w-md">
+                Customer profile editing is currently not available in the
+                portal. Please contact support if you need to update your
+                personal information.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

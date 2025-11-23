@@ -34,20 +34,30 @@ async function getAccessToken() {
 }
 
 export async function POST(req: Request) {
-  
   try {
     const body = await req.json();
 
-    const { _BookingParameterValueIds, _BookingSetupCode } = body;
+    const { _BookingParameterValueIds, _BookingParameterValueId, _BookingSetupCode, _BookingParameterId } = body;
 
-    if (!_BookingParameterValueIds || !Array.isArray(_BookingParameterValueIds) || _BookingParameterValueIds.length === 0) {
-      console.error("❌ Missing or invalid _BookingParameterValueIds:", _BookingParameterValueIds);
-      return NextResponse.json({ error: "_BookingParameterValueIds array is required" }, { status: 400 });
-    }
-
+    // Validate required fields
     if (!_BookingSetupCode) {
       console.error("❌ Missing _BookingSetupCode");
       return NextResponse.json({ error: "_BookingSetupCode is required" }, { status: 400 });
+    }
+
+    // Check if we have array input or single value input
+    const hasArrayInput = _BookingParameterValueIds && Array.isArray(_BookingParameterValueIds) && _BookingParameterValueIds.length > 0;
+    const hasSingleInput = _BookingParameterValueId && _BookingParameterId;
+
+    if (!hasArrayInput && !hasSingleInput) {
+      console.error("❌ Missing staff identifiers:", { 
+        _BookingParameterValueIds, 
+        _BookingParameterValueId, 
+        _BookingParameterId 
+      });
+      return NextResponse.json({ 
+        error: "Either _BookingParameterValueIds array or both _BookingParameterValueId and _BookingParameterId are required" 
+      }, { status: 400 });
     }
 
     if (!process.env.TENANT_ID) {
@@ -61,22 +71,40 @@ export async function POST(req: Request) {
     const environment = "SandboxDev2";
     const company = "SQUADLETHICS";
 
-    // Fetch colors for all staff codes
+    // Fetch colors for staff codes
     const staffColors: { [key: string]: { background: string; text: string } } = {};
 
-    for (const _BookingParameterValueId of _BookingParameterValueIds) {
+    // Prepare staff list to process
+    const staffToProcess: Array<{ parameterValueId: string; parameterId?: string }> = [];
+
+    if (hasArrayInput) {
+      staffToProcess.push(..._BookingParameterValueIds.map((id: string) => ({
+        parameterValueId: id,
+        parameterId: _BookingParameterId
+      })));
+    } else if (hasSingleInput) {
+      // Single input - use provided parameter ID
+      staffToProcess.push({
+        parameterValueId: _BookingParameterValueId,
+        parameterId: _BookingParameterId.toString() // Ensure it's a string
+      });
+    }
+
+    console.log(`🎨 Processing ${staffToProcess.length} staff members`);
+
+    for (const staff of staffToProcess) {
       try {
-        console.log(`🎨 Fetching color for staff: ${_BookingParameterValueId}`);
+        console.log(`🎨 Fetching color for staff: ${staff.parameterValueId} with parameterId: ${staff.parameterId}`);
         
         const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_GetBookingStaffColor?Company=${encodeURIComponent(company)}`;
 
         const bcRequestBody = {
           _BookingSetupCode: _BookingSetupCode,
-          _BookingParameterId: "5",
-          _BookingParameterValueId: _BookingParameterValueId,
+          _BookingParameterId: staff.parameterId,
+          _BookingParameterValueId: staff.parameterValueId,
         };
 
-        console.log(`📤 Sending to Business Central for ${_BookingParameterValueId}:`, JSON.stringify(bcRequestBody, null, 2));
+        console.log(`📤 Sending to Business Central for ${staff.parameterValueId}:`, JSON.stringify(bcRequestBody, null, 2));
 
         const res = await fetch(url, {
           method: "POST",
@@ -87,21 +115,21 @@ export async function POST(req: Request) {
           body: JSON.stringify(bcRequestBody),
         });
 
-        console.log(`📥 Business Central response for ${_BookingParameterValueId} - status:`, res.status);
+        console.log(`📥 Business Central response for ${staff.parameterValueId} - status:`, res.status);
 
         let data: any = null;
         const text = await res.text();
         
         try {
           data = text ? JSON.parse(text) : null;
-          console.log(`✅ Successfully parsed JSON response for ${_BookingParameterValueId}:`, data);
+          console.log(`✅ Successfully parsed JSON response for ${staff.parameterValueId}:`, data);
         } catch (err) {
-          console.warn(`⚠️ Failed to parse BC response for ${_BookingParameterValueId} as JSON:`, text);
+          console.warn(`⚠️ Failed to parse BC response for ${staff.parameterValueId} as JSON:`, text);
           continue; // Skip this staff code and continue with others
         }
 
         if (!res.ok) {
-          console.warn(`⚠️ Business Central API error for ${_BookingParameterValueId}:`, {
+          console.warn(`⚠️ Business Central API error for ${staff.parameterValueId}:`, {
             status: res.status,
             statusText: res.statusText,
             data: data,
@@ -110,40 +138,42 @@ export async function POST(req: Request) {
           continue; // Skip this staff code and continue with others
         }
 
-        // Assuming the API returns color in format { value: "#3788d8" }
-if (data && data.value) {
-  let backgroundColor = "";
+        // Parse the response to get the color
+        if (data && data.value) {
+          let backgroundColor = "";
 
-  try {
-    const parsed = JSON.parse(data.value); // Convert string → array/object
+          try {
+            const parsed = JSON.parse(data.value); // Convert string → array/object
 
-    if (Array.isArray(parsed) && parsed[0]?.StaffColor) {
-      backgroundColor = parsed[0].StaffColor;
-    }
-  } catch (e) {
-    console.warn("⚠️ Value is not valid JSON:", data.value);
-  }
+            if (Array.isArray(parsed) && parsed[0]?.StaffColor) {
+              backgroundColor = parsed[0].StaffColor;
+            }
+          } catch (e) {
+            console.warn("⚠️ Value is not valid JSON:", data.value);
+          }
 
-  if (backgroundColor) {
-    const textColor = getContrastColor(backgroundColor);
-    staffColors[_BookingParameterValueId] = {
-      background: backgroundColor,
-      text: textColor
-    };
-  } else {
-    console.warn(`⚠️ No StaffColor found for staff ${_BookingParameterValueId}`);
-  }
-}
-
+          if (backgroundColor) {
+            const textColor = getContrastColor(backgroundColor);
+            staffColors[staff.parameterValueId] = {
+              background: backgroundColor,
+              text: textColor
+            };
+            console.log(`✅ Found color for ${staff.parameterValueId}: ${backgroundColor}`);
+          } else {
+            console.warn(`⚠️ No StaffColor found for staff ${staff.parameterValueId}`);
+          }
+        }
 
       } catch (error) {
-        console.warn(`⚠️ Failed to get color for staff ${_BookingParameterValueId}:`, error);
+        console.warn(`⚠️ Failed to get color for staff ${staff.parameterValueId}:`, error);
         // Continue with other staff codes
       }
     }
     
+    console.log(`✅ Returning colors for ${Object.keys(staffColors).length} staff members`);
     return NextResponse.json({ staffColors });
   } catch (err: any) {
+    console.error("❌ API route error:", err);
     return NextResponse.json({ 
       error: err.message || "Internal Server Error" 
     }, { status: 500 });

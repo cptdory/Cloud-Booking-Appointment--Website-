@@ -38,6 +38,10 @@ export default function StaffPage() {
     [key: string]: { background: string; text: string };
   }>({});
 
+  // Flags for parameter type
+  const [isParamStaff, setIsParamStaff] = useState<boolean>(false);
+  const [isParamService, setIsParamService] = useState<boolean>(false);
+
   // Edit Dialog state
   const [editing, setEditing] = useState(false);
   const [editItem, setEditItem] = useState<any | null>(null);
@@ -91,25 +95,56 @@ export default function StaffPage() {
     { value: "#6b7280", label: "Gray", color: "bg-gray-500" },
   ];
 
+  useEffect(() => {
+    // load values when page params change
+    if (_BookingSetupCode && parameterId) {
+      loadValues();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [_BookingSetupCode, parameterId]);
+
   const loadValues = async () => {
     if (!_BookingSetupCode || !parameterId) return;
+
     setLoading(true);
     setError(null);
+
     try {
+      console.log("▶️ Loading values for:", { _BookingSetupCode, parameterId });
+
       const res = await fetch(
         `/api/booking-setup/get-booking-setup?code=${_BookingSetupCode}`
       );
       const json = await res.json();
+
+      console.log("📦 API Response:", json);
+
       if (!json.value || json.value.length === 0) {
+        console.log("⚠️ No booking setup found.");
         setValues([]);
         setLoading(false);
         return;
       }
+
       const setup = json.value[0];
+      console.log("🛠 Setup object:", setup);
+
+      // Find parameter
       const param = setup.BookingParameter.find(
         (p: any) => p.BookingParameterId.toString() === parameterId
       );
+
+      // Set flags into state so other functions can use them
+      const BookingParameterStaff = param?.BookingParameterStaff ?? false;
+      const BookingParameterService = param?.BookingParameterService ?? false;
+      setIsParamStaff(BookingParameterStaff);
+      setIsParamService(BookingParameterService);
+
+      console.log("👥 BookingParameterStaff:", BookingParameterStaff);
+      console.log("🛎️ BookingParameterService:", BookingParameterService);
+
       const staffValues = param ? param.BookingParameterValue : [];
+      console.log("📄 Parameter Values:", staffValues);
       setValues(staffValues);
 
       // Load colors for all staff
@@ -117,48 +152,51 @@ export default function StaffPage() {
         await loadStaffColors(staffValues);
       }
     } catch (err: any) {
-      console.error(err);
+      console.error("❌ Error loading values:", err);
       setError("Failed to load services");
     } finally {
       setLoading(false);
+      console.log("✔️ Loading finished");
     }
   };
 
-  // Load colors for all staff members
-  const loadStaffColors = async (staffList: any[]) => {
-    try {
-      const valueIds = staffList.map((staff) =>
-        String(staff.BookingParameterValueId)
-      );
+// Load colors for all staff members
+const loadStaffColors = async (staffList: any[]) => {
+  try {
+    const valueIds = staffList.map((staff) =>
+      String(staff.BookingParameterValueId)
+    );
 
-      const body = {
-        _BookingParameterValueIds: valueIds,
-        _BookingSetupCode: _BookingSetupCode,
-      };
+    const body = {
+      _BookingParameterValueIds: valueIds,
+      _BookingSetupCode: _BookingSetupCode,
+      _BookingParameterId: parameterId, // ✅ Add this missing parameter
+    };
 
-      // ✅ Log the body you're sending
-      console.log("📨 Sending color request body:", body);
+    console.log("📨 Sending color request body:", body);
 
-      const res = await fetch(
-        "/api/booking-staff-auth/get-booking-staff-color",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        }
-      );
-
-      const json = await res.json();
-
-      console.log("🎨 Color API response:", json);
-
-      if (res.ok && json.staffColors) {
-        setStaffColors(json.staffColors);
+    const res = await fetch(
+      "/api/booking-staff-auth/get-booking-staff-color",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       }
-    } catch (err) {
-      console.error("Failed to load staff colors:", err);
+    );
+
+    const json = await res.json();
+
+    console.log("🎨 Color API response:", json);
+
+    if (res.ok && json.staffColors) {
+      setStaffColors(json.staffColors);
+    } else {
+      console.error("❌ Color API error:", json.error);
     }
-  };
+  } catch (err) {
+    console.error("Failed to load staff colors:", err);
+  }
+};
 
   // Get color for a specific staff member
   const getStaffColorStyle = (valueIds: string) => {
@@ -347,6 +385,10 @@ export default function StaffPage() {
     if (!editItem) return;
     setSaving(true);
     try {
+      // Use flags from loadValues stored in state
+      const staffFlag = isParamStaff ? "True" : "False";
+      const serviceFlag = isParamService ? "True" : "False";
+
       const body = {
         _BookingSetupCode: _BookingSetupCode,
         _BookingParameterId: parameterId,
@@ -356,9 +398,11 @@ export default function StaffPage() {
         _BookingParameterValueDuration: String(
           editItem.BookingParameterValueDuration
         ),
-        _BookingParameterValueStaff: "No",
-        _BookingParameterValueService: "Yes",
+        _BookingParameterValueStaff: staffFlag,
+        _BookingParameterValueService: serviceFlag,
       };
+
+      console.log("📤 Sending update body:", body);
 
       const res = await fetch(
         "/api/booking-parameter/update-booking-parameter-value",
@@ -420,6 +464,10 @@ export default function StaffPage() {
   const handleCreate = async () => {
     setCreatingSaving(true);
     try {
+      // Use flags from loadValues stored in state
+      const staffFlag = isParamStaff ? "True" : "False";
+      const serviceFlag = isParamService ? "True" : "False";
+
       const body = {
         _BookingSetupCode: _BookingSetupCode,
         _BookingParameterId: parameterId,
@@ -428,9 +476,11 @@ export default function StaffPage() {
         _BookingParameterValueDuration: String(
           newItem.BookingParameterValueDuration
         ),
-        _BookingParameterValueStaff: "Yes",
-        _BookingParameterValueService: "No",
+        _BookingParameterValueStaff: staffFlag,
+        _BookingParameterValueService: serviceFlag,
       };
+
+      console.log("📤 Sending create body:", body);
 
       const res = await fetch(
         "/api/booking-parameter/create-booking-parameter-value",

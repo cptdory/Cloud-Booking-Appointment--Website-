@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { _BookingSetupCode, _BookingParameterId, _BookingParameterValueId, _StaffColor } = body;
 
-    if (!_BookingSetupCode || !_BookingParameterId || !_BookingParameterValueId || !_StaffColor) {
+    if (!_StaffColor) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -56,9 +56,9 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        _BookingSetupCode: _BookingSetupCode,
-        _BookingParameterId: _BookingParameterId,
-        _BookingParameterValueId: _BookingParameterValueId,
+        _BookingSetupCode: _BookingSetupCode || "",
+        _BookingParameterId: _BookingParameterId || "0",
+        _BookingParameterValueId: _BookingParameterValueId || "0",
         _StaffColor: _StaffColor,
       }),
     });

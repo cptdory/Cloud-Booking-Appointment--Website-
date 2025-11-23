@@ -64,6 +64,9 @@ export default function ServicesPage() {
     BookingParameterValueDuration: 60,
   });
   const [creatingSaving, setCreatingSaving] = useState(false);
+  const [isParamStaff, setIsParamStaff] = useState("false");
+const [isParamService, setIsParamService] = useState("false");
+
 
   // read url params
   const search =
@@ -73,32 +76,51 @@ export default function ServicesPage() {
   const code = search.get("code") || "";
   const parameterId = search.get("parameter_id") || "";
 
-  const loadValues = async () => {
-    if (!code || !parameterId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(
-        `/api/booking-setup/get-booking-setup?code=${code}`
-      );
-      const json = await res.json();
-      if (!json.value || json.value.length === 0) {
-        setValues([]);
-        setLoading(false);
-        return;
-      }
-      const setup = json.value[0];
-      const param = setup.BookingParameter.find(
-        (p: any) => p.BookingParameterId.toString() === parameterId
-      );
-      setValues(param ? param.BookingParameterValue : []);
-    } catch (err: any) {
-      console.error(err);
-      setError("Failed to load services");
-    } finally {
+const loadValues = async () => {
+  if (!code || !parameterId) return;
+
+  setLoading(true);
+  setError(null);
+
+  try {
+    console.log("▶️ Loading values for:", { code, parameterId });
+
+    const res = await fetch(
+      `/api/booking-setup/get-booking-setup?code=${code}`
+    );
+    const json = await res.json();
+
+    if (!json.value || json.value.length === 0) {
+      setValues([]);
       setLoading(false);
+      return;
     }
-  };
+
+    const setup = json.value[0];
+
+    const param = setup.BookingParameter.find(
+      (p: any) => p.BookingParameterId.toString() === parameterId
+    );
+
+    // Extract flags as STRING: "true" or "false"
+    const BookingParameterStaff = String(param?.BookingParameterStaff ?? "false");
+    const BookingParameterService = String(param?.BookingParameterService ?? "false");
+
+    console.log("👥 BookingParameterStaff:", BookingParameterStaff);
+    console.log("🛎️ BookingParameterService:", BookingParameterService);
+
+    // Save them to state
+    setIsParamStaff(BookingParameterStaff);
+    setIsParamService(BookingParameterService);
+
+    setValues(param ? param.BookingParameterValue : []);
+  } catch (err: any) {
+    console.error(err);
+    setError("Failed to load services");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const loadStaff = async () => {
     if (!code) return;
@@ -228,8 +250,8 @@ export default function ServicesPage() {
         _BookingParameterValueDuration: String(
           editItem.BookingParameterValueDuration
         ),
-        _BookingParameterValueStaff: "No",
-        _BookingParameterValueService: "Yes",
+        _BookingParameterValueStaff: isParamStaff,
+        _BookingParameterValueService: isParamService,
       };
 
       const res = await fetch(
@@ -300,8 +322,8 @@ export default function ServicesPage() {
         _BookingParameterValueDuration: String(
           newItem.BookingParameterValueDuration
         ),
-        _BookingParameterValueStaff: "No",
-        _BookingParameterValueService: "Yes",
+        _BookingParameterValueStaff: isParamStaff,
+        _BookingParameterValueService: isParamService,
       };
 
       const res = await fetch(
@@ -342,7 +364,7 @@ export default function ServicesPage() {
       );
       const body = {
         _BookingSetupCode: code,
-        _BookingParameterId_Staff: "5",
+        _BookingParameterId_Staff: parameterId,
         _ServiceId: String(selectedService.BookingParameterValueId),
         _StaffId: String(selectedStaffId),
         _StaffCode: staff?.BookingParameterValueCode || "",

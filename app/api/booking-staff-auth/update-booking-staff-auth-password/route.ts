@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     const { _BookingSetupCode, _BookingParameterId, _BookingParameterValueId, _PortalPassword } = body;
 
     // Validate required fields based on your sample body
-    if (!_BookingSetupCode || !_PortalPassword) {
+    if (!_PortalPassword) {
       return NextResponse.json({ 
         error: "Missing required fields" 
       }, { status: 400 });
@@ -61,9 +61,9 @@ export async function POST(req: Request) {
         Accept: "application/json",
       },
       body: JSON.stringify({
-        _BookingSetupCode: _BookingSetupCode,
-        _BookingParameterId: _BookingParameterId,
-        _BookingParameterValueId: _BookingParameterValueId,
+        _BookingSetupCode: _BookingSetupCode || "",
+        _BookingParameterId: _BookingParameterId || "0",
+        _BookingParameterValueId: _BookingParameterValueId || "0",
         _PortalPassword: _PortalPassword,
       }),
     });
