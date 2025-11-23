@@ -493,9 +493,6 @@ const fetchStaffColors = useCallback(async () => {
             <div className="text-center space-y-4">
               <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
               <p className="text-muted-foreground">Loading calendar...</p>
-              <Button onClick={testFetch} variant="outline">
-                Test Fetch Manually
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -505,20 +502,6 @@ const fetchStaffColors = useCallback(async () => {
 
   return (
     <div className="container mx-auto p-6 max-w-7xl space-y-6">
-      {/* Debug Button - Remove in production */}
-      <Card className="bg-yellow-50 border-yellow-200">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-yellow-800">Debug Mode</p>
-              <p className="text-sm text-yellow-600">Testing calendar data fetch</p>
-            </div>
-            <Button onClick={testFetch} variant="outline" size="sm">
-              Test Fetch Entries
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Error Alert */}
       {error && (
@@ -529,7 +512,6 @@ const fetchStaffColors = useCallback(async () => {
         </Alert>
       )}
 
-      {/* Rest of your existing JSX remains the same */}
       {/* Staff Colors Management */}
       <Card>
         <CardHeader>
@@ -538,7 +520,7 @@ const fetchStaffColors = useCallback(async () => {
             Staff Colors
           </CardTitle>
           <CardDescription>
-            Manage staff colors for calendar events. Changes will be saved to Business Central.
+            Manage staff colors for calendar events.
             {currentDateRange && (
               <> - Showing appointments from {currentDateRange.start.toLocaleDateString()} to {currentDateRange.end.toLocaleDateString()}</>
             )}
