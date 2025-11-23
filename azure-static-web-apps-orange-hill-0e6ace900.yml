@@ -1,10 +1,11 @@
 name: SWA-$(Date:yyyyMMdd)$(Rev:.r)
 
-pr:
+trigger:
   branches:
     include:
       - main
-trigger:
+
+pr:
   branches:
     include:
       - main
@@ -12,21 +13,20 @@ trigger:
 jobs:
 - job: build_and_deploy_job
   displayName: Build and Deploy Job
-  condition: or(eq(variables['Build.Reason'], 'Manual'),or(eq(variables['Build.Reason'], 'PullRequest'),eq(variables['Build.Reason'], 'IndividualCI')))
   pool:
     vmImage: ubuntu-latest
+
   variables:
-  - group: Azure-Static-Web-Apps-orange-hill-0e6ace900-variable-group
+  - group: Azure-Static-Web-Apps-mango-bush-0a726a800-variable-group
+
   steps:
   - checkout: self
     submodules: true
+
   - task: AzureStaticWebApp@0
+    displayName: "Deploy Next.js SSR App"
     inputs:
       azure_static_web_apps_api_token: $(AZURE_STATIC_WEB_APPS_API_TOKEN_ORANGE_HILL_0E6ACE900)
-###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
-# For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
-      app_location: "/" # App source code path
-      api_location: "" # Api source code path - optional
-      output_location: "" # Built app content directory - optional
-###### End of Repository/Build Configurations ######
-
+      app_location: "/"        # root of Next.js
+      api_location: ""         # EMPTY for Next.js app/api
+      output_location: ""      # EMPTY for SSR build
