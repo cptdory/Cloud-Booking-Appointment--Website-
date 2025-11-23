@@ -20,12 +20,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Edit, Trash2, Plus } from "lucide-react";
+import { Edit, Trash2, Plus, CheckCircle } from "lucide-react";
 
 export default function BedPage() {
   const [values, setValues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Success state
+  const [success, setSuccess] = useState<string | null>(null);
 
   // Flags (string values)
   const [isParamStaff, setIsParamStaff] = useState("false");
@@ -49,6 +52,16 @@ export default function BedPage() {
   });
   const [creatingSaving, setCreatingSaving] = useState(false);
 
+  // Auto-hide success alert
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        setSuccess(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
   // read url params
   const search =
     typeof window !== "undefined"
@@ -66,52 +79,36 @@ export default function BedPage() {
     setError(null);
 
     try {
-      console.log("▶️ Loading values for:", { code, parameterId });
-
       const res = await fetch(
         `/api/booking-setup/get-booking-setup?code=${code}`
       );
       const json = await res.json();
 
-      console.log("📦 API Response:", json);
-
       if (!json.value || json.value.length === 0) {
-        console.log("⚠️ No booking setup found.");
         setValues([]);
         setLoading(false);
         return;
       }
 
       const setup = json.value[0];
-      console.log("🛠 Setup object:", setup);
-
       // Find parameter
       const param = setup.BookingParameter.find(
         (p: any) => p.BookingParameterId.toString() === parameterId
       );
 
-      console.log("🔍 Found parameter:", param);
-
       // Extract flags AS STRING
       const BookingParameterStaff = String(param?.BookingParameterStaff ?? "false");
       const BookingParameterService = String(param?.BookingParameterService ?? "false");
-
-      console.log("👥 BookingParameterStaff:", BookingParameterStaff);
-      console.log("🛎️ BookingParameterService:", BookingParameterService);
 
       // Save flags
       setIsParamStaff(BookingParameterStaff);
       setIsParamService(BookingParameterService);
 
-      console.log("📄 Parameter Values:", param?.BookingParameterValue);
-
       setValues(param ? param.BookingParameterValue : []);
     } catch (err: any) {
-      console.error("❌ Error loading values:", err);
       setError("Failed to load services");
     } finally {
       setLoading(false);
-      console.log("✔️ Loading finished");
     }
   };
 
@@ -152,8 +149,6 @@ export default function BedPage() {
         _BookingParameterValueService: isParamService,
       };
 
-      console.log("📤 UPDATE BODY:", body);
-
       const res = await fetch(
         "/api/booking-parameter/update-booking-parameter-value",
         {
@@ -169,9 +164,9 @@ export default function BedPage() {
       await loadValues();
       setEditing(false);
       setEditItem(null);
+      setSuccess("Bed updated successfully!");
     } catch (err: any) {
-      console.error(err);
-      alert(err.message || "Failed to update");
+      setError(err.message || "Failed to update");
     } finally {
       setSaving(false);
     }
@@ -202,9 +197,9 @@ export default function BedPage() {
 
       await loadValues();
       setDeleteItem(null);
+      setSuccess("Bed deleted successfully!");
     } catch (err: any) {
-      console.error(err);
-      alert(err.message || "Failed to delete");
+      setError(err.message || "Failed to delete");
     } finally {
       setDeleting(false);
     }
@@ -228,9 +223,6 @@ export default function BedPage() {
         _BookingParameterValueStaff: isParamStaff,
         _BookingParameterValueService: isParamService,
       };
-
-      console.log("📤 CREATE BODY:", body);
-
       const res = await fetch(
         "/api/booking-parameter/create-booking-parameter-value",
         {
@@ -250,9 +242,10 @@ export default function BedPage() {
         BookingParamterValueDescription: "",
         BookingParameterValueDuration: 60,
       });
+      setSuccess("Bed created successfully!");
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Failed to create");
+      setError(err.message || "Failed to create");
     } finally {
       setCreatingSaving(false);
     }
@@ -260,6 +253,16 @@ export default function BedPage() {
 
   return (
     <div className="flex flex-1 flex-col p-6 md:p-8">
+      {/* Success Alert */}
+      {success && (
+        <Alert className="mb-4">
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>
+            {success}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Card className="w-full">
         <CardHeader className="flex justify-between items-center">
           <CardTitle>Bed</CardTitle>
@@ -318,7 +321,7 @@ export default function BedPage() {
 
         <CardContent>
           {error && (
-            <Alert variant="destructive">
+            <Alert variant="destructive" className="mb-4">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}

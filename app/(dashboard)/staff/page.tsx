@@ -28,12 +28,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Plus, Key, Palette } from "lucide-react";
+import { Edit, Trash2, Plus, Key, Palette, CheckCircle } from "lucide-react";
 
 export default function StaffPage() {
   const [values, setValues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [staffColors, setStaffColors] = useState<{
     [key: string]: { background: string; text: string };
   }>({});
@@ -74,6 +75,16 @@ export default function StaffPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [updatingPassword, setUpdatingPassword] = useState(false);
 
+  // Auto-hide success alert
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        setSuccess(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
   // read url params
   const search =
     typeof window !== "undefined"
@@ -110,24 +121,18 @@ export default function StaffPage() {
     setError(null);
 
     try {
-      console.log("▶️ Loading values for:", { _BookingSetupCode, parameterId });
-
       const res = await fetch(
         `/api/booking-setup/get-booking-setup?code=${_BookingSetupCode}`
       );
       const json = await res.json();
 
-      console.log("📦 API Response:", json);
-
       if (!json.value || json.value.length === 0) {
-        console.log("⚠️ No booking setup found.");
         setValues([]);
         setLoading(false);
         return;
       }
 
       const setup = json.value[0];
-      console.log("🛠 Setup object:", setup);
 
       // Find parameter
       const param = setup.BookingParameter.find(
@@ -140,11 +145,7 @@ export default function StaffPage() {
       setIsParamStaff(BookingParameterStaff);
       setIsParamService(BookingParameterService);
 
-      console.log("👥 BookingParameterStaff:", BookingParameterStaff);
-      console.log("🛎️ BookingParameterService:", BookingParameterService);
-
       const staffValues = param ? param.BookingParameterValue : [];
-      console.log("📄 Parameter Values:", staffValues);
       setValues(staffValues);
 
       // Load colors for all staff
@@ -152,11 +153,9 @@ export default function StaffPage() {
         await loadStaffColors(staffValues);
       }
     } catch (err: any) {
-      console.error("❌ Error loading values:", err);
       setError("Failed to load services");
     } finally {
       setLoading(false);
-      console.log("✔️ Loading finished");
     }
   };
 
@@ -170,10 +169,8 @@ const loadStaffColors = async (staffList: any[]) => {
     const body = {
       _BookingParameterValueIds: valueIds,
       _BookingSetupCode: _BookingSetupCode,
-      _BookingParameterId: parameterId, // ✅ Add this missing parameter
+      _BookingParameterId: parameterId, 
     };
-
-    console.log("📨 Sending color request body:", body);
 
     const res = await fetch(
       "/api/booking-staff-auth/get-booking-staff-color",
@@ -186,12 +183,10 @@ const loadStaffColors = async (staffList: any[]) => {
 
     const json = await res.json();
 
-    console.log("🎨 Color API response:", json);
-
     if (res.ok && json.staffColors) {
       setStaffColors(json.staffColors);
     } else {
-      console.error("❌ Color API error:", json.error);
+      console.error("Color API error:", json.error);
     }
   } catch (err) {
     console.error("Failed to load staff colors:", err);
@@ -270,8 +265,6 @@ const loadStaffColors = async (staffList: any[]) => {
         _StaffColor: selectedColor,
       };
 
-      console.log("🎨 Updating color with body:", body);
-
       const res = await fetch(
         "/api/booking-staff-auth/update-booking-staff-auth-details",
         {
@@ -293,14 +286,14 @@ const loadStaffColors = async (staffList: any[]) => {
         },
       }));
 
-      alert("Staff color updated successfully!");
+      setSuccess("Staff color updated successfully!");
       setColorDialogOpen(false);
       setColorStaff(null);
       setSelectedColor("");
       setCurrentColor("");
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Failed to update color");
+      setError(err.message || "Failed to update color");
     } finally {
       setUpdatingColor(false);
     }
@@ -329,7 +322,7 @@ const loadStaffColors = async (staffList: any[]) => {
     if (!passwordStaff || !newPassword) return;
 
     if (newPassword !== confirmPassword) {
-      alert("Passwords do not match!");
+      setError("Passwords do not match!");
       return;
     }
 
@@ -356,14 +349,14 @@ const loadStaffColors = async (staffList: any[]) => {
       if (!res.ok)
         throw new Error(json?.message || "Failed to update password");
 
-      alert("Staff password updated successfully!");
+      setSuccess("Staff password updated successfully!");
       setPasswordDialogOpen(false);
       setPasswordStaff(null);
       setNewPassword("");
       setConfirmPassword("");
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Failed to update password");
+      setError(err.message || "Failed to update password");
     } finally {
       setUpdatingPassword(false);
     }
@@ -402,8 +395,6 @@ const loadStaffColors = async (staffList: any[]) => {
         _BookingParameterValueService: serviceFlag,
       };
 
-      console.log("📤 Sending update body:", body);
-
       const res = await fetch(
         "/api/booking-parameter/update-booking-parameter-value",
         {
@@ -419,9 +410,10 @@ const loadStaffColors = async (staffList: any[]) => {
       await loadValues();
       setEditing(false);
       setEditItem(null);
+      setSuccess("Staff updated successfully!");
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Failed to update");
+      setError(err.message || "Failed to update");
     } finally {
       setSaving(false);
     }
@@ -452,9 +444,10 @@ const loadStaffColors = async (staffList: any[]) => {
 
       await loadValues();
       setDeleteItem(null);
+      setSuccess("Staff deleted successfully!");
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Failed to delete");
+      setError(err.message || "Failed to delete");
     } finally {
       setDeleting(false);
     }
@@ -480,8 +473,6 @@ const loadStaffColors = async (staffList: any[]) => {
         _BookingParameterValueService: serviceFlag,
       };
 
-      console.log("📤 Sending create body:", body);
-
       const res = await fetch(
         "/api/booking-parameter/create-booking-parameter-value",
         {
@@ -501,9 +492,10 @@ const loadStaffColors = async (staffList: any[]) => {
         BookingParamterValueDescription: "",
         BookingParameterValueDuration: 60,
       });
+      setSuccess("Staff created successfully!");
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Failed to create");
+      setError(err.message || "Failed to create");
     } finally {
       setCreatingSaving(false);
     }
@@ -516,6 +508,16 @@ const loadStaffColors = async (staffList: any[]) => {
 
   return (
     <div className="flex flex-1 flex-col p-6 md:p-8">
+      {/* Success Alert */}
+      {success && (
+        <Alert className="mb-4">
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>
+            {success}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Card className="w-full">
         <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle>Staff Management</CardTitle>
@@ -574,7 +576,7 @@ const loadStaffColors = async (staffList: any[]) => {
 
         <CardContent>
           {error && (
-            <Alert variant="destructive">
+            <Alert variant="destructive" className="mb-4">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}

@@ -92,9 +92,18 @@ export async function POST(req: Request) {
     let endpoint = "";
     let body = {};
 
-    // Convert times to 12-hour format with AM/PM
-    const startTime12h = convertTo12HourFormat(data.startTime.substring(0, 5));
-    const endTime12h = convertTo12HourFormat(data.endTime.substring(0, 5));
+    let startTime12h = "";
+    let endTime12h = "";
+
+    // Convert times ONLY for create/update
+    if (action === "create" || action === "update") {
+      if (!data.startTime || !data.endTime) {
+        throw new Error("Missing startTime or endTime for create/update");
+      }
+
+      startTime12h = convertTo12HourFormat(data.startTime.substring(0, 5));
+      endTime12h = convertTo12HourFormat(data.endTime.substring(0, 5));
+    }
 
     switch (action) {
       case "create":
@@ -135,7 +144,7 @@ export async function POST(req: Request) {
 
     const result = await callBusinessCentralAPI(endpoint, body);
     console.log('Business Central API result:', result);
-    
+
     return NextResponse.json({ success: true, data: result });
 
   } catch (err: any) {

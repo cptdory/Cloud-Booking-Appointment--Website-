@@ -311,7 +311,7 @@ function BusinessHoursContent() {
           },
         }),
       });
-
+      console.log (dayOfWeek);
       if (!res.ok) throw new Error("Failed to delete");
 
       toast.success("Business hour deleted successfully");

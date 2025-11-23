@@ -28,12 +28,13 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Plus, Users, X } from "lucide-react";
+import { Edit, Trash2, Plus, Users, X, CheckCircle } from "lucide-react";
 
 export default function ServicesPage() {
   const [values, setValues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   // Staff assignments
   const [staffList, setStaffList] = useState<any[]>([]);
@@ -65,8 +66,17 @@ export default function ServicesPage() {
   });
   const [creatingSaving, setCreatingSaving] = useState(false);
   const [isParamStaff, setIsParamStaff] = useState("false");
-const [isParamService, setIsParamService] = useState("false");
+  const [isParamService, setIsParamService] = useState("false");
 
+  // Auto-hide success alert
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        setSuccess(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
 
   // read url params
   const search =
@@ -76,51 +86,46 @@ const [isParamService, setIsParamService] = useState("false");
   const code = search.get("code") || "";
   const parameterId = search.get("parameter_id") || "";
 
-const loadValues = async () => {
-  if (!code || !parameterId) return;
+  const loadValues = async () => {
+    if (!code || !parameterId) return;
 
-  setLoading(true);
-  setError(null);
+    setLoading(true);
+    setError(null);
 
-  try {
-    console.log("▶️ Loading values for:", { code, parameterId });
+    try {
+      const res = await fetch(
+        `/api/booking-setup/get-booking-setup?code=${code}`
+      );
+      const json = await res.json();
 
-    const res = await fetch(
-      `/api/booking-setup/get-booking-setup?code=${code}`
-    );
-    const json = await res.json();
+      if (!json.value || json.value.length === 0) {
+        setValues([]);
+        setLoading(false);
+        return;
+      }
 
-    if (!json.value || json.value.length === 0) {
-      setValues([]);
+      const setup = json.value[0];
+
+      const param = setup.BookingParameter.find(
+        (p: any) => p.BookingParameterId.toString() === parameterId
+      );
+
+      // Extract flags as STRING: "true" or "false"
+      const BookingParameterStaff = String(param?.BookingParameterStaff ?? "false");
+      const BookingParameterService = String(param?.BookingParameterService ?? "false");
+
+      // Save them to state
+      setIsParamStaff(BookingParameterStaff);
+      setIsParamService(BookingParameterService);
+
+      setValues(param ? param.BookingParameterValue : []);
+    } catch (err: any) {
+      console.error(err);
+      setError("Failed to load services");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const setup = json.value[0];
-
-    const param = setup.BookingParameter.find(
-      (p: any) => p.BookingParameterId.toString() === parameterId
-    );
-
-    // Extract flags as STRING: "true" or "false"
-    const BookingParameterStaff = String(param?.BookingParameterStaff ?? "false");
-    const BookingParameterService = String(param?.BookingParameterService ?? "false");
-
-    console.log("👥 BookingParameterStaff:", BookingParameterStaff);
-    console.log("🛎️ BookingParameterService:", BookingParameterService);
-
-    // Save them to state
-    setIsParamStaff(BookingParameterStaff);
-    setIsParamService(BookingParameterService);
-
-    setValues(param ? param.BookingParameterValue : []);
-  } catch (err: any) {
-    console.error(err);
-    setError("Failed to load services");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const loadStaff = async () => {
     if (!code) return;
@@ -177,7 +182,7 @@ const loadValues = async () => {
       setAssignedStaff(staffArray);
     } catch (err: any) {
       console.error("Error loading assigned staff:", err);
-      alert(err.message || "Failed to load assigned staff");
+      setError(err.message || "Failed to load assigned staff");
     } finally {
       setLoadingAssignedStaff(false);
     }
@@ -205,10 +210,10 @@ const loadValues = async () => {
 
       // Refresh the assigned staff list
       await loadAssignedStaff(serviceId);
-      alert("Staff assignment deleted successfully!");
+      setSuccess("Staff assignment deleted successfully!");
     } catch (err: any) {
       console.error("Error deleting assigned staff:", err);
-      alert(err.message || "Failed to delete staff assignment");
+      setError(err.message || "Failed to delete staff assignment");
     }
   };
 
@@ -269,9 +274,10 @@ const loadValues = async () => {
       await loadValues();
       setEditing(false);
       setEditItem(null);
+      setSuccess("Service updated successfully!");
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Failed to update");
+      setError(err.message || "Failed to update");
     } finally {
       setSaving(false);
     }
@@ -302,9 +308,10 @@ const loadValues = async () => {
 
       await loadValues();
       setDeleteItem(null);
+      setSuccess("Service deleted successfully!");
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Failed to delete");
+      setError(err.message || "Failed to delete");
     } finally {
       setDeleting(false);
     }
@@ -345,9 +352,10 @@ const loadValues = async () => {
         BookingParamterValueDescription: "",
         BookingParameterValueDuration: 60,
       });
+      setSuccess("Service created successfully!");
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Failed to create");
+      setError(err.message || "Failed to create");
     } finally {
       setCreatingSaving(false);
     }
@@ -382,13 +390,13 @@ const loadValues = async () => {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.message || "Assignment failed");
 
-      alert("Service assigned successfully!");
+      setSuccess("Service assigned successfully!");
       setAssignDialogOpen(false);
       setSelectedStaffId(null);
       setSelectedService(null);
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Failed to assign service");
+      setError(err.message || "Failed to assign service");
     } finally {
       setAssigning(false);
     }
@@ -396,6 +404,16 @@ const loadValues = async () => {
 
   return (
     <div className="flex flex-1 flex-col p-6 md:p-8 space-y-6">
+      {/* Success Alert */}
+      {success && (
+        <Alert className="mb-4">
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>
+            {success}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Services Card */}
       <Card className="w-full">
         <CardHeader className="flex flex-row justify-between items-center">
@@ -468,7 +486,7 @@ const loadValues = async () => {
 
         <CardContent>
           {error && (
-            <Alert variant="destructive">
+            <Alert variant="destructive" className="mb-4">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}

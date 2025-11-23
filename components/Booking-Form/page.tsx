@@ -808,11 +808,6 @@ export default function BookingForm() {
                 </div>
               </div>
             </div>
-            {userRole === "admin" && (
-              <Button variant="outline" onClick={() => router.push("/admin")}>
-                Admin Panel
-              </Button>
-            )}
           </div>
         </CardContent>
       </Card>

@@ -399,25 +399,6 @@ export default function AccountForm() {
                   </p>
                 </div>
 
-                {/* Color Preview */}
-                <div className="space-y-2">
-                  <Label>Preview</Label>
-                  <div
-                    className="w-full h-20 rounded-lg border flex items-center justify-center"
-                    style={{ backgroundColor: staffColor }}
-                  >
-                    <span
-                      className={`text-lg font-medium ${
-                        parseInt(staffColor.replace("#", ""), 16) > 0xffffff / 2
-                          ? "text-black"
-                          : "text-white"
-                      }`}
-                    >
-                      Your Staff Color
-                    </span>
-                  </div>
-                </div>
-
                 <Button
                   className="w-full"
                   disabled={changingColor}
