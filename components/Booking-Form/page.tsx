@@ -1095,8 +1095,7 @@ export default function BookingForm() {
                                   </div>
                                   <div className="text-sm text-muted-foreground">
                                     {value.BookingParameterValueCode}
-                                    {value.BookingParameterValueDuration > 0 &&
-                                      ` • ${value.BookingParameterValueDuration} mins`}
+                                    
                                   </div>
                                 </div>
                               </Label>
