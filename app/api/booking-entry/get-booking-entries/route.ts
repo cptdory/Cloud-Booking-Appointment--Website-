@@ -2,19 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 
 let memoryCache: { access_token: string; expires_at: number } | null = null;
 
+/* ============================================================
+    FAST ACCESS TOKEN
+============================================================ */
 async function getAccessToken() {
   const isVercel = !!process.env.VERCEL;
 
+  // Use cached token
   if (isVercel && memoryCache && Date.now() < memoryCache.expires_at) {
     return memoryCache.access_token;
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const tokenRes = await fetch(`${baseUrl}/api/auth/token`);
-  if (!tokenRes.ok)
-    throw new Error(`Failed to refresh token (${tokenRes.status})`);
+
+  const tokenRes = await fetch(`${baseUrl}/api/auth/token`, {
+    cache: "no-store",
+  });
+
+  if (!tokenRes.ok) {
+    throw new Error(`Failed to refresh token`);
+  }
+
   const data = await tokenRes.json();
 
+  // Cache for 30 mins
   if (isVercel && data.access_token) {
     memoryCache = {
       access_token: data.access_token,
@@ -25,24 +36,21 @@ async function getAccessToken() {
   return data.access_token;
 }
 
+/* ============================================================
+    ROUTE — FAST, CLEAN, SAME OUTPUT
+============================================================ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    console.log("Get entries request body:", body);
-    console.log("Body type:", typeof body);
-    console.log("Body keys:", Object.keys(body));
-    console.log("Body values:", Object.values(body));
-    console.log("Full body stringified:", JSON.stringify(body, null, 2));
-    
+
     const accessToken = await getAccessToken();
     const tenantId = process.env.TENANT_ID!;
     const environment = "SandboxDev2";
     const company = "SQUADLETHICS";
 
-    const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_GetBookingEntries?Company=${company}`;
-
-    console.log("Calling Business Central API:", url);
-    console.log("Sending to BC API:", JSON.stringify(body, null, 2));
+    const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_GetBookingEntries?Company=${encodeURIComponent(
+      company
+    )}`;
 
     const res = await fetch(url, {
       method: "POST",
@@ -55,25 +63,20 @@ export async function POST(request: NextRequest) {
     });
 
     if (!res.ok) {
-      const text = await res.text();
-      console.error("Business Central API error:", {
-        status: res.status,
-        statusText: res.statusText,
-        response: text,
-      });
-      throw new Error(`Failed to fetch booking entries: ${res.status}`);
+      const errorText = await res.text();
+      throw new Error(
+        `BC API error ${res.status}: ${res.statusText} | ${errorText}`
+      );
     }
 
     const json = await res.json();
-    console.log("Booking entries response received");
-    console.log("Response type:", typeof json);
-    console.log("Response keys:", Object.keys(json));
-    
     return NextResponse.json(json);
   } catch (error: any) {
-    console.error('Error fetching booking entries:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch booking entries', message: error.message },
+      {
+        error: "Failed to fetch booking entries",
+        message: error.message,
+      },
       { status: 500 }
     );
   }

@@ -20,37 +20,40 @@ const LoginForm = ({ isAdmin = false }: { isAdmin?: boolean }) => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError("");
+  setIsLoading(true);
 
-    try {
-      const res = await fetch("/api/auth/login-user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          _PortalUsername: username,
-          _PortalPassword: password,
-          _IsAdminLogin: isAdmin ? "true" : "false", 
-        }),
-      });
+  try {
+    const res = await fetch("/api/auth/login-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        _PortalUsername: username,
+        _PortalPassword: password,
+        _IsAdminLogin: isAdmin ? "true" : "false", 
+      }),
+      // Add cache control to prevent caching
+      cache: 'no-store',
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (!res.ok) {
-        setError(data.error || data.message || "Login failed");
-        setIsLoading(false);
-        return;
-      }
-
-      router.push(isAdmin ? "/calendar" : "/booking");
-    } catch (err) {
-      setError("Something went wrong");
+    if (!res.ok) {
+      setError(data.error || data.message || "Login failed");
+      setIsLoading(false);
+      return;
     }
 
+    // Clear any cached data and redirect
+    window.location.href = isAdmin ? "/calendar" : "/booking";
+    
+  } catch (err) {
+    setError("Something went wrong");
     setIsLoading(false);
-  };
+  }
+};
 
   return (
     <form onSubmit={handleSubmit}>
