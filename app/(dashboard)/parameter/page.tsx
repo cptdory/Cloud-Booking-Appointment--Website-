@@ -22,10 +22,12 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Edit, Trash2, Plus, CheckCircle } from "lucide-react";
 
-export default function BedPage() {
+export default function ParameterPage() {
   const [values, setValues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [parameterName, setParameterName] = useState<string>("");
+  const [parameterData, setParameterData] = useState<any>(null);
 
   // Success state
   const [success, setSuccess] = useState<string | null>(null);
@@ -33,6 +35,7 @@ export default function BedPage() {
   // Flags (string values)
   const [isParamStaff, setIsParamStaff] = useState("false");
   const [isParamService, setIsParamService] = useState("false");
+  const [checkDuration, setCheckDuration] = useState("false");
 
   // Edit Dialog state
   const [editing, setEditing] = useState(false);
@@ -62,7 +65,7 @@ export default function BedPage() {
     }
   }, [success]);
 
-  // read url params
+  // Read URL params
   const search =
     typeof window !== "undefined"
       ? new URLSearchParams(window.location.search)
@@ -70,6 +73,20 @@ export default function BedPage() {
 
   const code = search.get("code") || "";
   const parameterId = search.get("parameter_id") || "";
+
+  // Get page title based on parameter type
+  const getPageTitle = () => {
+    if (isParamService === "true") return "Services";
+    if (isParamStaff === "true") return "Staff";
+    return parameterName || "Parameter";
+  };
+
+  // Get item type name for messages
+  const getItemType = () => {
+    if (isParamService === "true") return "service";
+    if (isParamStaff === "true") return "staff";
+    return "item";
+  };
 
   // Load values + flags
   const loadValues = async () => {
@@ -96,17 +113,27 @@ export default function BedPage() {
         (p: any) => p.BookingParameterId.toString() === parameterId
       );
 
+      if (!param) {
+        setError("Parameter not found");
+        setLoading(false);
+        return;
+      }
+
       // Extract flags AS STRING
       const BookingParameterStaff = String(param?.BookingParameterStaff ?? "false");
       const BookingParameterService = String(param?.BookingParameterService ?? "false");
+      const BookingParameterCheckDuration = String(param?.BookingParameterCheckDuration ?? "false");
 
-      // Save flags
+      // Save flags and data
       setIsParamStaff(BookingParameterStaff);
       setIsParamService(BookingParameterService);
+      setCheckDuration(BookingParameterCheckDuration);
+      setParameterName(param.BookingParameterCode);
+      setParameterData(param);
 
-      setValues(param ? param.BookingParameterValue : []);
+      setValues(param.BookingParameterValue || []);
     } catch (err: any) {
-      setError("Failed to load services");
+      setError("Failed to load data");
     } finally {
       setLoading(false);
     }
@@ -122,8 +149,7 @@ export default function BedPage() {
     setEditItem({
       BookingParameterValueId: item.BookingParameterValueId,
       BookingParameterValueCode: item.BookingParameterValueCode,
-      BookingParamterValueDescription:
-        item.BookingParamterValueDescription || "",
+      BookingParamterValueDescription: item.BookingParamterValueDescription || "",
       BookingParameterValueDuration: item.BookingParameterValueDuration || 60,
     });
     setEditing(true);
@@ -140,9 +166,7 @@ export default function BedPage() {
         _BookingParameterValueId: String(editItem.BookingParameterValueId),
         _BookingParameterValueCode: String(editItem.BookingParameterValueCode),
         _BookingParamenterValueDesc: editItem.BookingParamterValueDescription,
-        _BookingParameterValueDuration: String(
-          editItem.BookingParameterValueDuration
-        ),
+        _BookingParameterValueDuration: String(editItem.BookingParameterValueDuration),
 
         // USE STRING FLAGS
         _BookingParameterValueStaff: isParamStaff,
@@ -164,7 +188,7 @@ export default function BedPage() {
       await loadValues();
       setEditing(false);
       setEditItem(null);
-      setSuccess("Bed updated successfully!");
+      setSuccess(`${getItemType().charAt(0).toUpperCase() + getItemType().slice(1)} updated successfully!`);
     } catch (err: any) {
       setError(err.message || "Failed to update");
     } finally {
@@ -197,7 +221,7 @@ export default function BedPage() {
 
       await loadValues();
       setDeleteItem(null);
-      setSuccess("Bed deleted successfully!");
+      setSuccess(`${getItemType().charAt(0).toUpperCase() + getItemType().slice(1)} deleted successfully!`);
     } catch (err: any) {
       setError(err.message || "Failed to delete");
     } finally {
@@ -215,14 +239,13 @@ export default function BedPage() {
         _BookingParameterId: parameterId,
         _BookingParameterValueCode: newItem.BookingParameterValueCode,
         _BookingParameterValueDesc: newItem.BookingParamterValueDescription,
-        _BookingParameterValueDuration: String(
-          newItem.BookingParameterValueDuration
-        ),
+        _BookingParameterValueDuration: String(newItem.BookingParameterValueDuration),
 
         // USE STRING FLAGS
         _BookingParameterValueStaff: isParamStaff,
         _BookingParameterValueService: isParamService,
       };
+      
       const res = await fetch(
         "/api/booking-parameter/create-booking-parameter-value",
         {
@@ -242,7 +265,7 @@ export default function BedPage() {
         BookingParamterValueDescription: "",
         BookingParameterValueDuration: 60,
       });
-      setSuccess("Bed created successfully!");
+      setSuccess(`${getItemType().charAt(0).toUpperCase() + getItemType().slice(1)} created successfully!`);
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to create");
@@ -257,22 +280,20 @@ export default function BedPage() {
       {success && (
         <Alert className="mb-4">
           <CheckCircle className="h-4 w-4" />
-          <AlertDescription>
-            {success}
-          </AlertDescription>
+          <AlertDescription>{success}</AlertDescription>
         </Alert>
       )}
 
       <Card className="w-full">
         <CardHeader className="flex justify-between items-center">
-          <CardTitle>Bed</CardTitle>
+          <CardTitle>{getPageTitle()}</CardTitle>
           <Dialog
             open={creating}
             onOpenChange={(open) => !open && setCreating(false)}
           >
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add Bed</DialogTitle>
+                <DialogTitle>Add {getItemType().charAt(0).toUpperCase() + getItemType().slice(1)}</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4">
                 <div>
@@ -299,6 +320,21 @@ export default function BedPage() {
                     }
                   />
                 </div>
+                {checkDuration === "true" && (
+                  <div>
+                    <Label>Duration (minutes)</Label>
+                    <Input
+                      type="number"
+                      value={newItem.BookingParameterValueDuration}
+                      onChange={(e) =>
+                        setNewItem({
+                          ...newItem,
+                          BookingParameterValueDuration: parseInt(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+                )}
                 <div className="flex justify-end gap-2 mt-4">
                   <Button variant="ghost" onClick={() => setCreating(false)}>
                     Cancel
@@ -314,7 +350,7 @@ export default function BedPage() {
               size="sm"
               variant="outline"
             >
-              <Plus className="w-4 h-4 mr-2" /> New Bed
+              <Plus className="w-4 h-4 mr-2" /> New {getItemType().charAt(0).toUpperCase() + getItemType().slice(1)}
             </Button>
           </Dialog>
         </CardHeader>
@@ -336,6 +372,9 @@ export default function BedPage() {
                     <TableHead className="w-20">ID</TableHead>
                     <TableHead>Code</TableHead>
                     <TableHead>Description</TableHead>
+                    {checkDuration === "true" && (
+                      <TableHead>Duration (min)</TableHead>
+                    )}
                     <TableHead className="w-32 text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -351,6 +390,9 @@ export default function BedPage() {
                         {v.BookingParameterValueCode}
                       </TableCell>
                       <TableCell>{v.BookingParamterValueDescription}</TableCell>
+                      {checkDuration === "true" && (
+                        <TableCell>{v.BookingParameterValueDuration}</TableCell>
+                      )}
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-2">
                           <Button
@@ -375,10 +417,10 @@ export default function BedPage() {
                   {values.length === 0 && (
                     <TableRow>
                       <TableCell
-                        colSpan={5}
+                        colSpan={checkDuration === "true" ? 5 : 4}
                         className="text-center py-6 text-muted-foreground"
                       >
-                        No services found
+                        No {getItemType()}s found
                       </TableCell>
                     </TableRow>
                   )}
@@ -388,6 +430,7 @@ export default function BedPage() {
           )}
         </CardContent>
       </Card>
+
       {/* Edit Dialog */}
       <Dialog
         open={editing}
@@ -400,7 +443,7 @@ export default function BedPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Bed</DialogTitle>
+            <DialogTitle>Edit {getItemType().charAt(0).toUpperCase() + getItemType().slice(1)}</DialogTitle>
           </DialogHeader>
 
           {editItem && (
@@ -431,6 +474,22 @@ export default function BedPage() {
                 />
               </div>
 
+              {checkDuration === "true" && (
+                <div>
+                  <Label>Duration (minutes)</Label>
+                  <Input
+                    type="number"
+                    value={editItem.BookingParameterValueDuration}
+                    onChange={(e) =>
+                      setEditItem({
+                        ...editItem,
+                        BookingParameterValueDuration: parseInt(e.target.value) || 0,
+                      })
+                    }
+                  />
+                </div>
+              )}
+
               <div className="flex justify-end gap-2">
                 <Button
                   variant="ghost"
@@ -450,7 +509,7 @@ export default function BedPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog (simple) */}
+      {/* Delete Confirmation Dialog */}
       <Dialog
         open={!!deleteItem}
         onOpenChange={(open) => {
@@ -464,7 +523,7 @@ export default function BedPage() {
 
           <div>
             <p>
-              Are you sure you want to delete bed{" "}
+              Are you sure you want to delete {getItemType()}{" "}
               <strong>{deleteItem?.BookingParameterValueCode}</strong> (ID:{" "}
               {deleteItem?.BookingParameterValueId})?
             </p>

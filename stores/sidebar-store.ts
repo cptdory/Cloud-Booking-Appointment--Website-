@@ -175,35 +175,50 @@ export const useSidebarStore = create<SidebarState>()((set, get) => ({
 
     console.log('[Store] Fetching nav for:', teamCode);
 
-    try {
-      const res = await fetch(`/api/booking-setup/get-booking-setup?code=${teamCode}`);
-      const json = await res.json();
+try {
+  const res = await fetch(`/api/booking-setup/get-booking-setup?code=${teamCode}`);
+  const json = await res.json();
 
-      if (!json.value?.length) return;
+  if (!json.value?.length) return;
 
-      const setupData = json.value[0];
-      const params = setupData.BookingParameter || [];
+  const setupData = json.value[0];
+  const params = setupData.BookingParameter || [];
 
-      const parameterNav: NavItem[] = params.map((p: any) => {
-        const lower = p.BookingParameterCode.toLowerCase();
-        let icon = Info;
-        if (lower.includes("staff")) icon = ContactRound;
-        else if (lower.includes("bed")) icon = BedDouble;
-        else if (lower.includes("service")) icon = BriefcaseBusiness;
+  const parameterNav: NavItem[] = params.map((p: any) => {
+    const lower = p.BookingParameterCode.toLowerCase();
+    let icon = Info;
+    
+    // Determine icon based on parameter type
+    if (lower.includes("staff")) icon = ContactRound;
+    else if (lower.includes("bed")) icon = BedDouble;
+    else if (lower.includes("service")) icon = BriefcaseBusiness;
 
-        return {
-          title: p.BookingParameterCode,
-          url: `/${lower}?code=${teamCode}&parameter_id=${p.BookingParameterId}`,
-          icon,
-        };
-      });
-
-      set({ 
-        dynamicNav: parameterNav, 
-        dynamicNavCache: { ...get().dynamicNavCache, [teamCode]: parameterNav }
-      });
-    } catch (error) {
-      console.error("[Store] Failed to load dynamic nav:", error);
+    // Determine URL based on BookingParameterStaff and BookingParameterService
+    let url = "";
+    if (p.BookingParameterStaff) {
+      // Route to staff page
+      url = `/staff?code=${teamCode}&parameter_id=${p.BookingParameterId}`;
+    } else if (p.BookingParameterService) {
+      // Route to services page
+      url = `/services?code=${teamCode}&parameter_id=${p.BookingParameterId}`;
+    } else {
+      // Route to generic parameter page for other types (like Bed)
+      url = `/parameter?code=${teamCode}&parameter_id=${p.BookingParameterId}`;
     }
+
+    return {
+      title: p.BookingParameterCode,
+      url: url,
+      icon,
+    };
+  });
+
+  set({ 
+    dynamicNav: parameterNav, 
+    dynamicNavCache: { ...get().dynamicNavCache, [teamCode]: parameterNav }
+  });
+} catch (error) {
+  console.error("[Store] Failed to load dynamic nav:", error);
+}
   },
 }));
