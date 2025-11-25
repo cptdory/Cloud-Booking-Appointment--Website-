@@ -120,16 +120,27 @@ export default function BookingCalendar() {
 
   const branchCode = searchParams.get("code") || "MAIN";
 
-  // Check for mobile device
+  // Check for mobile device and set initial view
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      
+      // If mobile, force list view
+      if (mobile && calendarView !== "listWeek") {
+        setCalendarView("listWeek");
+        if (calendarRef.current) {
+          const calendarApi = calendarRef.current.getApi();
+          calendarApi.changeView("listWeek");
+          setCurrentTitle(calendarApi.view.title);
+        }
+      }
     };
     
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  }, [calendarView]);
 
   // Load staff mappings (StaffCode -> BookingParameterValueId)
   const loadStaffMappings = async (): Promise<{ mappings: StaffMapping; parameterId: string }> => {
@@ -562,8 +573,11 @@ export default function BookingCalendar() {
     }
   };
 
-  // Handle view change
+  // Handle view change - prevent non-list views on mobile
   const handleViewChange = (view: string) => {
+    if (isMobile && view !== "listWeek") {
+      return; // Prevent changing to non-list views on mobile
+    }
     setCalendarView(view);
     if (calendarRef.current) {
       const calendarApi = calendarRef.current.getApi();
@@ -572,7 +586,7 @@ export default function BookingCalendar() {
     }
   };
 
-  // Navigation handlers
+  // Navigation handlers - work with current view
   const handlePrev = () => {
     if (calendarRef.current) {
       const calendarApi = calendarRef.current.getApi();
@@ -595,6 +609,11 @@ export default function BookingCalendar() {
       calendarApi.today();
       setCurrentTitle(calendarApi.view.title);
     }
+  };
+
+  // Get initial view based on device
+  const getInitialView = () => {
+    return isMobile ? "listWeek" : calendarView;
   };
 
   if (loading && events.length === 0) {
@@ -644,7 +663,7 @@ export default function BookingCalendar() {
                 </CardDescription>
               </div>
               
-              {/* View Controls */}
+              {/* View Controls - Hidden on mobile since only list view is available */}
               <div className="flex items-center gap-2">
                 <div className="hidden sm:flex rounded-lg p-1">
                   <Button
@@ -682,10 +701,12 @@ export default function BookingCalendar() {
                 </div>
                 
                 {/* Mobile view indicator */}
-                <div className="sm:hidden flex items-center gap-2 text-sm text-muted-foreground bg-blue-50 px-3 py-1.5 rounded-lg border">
-                  <Smartphone className="w-4 h-4" />
-                  <span>Mobile View</span>
-                </div>
+                {isMobile && (
+                  <div className="sm:hidden flex items-center gap-2 text-sm text-muted-foreground bg-blue-50 px-3 py-1.5 rounded-lg border">
+                    <Smartphone className="w-4 h-4" />
+                    <span>List View</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -739,7 +760,7 @@ export default function BookingCalendar() {
               ref={calendarRef}
               plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
               headerToolbar={false} // We're using custom header
-              initialView={isMobile ? "listWeek" : "dayGridMonth"}
+              initialView={getInitialView()}
               events={events}
               eventClick={handleEventClick}
               datesSet={handleDatesSet}

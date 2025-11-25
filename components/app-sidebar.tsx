@@ -11,7 +11,9 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarRail,
+  SidebarRail,  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
 export function AppSidebar({ ...props }) {
@@ -90,20 +92,48 @@ export function AppSidebar({ ...props }) {
     );
   }
 
-  return (
-    <Sidebar collapsible="icon" className="bg-blue-900 border-blue-700 text-white" {...props}>
-      {userData?.role === "admin" && activeTeam && (
-        <SidebarHeader className="bg-blue-800 border-b border-blue-700">
-          <TeamSwitcher teams={teams} activeTeam={activeTeam} onTeamSelect={handleTeamClick} />
-        </SidebarHeader>
-      )}
-      <SidebarContent className="bg-blue-900">
-        <NavMain groups={navGroups} />
-      </SidebarContent>
-      <SidebarFooter className="bg-blue-800 border-t border-blue-700">
-        <NavUser user={userDisplayInfo} />
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
-  );
+return (
+  <Sidebar collapsible="icon" className="bg-blue-900 border-blue-700 text-white" {...props}>
+    
+    {/* Header Section */}
+    {userData?.role === "admin" ? (
+      <SidebarHeader className="bg-blue-800 border-b border-blue-700">
+        <TeamSwitcher
+          teams={teams}
+          activeTeam={activeTeam}
+          onTeamSelect={handleTeamClick}
+        />
+      </SidebarHeader>
+    ) : (
+      <SidebarHeader className="bg-blue-800 border-b border-blue-700">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              className="data-[slot=sidebar-menu-button]:!p-1.5"
+            >
+              <a href="#">
+                <span className="!size-5" />
+                <span className="text-base font-semibold">Booking System</span>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+    )}
+
+    {/* Content */}
+    <SidebarContent className="bg-blue-900">
+      <NavMain groups={navGroups} />
+    </SidebarContent>
+
+    {/* Footer */}
+    <SidebarFooter className="bg-blue-800 border-t border-blue-700">
+      <NavUser user={userDisplayInfo} />
+    </SidebarFooter>
+
+    <SidebarRail />
+  </Sidebar>
+);
+
 }
