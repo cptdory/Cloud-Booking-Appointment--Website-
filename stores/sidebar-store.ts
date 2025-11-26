@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { Building, Calendar, Users, Info, ListCheck, BedDouble, BriefcaseBusiness, ContactRound, Clock } from 'lucide-react';
 
 interface UserData {
-  role: "admin" | "customer";
+  role: "global-admin" | "admin" | "customer"; // Updated to include global-admin
   name: string;
   email: string;
   staffCode?: string;
@@ -90,7 +90,8 @@ export const useSidebarStore = create<SidebarState>()((set, get) => ({
           currentBookingSetup: user.currentBookingSetup,
         };
 
-        if (user.role !== "admin") {
+        // Updated role check - only customer gets limited features
+        if (user.role === "customer") {
           set({
             userData,
             staticNav: [{ title: "Booking Page", url: "/booking", icon: ListCheck }],
@@ -100,6 +101,7 @@ export const useSidebarStore = create<SidebarState>()((set, get) => ({
           return;
         }
 
+        // Both global-admin and admin continue with admin initialization
         const teamsRes = await fetch("/api/booking-setup/get-booking-setup-list");
         const teamsJson = await teamsRes.json();
         const setups = typeof teamsJson.value === "string" 
@@ -119,14 +121,23 @@ export const useSidebarStore = create<SidebarState>()((set, get) => ({
           { title: "Business Information", url: "/business-information", icon: Info },
         ];
 
-        // Determine initial active team
+        // Determine initial active team - UPDATED LOGIC FOR ROLE-BASED TEAM ASSIGNMENT
         let activeTeam: Team | null = null;
-        const hasContext = user.currentBookingSetup?.code && user.currentBookingSetup?.parameterId !== 0;
-
-        if (hasContext) {
-          activeTeam = teams.find((t) => t.name === user.currentBookingSetup.code) || null;
-        } else if (teams.length > 0) {
-          activeTeam = teams[0];
+        
+        if (user.role === "admin") {
+          // Regular admin - only show their assigned team
+          const assignedTeamCode = user.currentBookingSetup?.code;
+          if (assignedTeamCode) {
+            activeTeam = teams.find((t) => t.name === assignedTeamCode) || null;
+          }
+        } else if (user.role === "global-admin") {
+          // Global admin - show first team or based on context
+          const hasContext = user.currentBookingSetup?.code && user.currentBookingSetup?.parameterId !== 0;
+          if (hasContext) {
+            activeTeam = teams.find((t) => t.name === user.currentBookingSetup.code) || null;
+          } else if (teams.length > 0) {
+            activeTeam = teams[0];
+          }
         }
 
         set({ 
@@ -175,50 +186,50 @@ export const useSidebarStore = create<SidebarState>()((set, get) => ({
 
     console.log('[Store] Fetching nav for:', teamCode);
 
-try {
-  const res = await fetch(`/api/booking-setup/get-booking-setup?code=${teamCode}`);
-  const json = await res.json();
+    try {
+      const res = await fetch(`/api/booking-setup/get-booking-setup?code=${teamCode}`);
+      const json = await res.json();
 
-  if (!json.value?.length) return;
+      if (!json.value?.length) return;
 
-  const setupData = json.value[0];
-  const params = setupData.BookingParameter || [];
+      const setupData = json.value[0];
+      const params = setupData.BookingParameter || [];
 
-  const parameterNav: NavItem[] = params.map((p: any) => {
-    const lower = p.BookingParameterCode.toLowerCase();
-    let icon = Info;
-    
-    // Determine icon based on parameter type
-    if (lower.includes("staff")) icon = ContactRound;
-    else if (lower.includes("bed")) icon = BedDouble;
-    else if (lower.includes("service")) icon = BriefcaseBusiness;
+      const parameterNav: NavItem[] = params.map((p: any) => {
+        const lower = p.BookingParameterCode.toLowerCase();
+        let icon = Info;
+        
+        // Determine icon based on parameter type
+        if (lower.includes("staff")) icon = ContactRound;
+        else if (lower.includes("bed")) icon = BedDouble;
+        else if (lower.includes("service")) icon = BriefcaseBusiness;
 
-    // Determine URL based on BookingParameterStaff and BookingParameterService
-    let url = "";
-    if (p.BookingParameterStaff) {
-      // Route to staff page
-      url = `/staff?code=${teamCode}&parameter_id=${p.BookingParameterId}`;
-    } else if (p.BookingParameterService) {
-      // Route to services page
-      url = `/services?code=${teamCode}&parameter_id=${p.BookingParameterId}`;
-    } else {
-      // Route to generic parameter page for other types (like Bed)
-      url = `/parameter?code=${teamCode}&parameter_id=${p.BookingParameterId}`;
+        // Determine URL based on BookingParameterStaff and BookingParameterService
+        let url = "";
+        if (p.BookingParameterStaff) {
+          // Route to staff page
+          url = `/staff?code=${teamCode}&parameter_id=${p.BookingParameterId}`;
+        } else if (p.BookingParameterService) {
+          // Route to services page
+          url = `/services?code=${teamCode}&parameter_id=${p.BookingParameterId}`;
+        } else {
+          // Route to generic parameter page for other types (like Bed)
+          url = `/parameter?code=${teamCode}&parameter_id=${p.BookingParameterId}`;
+        }
+
+        return {
+          title: p.BookingParameterCode,
+          url: url,
+          icon,
+        };
+      });
+
+      set({ 
+        dynamicNav: parameterNav, 
+        dynamicNavCache: { ...get().dynamicNavCache, [teamCode]: parameterNav }
+      });
+    } catch (error) {
+      console.error("[Store] Failed to load dynamic nav:", error);
     }
-
-    return {
-      title: p.BookingParameterCode,
-      url: url,
-      icon,
-    };
-  });
-
-  set({ 
-    dynamicNav: parameterNav, 
-    dynamicNavCache: { ...get().dynamicNavCache, [teamCode]: parameterNav }
-  });
-} catch (error) {
-  console.error("[Store] Failed to load dynamic nav:", error);
-}
   },
 }));

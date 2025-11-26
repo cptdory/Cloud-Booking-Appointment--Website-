@@ -11,7 +11,8 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarRail,  SidebarMenu,
+  SidebarRail,  
+  SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
@@ -49,12 +50,38 @@ export function AppSidebar({ ...props }) {
     }
   }, [initialized, activeTeam, loading, router]);
 
-  // Handle team switch
+  // Handle team switch - only global-admin can switch teams
   const handleTeamClick = React.useCallback((team: any) => {
-    if (userData?.role !== "admin") return;
+    if (userData?.role !== "global-admin") return;
     setActiveTeam(team);
     router.push(`?code=${team.name}`, { scroll: false });
   }, [userData?.role, setActiveTeam, router]);
+
+  // Filter teams based on role
+  const filteredTeams = React.useMemo(() => {
+    if (userData?.role === "global-admin") {
+      // Global admin sees ALL teams
+      return teams;
+    } else if (userData?.role === "admin") {
+      // Regular admin only sees their assigned team (based on bookingSetupCode)
+      const userBookingSetupCode = userData.currentBookingSetup?.code;
+      if (userBookingSetupCode) {
+        return teams.filter(team => team.name === userBookingSetupCode);
+      }
+      return [];
+    } else {
+      // Customer sees no teams
+      return [];
+    }
+  }, [teams, userData?.role, userData?.currentBookingSetup?.code]);
+
+  // Set active team for regular admin automatically
+  React.useEffect(() => {
+    if (userData?.role === "admin" && filteredTeams.length > 0 && !activeTeam) {
+      const userTeam = filteredTeams[0];
+      setActiveTeam(userTeam);
+    }
+  }, [userData?.role, filteredTeams, activeTeam, setActiveTeam]);
 
   // Build nav URLs with active team code
   const staticNavWithCode = React.useMemo(() => {
@@ -62,22 +89,48 @@ export function AppSidebar({ ...props }) {
     return staticNav.map((item) => ({ ...item, url: `${item.url}?code=${code}` }));
   }, [staticNav, activeTeam?.name]);
 
-  // User display info
+  // User display info - FIXED: Map global-admin to admin for NavUser compatibility
   const userDisplayInfo = React.useMemo(() => {
     if (!userData) {
       return { name: "Loading...", email: "Loading...", avatar: "/avatars/client.png", role: "customer" as const };
     }
-    return userData.role === "admin"
-      ? { name: userData.name, email: "Administrator", avatar: "/avatars/admin.png", role: "admin" as const, staffCode: userData.staffCode }
-      : { name: userData.name, email: userData.email, avatar: "/avatars/client.png", role: "customer" as const };
+    
+    switch (userData.role) {
+      case "global-admin":
+        return { 
+          name: userData.name, 
+          email: "Global Administrator", 
+          avatar: "/avatars/global-admin.png", 
+          role: "admin" as const, 
+          staffCode: userData.staffCode 
+        };
+      case "admin":
+        return { 
+          name: userData.name, 
+          email: "Administrator", 
+          avatar: "/avatars/admin.png", 
+          role: "admin" as const, 
+          staffCode: userData.staffCode 
+        };
+      default:
+        return { 
+          name: userData.name, 
+          email: userData.email, 
+          avatar: "/avatars/client.png", 
+          role: "customer" as const 
+        };
+    }
   }, [userData]);
 
-  // Nav groups
+  // Nav groups - global-admin and admin both get admin navigation
   const navGroups = React.useMemo(() => {
-    const groups = [{ label: userData?.role === "admin" ? "Management" : "Booking", items: staticNavWithCode }];
-    if (dynamicNav.length > 0 && userData?.role === "admin") {
+    const isAdmin = userData?.role === "admin" || userData?.role === "global-admin";
+    const groups = [{ label: isAdmin ? "Management" : "Booking", items: staticNavWithCode }];
+    
+    if (dynamicNav.length > 0 && isAdmin) {
       groups.push({ label: "Booking Parameters", items: dynamicNav });
     }
+    
     return groups;
   }, [userData?.role, staticNavWithCode, dynamicNav]);
 
@@ -92,48 +145,50 @@ export function AppSidebar({ ...props }) {
     );
   }
 
-return (
-  <Sidebar collapsible="icon" className="bg-blue-900 border-blue-700 text-white" {...props}>
-    
-    {/* Header Section */}
-    {userData?.role === "admin" ? (
-      <SidebarHeader className="bg-blue-800 border-b border-blue-700">
-        <TeamSwitcher
-          teams={teams}
-          activeTeam={activeTeam}
-          onTeamSelect={handleTeamClick}
-        />
-      </SidebarHeader>
-    ) : (
-      <SidebarHeader className="bg-blue-800 border-b border-blue-700">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5"
-            >
-              <a href="#">
-                <span className="!size-5" />
-                <span className="text-base font-semibold">Booking System</span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
-    )}
+  return (
+    <Sidebar collapsible="icon" className="bg-blue-900 border-blue-700 text-white" {...props}>
+      
+      {/* Header Section - Team Switcher */}
+      {userData?.role === "global-admin" || userData?.role === "admin" ? (
+        <SidebarHeader className="bg-blue-800 border-b border-blue-700">
+          <TeamSwitcher
+            teams={filteredTeams}
+            activeTeam={activeTeam}
+            onTeamSelect={handleTeamClick}
+            // Disable team selection for regular admin (locked to single team)
+            disabled={userData?.role === "admin"}
+          />
+        </SidebarHeader>
+      ) : (
+        // Customer - No team switcher, just system title
+        <SidebarHeader className="bg-blue-800 border-b border-blue-700">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                className="data-[slot=sidebar-menu-button]:!p-1.5"
+              >
+                <a href="#">
+                  <span className="!size-5" />
+                  <span className="text-base font-semibold">Booking System</span>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
+      )}
 
-    {/* Content */}
-    <SidebarContent className="bg-blue-900">
-      <NavMain groups={navGroups} />
-    </SidebarContent>
+      {/* Content - Navigation */}
+      <SidebarContent className="bg-blue-900">
+        <NavMain groups={navGroups} />
+      </SidebarContent>
 
-    {/* Footer */}
-    <SidebarFooter className="bg-blue-800 border-t border-blue-700">
-      <NavUser user={userDisplayInfo} />
-    </SidebarFooter>
+      {/* Footer - User Info */}
+      <SidebarFooter className="bg-blue-800 border-t border-blue-700">
+        <NavUser user={userDisplayInfo} />
+      </SidebarFooter>
 
-    <SidebarRail />
-  </Sidebar>
-);
-
+      <SidebarRail />
+    </Sidebar>
+  );
 }

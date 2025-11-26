@@ -4,13 +4,13 @@ import jwt from "jsonwebtoken";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    
+
     // Console the incoming request body
-    console.log('Incoming request body:', JSON.stringify(body, null, 2));
-    
+    console.log("Incoming request body:", JSON.stringify(body, null, 2));
+
     const { _PortalUsername, _PortalPassword, _IsAdminLogin } = body;
 
-    console.log('Login attempt:', { _PortalUsername, _IsAdminLogin });
+    console.log("Login attempt:", { _PortalUsername, _IsAdminLogin });
 
     if (!_PortalUsername || !_PortalPassword) {
       return NextResponse.json(
@@ -27,12 +27,12 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         _PortalUsername,
         _PortalPassword,
-        _IsAdminLogin
+        _IsAdminLogin,
       }),
     });
 
     const bcData = await res.json();
-    console.log('BC API Response:', bcData);
+    console.log("BC API Response:", bcData);
 
     if (!res.ok) {
       return NextResponse.json(
@@ -45,9 +45,9 @@ export async function POST(request: Request) {
     let loginResult = null;
     try {
       loginResult = JSON.parse(bcData.value)[0];
-      console.log('Parsed login result:', loginResult);
+      console.log("Parsed login result:", loginResult);
     } catch (err) {
-      console.error('Parse error:', err);
+      console.error("Parse error:", err);
       return NextResponse.json(
         { error: "Invalid BC response format" },
         { status: 500 }
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     if (isAdmin) {
       // ADMIN LOGIN: Validate staff data
       if (!loginResult.StaffCode) {
-        console.log('Admin validation failed - missing staff fields');
+        console.log("Admin validation failed - missing staff fields");
         return NextResponse.json(
           { error: "Invalid admin credentials" },
           { status: 401 }
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     } else {
       // CUSTOMER LOGIN: Must have CustomerNo (adjust based on your BC customer response)
       if (!loginResult.CustomerNo) {
-        console.log('Customer validation failed - missing CustomerNo');
+        console.log("Customer validation failed - missing CustomerNo");
         return NextResponse.json(
           { error: "Invalid customer credentials" },
           { status: 401 }
@@ -86,37 +86,49 @@ export async function POST(request: Request) {
     // -------------------------------
     // CREATE JWT PAYLOAD
     // -------------------------------
-    const tokenData = isAdmin
-      ? {
-      role: "admin",
-      username: loginResult.StaffCode,
-      name: loginResult.StaffName,
-      email: "",
-      staffCode: loginResult.StaffCode,
-      staffName: loginResult.StaffName,
-      staffColor: loginResult.StaffColor || "",
-      // Include current booking setup context
-      currentBookingSetup: {
-        code: loginResult.BookingSetupCode || "",
-        parameterId: loginResult.BookingParameterId || 0,
-        parameterValueId: loginResult.BookingParameterValueId || 0
-      }
-    }
-      : {
-          role: "customer",
-          customerNo: loginResult.CustomerNo,
-          name: loginResult.Name,
-          email: loginResult.EMail || loginResult.Email,
-          customerId: loginResult.CustomerId || loginResult.Id
-        };
 
-    console.log('Creating token for:', tokenData);
+let tokenData;
 
-    const token = jwt.sign(
-      tokenData,
-      process.env.JWT_SECRET || "dev_secret",
-      { expiresIn: "1d" }
-    );
+if (isAdmin) {
+  // Determine if this admin is a Global Admin
+  const bookingSetup = {
+    code: loginResult.BookingSetupCode || "",
+    parameterId: loginResult.BookingParameterId || 0,
+    parameterValueId: loginResult.BookingParameterValueId || 0
+  };
+
+  const isGlobalAdmin =
+    bookingSetup.code === "" &&
+    bookingSetup.parameterId === 0 &&
+    bookingSetup.parameterValueId === 0;
+
+  tokenData = {
+    role: isGlobalAdmin ? "global-admin" : "admin",
+    username: loginResult.StaffCode,
+    name: loginResult.StaffName,
+    email: "",
+    staffCode: loginResult.StaffCode,
+    staffName: loginResult.StaffName,
+    staffColor: loginResult.StaffColor || "",
+    currentBookingSetup: bookingSetup,
+  };
+
+} else {
+  // CUSTOMER TOKEN DATA
+  tokenData = {
+    role: "customer",
+    customerNo: loginResult.CustomerNo,
+    name: loginResult.Name,
+    email: loginResult.EMail || loginResult.Email,
+    customerId: loginResult.CustomerId || loginResult.Id
+  };
+}
+
+    console.log("Creating token for:", tokenData);
+
+    const token = jwt.sign(tokenData, process.env.JWT_SECRET || "dev_secret", {
+      expiresIn: "1d",
+    });
 
     const response = NextResponse.json({
       success: true,
@@ -133,9 +145,8 @@ export async function POST(request: Request) {
     });
 
     return response;
-
   } catch (error: any) {
-    console.error('Login error:', error);
+    console.error("Login error:", error);
     return NextResponse.json(
       { error: "Internal server error", message: error.message },
       { status: 500 }
