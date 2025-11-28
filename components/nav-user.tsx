@@ -30,7 +30,7 @@ export function NavUser({
     name: string;
     email: string;
     avatar: string;
-    role: "admin" | "customer";
+    role: "admin" | "customer" | "global-admin";
     staffCode?: string;
   };
 }) {
