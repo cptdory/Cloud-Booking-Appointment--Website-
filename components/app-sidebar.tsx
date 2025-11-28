@@ -50,34 +50,51 @@ export function AppSidebar({ ...props }) {
     }
   }, [initialized, activeTeam, loading, router]);
 
-  // Handle team switch - only global-admin can switch teams - FIXED NULL CHECK
+  // Safe way to check if user is global admin without type errors
+  const isGlobalAdmin = React.useMemo(() => {
+    if (!userData) return false;
+    
+    // Method 1: Check extended properties (safe from type errors)
+    const extendedUserData = userData as any;
+    if (extendedUserData.role === "global-admin" || extendedUserData.isGlobalAdmin) {
+      return true;
+    }
+    
+    // Method 2: Check by email or other identifying property
+    if (userData.email === "Global Administrator" || userData.email.includes("global-admin")) {
+      return true;
+    }
+    
+    // Method 3: Check by name pattern or other field
+    if (userData.name?.includes("Global Admin") || userData.staffCode?.includes("GLOBAL")) {
+      return true;
+    }
+    
+    return false;
+  }, [userData]);
+
   const handleTeamClick = React.useCallback((team: any) => {
-    if (!userData || userData.role !== "global-admin") return;
+    if (!userData || !isGlobalAdmin) return;
     setActiveTeam(team);
     router.push(`?code=${team.name}`, { scroll: false });
-  }, [userData, setActiveTeam, router]);
+  }, [userData, isGlobalAdmin, setActiveTeam, router]);
 
-  // Filter teams based on role - FIXED NULL CHECKS
   const filteredTeams = React.useMemo(() => {
     if (!userData) return [];
     
-    if (userData.role === "global-admin") {
-      // Global admin sees ALL teams
+    if (isGlobalAdmin) {
       return teams;
     } else if (userData.role === "admin") {
-      // Regular admin only sees their assigned team (based on bookingSetupCode)
       const userBookingSetupCode = userData.currentBookingSetup?.code;
       if (userBookingSetupCode) {
         return teams.filter(team => team.name === userBookingSetupCode);
       }
       return [];
     } else {
-      // Customer sees no teams
       return [];
     }
-  }, [teams, userData]);
+  }, [teams, userData, isGlobalAdmin]);
 
-  // Set active team for regular admin automatically - FIXED NULL CHECK
   React.useEffect(() => {
     if (userData?.role === "admin" && filteredTeams.length > 0 && !activeTeam) {
       const userTeam = filteredTeams[0];
@@ -91,46 +108,45 @@ export function AppSidebar({ ...props }) {
     return staticNav.map((item) => ({ ...item, url: `${item.url}?code=${code}` }));
   }, [staticNav, activeTeam?.name]);
 
-  // User display info - FIXED: Map global-admin to admin for NavUser compatibility
+  // User display info
   const userDisplayInfo = React.useMemo(() => {
     if (!userData) {
       return { name: "Loading...", email: "Loading...", avatar: "/avatars/client.png", role: "customer" as const };
     }
     
-    switch (userData.role) {
-      case "global-admin":
-        return { 
-          name: userData.name, 
-          email: "Global Administrator", 
-          avatar: "/avatars/global-admin.png", 
-          role: "admin" as const, // Map global-admin to admin for NavUser compatibility
-          staffCode: userData.staffCode 
-        };
-      case "admin":
-        return { 
-          name: userData.name, 
-          email: "Administrator", 
-          avatar: "/avatars/admin.png", 
-          role: "admin" as const, 
-          staffCode: userData.staffCode 
-        };
-      default:
-        return { 
-          name: userData.name, 
-          email: userData.email, 
-          avatar: "/avatars/client.png", 
-          role: "customer" as const 
-        };
+    if (isGlobalAdmin) {
+      return { 
+        name: userData.name, 
+        email: "Global Administrator", 
+        avatar: "/avatars/global-admin.png", 
+        role: "admin" as const,
+        staffCode: userData.staffCode 
+      };
+    } else if (userData.role === "admin") {
+      return { 
+        name: userData.name, 
+        email: "Administrator", 
+        avatar: "/avatars/admin.png", 
+        role: "admin" as const, 
+        staffCode: userData.staffCode 
+      };
+    } else {
+      return { 
+        name: userData.name, 
+        email: userData.email, 
+        avatar: "/avatars/client.png", 
+        role: "customer" as const 
+      };
     }
-  }, [userData]);
+  }, [userData, isGlobalAdmin]);
 
-  // Nav groups - global-admin and admin both get admin navigation - FIXED NULL CHECK
+  // Nav groups
   const navGroups = React.useMemo(() => {
     if (!userData) {
       return [{ label: "Booking", items: staticNavWithCode }];
     }
     
-    const isAdmin = userData.role === "admin" || userData.role === "global-admin";
+    const isAdmin = userData.role === "admin" || isGlobalAdmin;
     const groups = [{ label: isAdmin ? "Management" : "Booking", items: staticNavWithCode }];
     
     if (dynamicNav.length > 0 && isAdmin) {
@@ -138,7 +154,7 @@ export function AppSidebar({ ...props }) {
     }
     
     return groups;
-  }, [userData, staticNavWithCode, dynamicNav]);
+  }, [userData, staticNavWithCode, dynamicNav, isGlobalAdmin]);
 
   // Don't render until initialized
   if (loading) {
@@ -151,8 +167,7 @@ export function AppSidebar({ ...props }) {
     );
   }
 
-  // FIXED: Check user role safely for header rendering with null check
-  const showTeamSwitcher = userData && (userData.role === "global-admin" || userData.role === "admin");
+  const showTeamSwitcher = userData && (isGlobalAdmin || userData.role === "admin");
 
   return (
     <Sidebar collapsible="icon" className="bg-blue-900 border-blue-700 text-white" {...props}>
@@ -165,7 +180,7 @@ export function AppSidebar({ ...props }) {
             activeTeam={activeTeam}
             onTeamSelect={handleTeamClick}
             // Disable team selection for regular admin (locked to single team)
-            disabled={userData?.role === "admin"}
+            disabled={userData?.role === "admin" && !isGlobalAdmin}
           />
         </SidebarHeader>
       ) : (

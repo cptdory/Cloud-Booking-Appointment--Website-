@@ -76,7 +76,7 @@ export default function AccountForm() {
         }
 
         setUserData(authData.user);
-        setIsAdmin(authData.user?.role === "admin");
+        setIsAdmin(authData.user?.role === "admin" || authData.user?.role === "global-admin");
 
         // If admin, fetch the current staff color
         if (authData.user?.role === "admin" && authData.user?.currentBookingSetup) {
