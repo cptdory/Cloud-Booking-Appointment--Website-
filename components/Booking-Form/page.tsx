@@ -98,6 +98,32 @@ interface AvailableTimeSlot {
   available: boolean;
 }
 
+// Add this interface for booking summary
+interface BookingSummary {
+  branch: Branch | null;
+  service: {
+    id: string;
+    name: string;
+    duration: number;
+    code: string;
+  } | null;
+  staff: {
+    id: string;
+    name: string;
+    code: string;
+  } | null;
+  dynamicParameters: {
+    parameterName: string;
+    valueName: string;
+  }[];
+  date: string;
+  time: string;
+  customer: {
+    customerNo: string;
+    name: string;
+  } | null;
+}
+
 export default function BookingForm() {
   const router = useRouter();
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -149,6 +175,85 @@ export default function BookingForm() {
   });
 
   const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // Booking summary state
+  const [bookingSummary, setBookingSummary] = useState<BookingSummary>({
+    branch: null,
+    service: null,
+    staff: null,
+    dynamicParameters: [],
+    date: "",
+    time: "",
+    customer: null,
+  });
+
+  // Update booking summary when form data changes
+  useEffect(() => {
+    const updateBookingSummary = () => {
+      const summary: BookingSummary = {
+        branch: branches.find(b => b.Code === formData.branch) || null,
+        service: null,
+        staff: null,
+        dynamicParameters: [],
+        date: formData.date,
+        time: formData.selectedTime,
+        customer: customers.find(c => c.customerNo === formData.customerNo) || 
+                 (userRole !== "admin" && userRole !== "global-admin" && customerNo ? 
+                  { customerNo, name: username || "Customer" } : null),
+      };
+
+      // Set service info
+      if (bookingSetup && formData.service) {
+        const services = getServices();
+        const selectedService = services.find(
+          s => s.BookingParameterValueId.toString() === formData.service
+        );
+        if (selectedService) {
+          summary.service = {
+            id: selectedService.BookingParameterValueId.toString(),
+            name: selectedService.BookingParamterValueDescription,
+            duration: selectedService.BookingParameterValueDuration,
+            code: selectedService.BookingParameterValueCode,
+          };
+        }
+      }
+
+      // Set staff info
+      if (formData.staff) {
+        const selectedStaff = staffAssignments.find(
+          s => s.StaffId.toString() === formData.staff
+        );
+        if (selectedStaff) {
+          summary.staff = {
+            id: selectedStaff.StaffId.toString(),
+            name: selectedStaff.StaffName,
+            code: selectedStaff.StaffCode,
+          };
+        }
+      }
+
+      // Set dynamic parameters info
+      const dynamicParams = getDynamicParameters();
+      dynamicParams.forEach(param => {
+        const valueId = formData[param.BookingParameterId.toString()];
+        if (valueId) {
+          const selectedValue = param.BookingParameterValue.find(
+            v => v.BookingParameterValueId.toString() === valueId
+          );
+          if (selectedValue) {
+            summary.dynamicParameters.push({
+              parameterName: param.BookingParameterCode,
+              valueName: selectedValue.BookingParamterValueDescription,
+            });
+          }
+        }
+      });
+
+      setBookingSummary(summary);
+    };
+
+    updateBookingSummary();
+  }, [formData, branches, bookingSetup, staffAssignments, customers, userRole, customerNo, username]);
 
   // Show alert function
   const showAlert = (
@@ -525,6 +630,7 @@ export default function BookingForm() {
       setCurrentStep(5); // Move to customer
     }
   };
+
   const handleDynamicParameterChange = (
     parameterId: number,
     value: string
@@ -554,6 +660,7 @@ export default function BookingForm() {
     // Auto-advance to customer step after selecting time
     setCurrentStep(5);
   };
+
   // Get services from booking setup
   const getServices = () => {
     return (
@@ -562,6 +669,7 @@ export default function BookingForm() {
       )?.BookingParameterValue || []
     );
   };
+
   // Get dynamic parameters (all parameters except service and staff)
   const getDynamicParameters = (): BookingParameter[] => {
     if (!bookingSetup?.BookingParameter) return [];
@@ -570,6 +678,7 @@ export default function BookingForm() {
       (param) => !param.BookingParameterService && !param.BookingParameterStaff
     ).sort((a, b) => a.BookingParameterSequence - b.BookingParameterSequence);
   };
+
   const handleSubmit = async (
     e: React.MouseEvent<HTMLButtonElement>
   ): Promise<void> => {
@@ -664,6 +773,15 @@ export default function BookingForm() {
       setAvailableTimeSlots([]);
       setBookingSetup(null);
       setStaffAssignments([]);
+      setBookingSummary({
+        branch: null,
+        service: null,
+        staff: null,
+        dynamicParameters: [],
+        date: "",
+        time: "",
+        customer: null,
+      });
     } catch (error) {
       console.error("❌ Error creating booking:", error);
       showAlert(
@@ -699,6 +817,102 @@ export default function BookingForm() {
       </div>
     );
   }
+
+  // Booking Summary Component
+  const BookingSummaryCard = () => {
+    const hasSummary = bookingSummary.branch || bookingSummary.service || bookingSummary.staff || bookingSummary.date;
+    
+    if (!hasSummary) return null;
+
+    return (
+      <Card className=" border-blue-200 shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-blue-900 flex items-center gap-2 text-lg">
+            <CheckCircle2 className="w-5 h-5" />
+            Booking Summary
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {bookingSummary.branch && (
+            <div className="flex justify-between items-start">
+              <span className="text-blue-700 font-medium">Branch:</span>
+              <span className="text-blue-900 text-right">
+                {bookingSummary.branch.Description}
+                <br />
+                <span className="text-sm text-blue-600">{bookingSummary.branch.Location}</span>
+              </span>
+            </div>
+          )}
+          
+          {bookingSummary.service && (
+            <div className="flex justify-between items-start">
+              <span className="text-blue-700 font-medium">Service:</span>
+              <span className="text-blue-900 text-right">
+                {bookingSummary.service.name}
+                <br />
+                <span className="text-sm text-blue-600">
+                  {bookingSummary.service.duration} mins • {bookingSummary.service.code}
+                </span>
+              </span>
+            </div>
+          )}
+          
+          {bookingSummary.staff && (
+            <div className="flex justify-between items-start">
+              <span className="text-blue-700 font-medium">Staff:</span>
+              <span className="text-blue-900 text-right">
+                {bookingSummary.staff.name}
+                <br />
+                <span className="text-sm text-blue-600">ID: {bookingSummary.staff.code}</span>
+              </span>
+            </div>
+          )}
+          
+          {bookingSummary.dynamicParameters.length > 0 && (
+            <div>
+              <span className="text-blue-700 font-medium block mb-1">Options:</span>
+              <div className="space-y-1">
+                {bookingSummary.dynamicParameters.map((param, index) => (
+                  <div key={index} className="flex justify-between">
+                    <span className="text-blue-600 text-sm">{param.parameterName}:</span>
+                    <span className="text-blue-900 text-sm">{param.valueName}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {bookingSummary.date && (
+            <div className="flex justify-between">
+              <span className="text-blue-700 font-medium">Date:</span>
+              <span className="text-blue-900">
+                {new Date(bookingSummary.date).toLocaleDateString()}
+              </span>
+            </div>
+          )}
+          
+          {bookingSummary.time && (
+            <div className="flex justify-between">
+              <span className="text-blue-700 font-medium">Time:</span>
+              <span className="text-blue-900">{bookingSummary.time}</span>
+            </div>
+          )}
+          
+          {bookingSummary.customer && (
+            <div className="flex justify-between items-start">
+              <span className="text-blue-700 font-medium">Customer:</span>
+              <span className="text-blue-900 text-right">
+                {bookingSummary.customer.name}
+                <br />
+                <span className="text-sm text-blue-600">ID: {bookingSummary.customer.customerNo}</span>
+              </span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <div className="container mx-auto p-6 max-w-6xl space-y-6">
       {/* Alert Component */}
@@ -718,18 +932,19 @@ export default function BookingForm() {
       )}
 
       {/* User Info Banner */}
-      <Card className="bg-muted/50">
+      <Card className=" border-blue-200">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <User className="w-5 h-5 text-primary" />
+              <User className="w-5 h-5 text-blue-600" />
               <div>
-                <div className="font-semibold">
+                <div className="font-semibold text-blue-900">
                   Welcome, {username || "User"}
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 text-sm text-blue-700">
                   <Badge
                     variant={userRole === "admin" ? "default" : "secondary"}
+                    className="bg-blue-100 text-blue-800 hover:bg-blue-200"
                   >
                     {userRole === "admin" ? "Administrator" : "Customer"}
                   </Badge>
@@ -744,7 +959,7 @@ export default function BookingForm() {
       </Card>
 
       {/* Progress Steps */}
-      <Card>
+      <Card className="border-blue-200">
         <CardContent className="p-6">
           {/* Numbers + Chevrons */}
           <div className="grid grid-cols-5 gap-0">
@@ -755,10 +970,10 @@ export default function BookingForm() {
                   className={`flex items-center justify-center w-8 h-8 rounded-full
                     ${
                       currentStep >= step
-                        ? "bg-primary text-primary-foreground cursor-pointer"
-                        : "bg-muted text-muted-foreground cursor-default"
+                        ? "bg-blue-600 text-white cursor-pointer"
+                        : "bg-blue-100 text-blue-400 cursor-default"
                     }
-                    ${step < currentStep ? "hover:bg-primary/90" : ""}
+                    ${step < currentStep ? "hover:bg-blue-700" : ""}
                   `}
                 >
                   {step}
@@ -768,7 +983,7 @@ export default function BookingForm() {
                 {step < 5 && (
                   <ChevronRight
                     className={`w-4 h-4 mt-1 ${
-                      currentStep > step ? "text-primary" : "text-muted"
+                      currentStep > step ? "text-blue-600" : "text-blue-200"
                     }`}
                   />
                 )}
@@ -777,7 +992,7 @@ export default function BookingForm() {
           </div>
 
           {/* Step Labels */}
-          <div className="grid grid-cols-5 mt-3 text-xs text-muted-foreground text-center">
+          <div className="grid grid-cols-5 mt-3 text-xs text-blue-700 text-center">
             <span>Branch</span>
             <span>Service</span>
             <span>Staff & Options</span>
@@ -794,546 +1009,559 @@ export default function BookingForm() {
             variant="outline"
             onClick={() => handleStepSelection(currentStep - 1)}
             disabled={loading.submitting}
+            className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Previous Step
           </Button>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-blue-600">
             Step {currentStep} of 5
           </div>
         </div>
       )}
 
-      {/* Step 1: Branch Selection */}
-      {currentStep === 1 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-primary" />
-              <CardTitle>Step 1: Choose Your Branch</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading.branches ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                <span className="text-muted-foreground">
-                  Loading branches...
-                </span>
-              </div>
-            ) : branches.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                No branches available
-              </p>
-            ) : (
-              <RadioGroup
-                value={formData.branch}
-                onValueChange={(value) => handleInputChange("branch", value)}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {branches.map((branch) => (
-                    <Label
-                      key={branch.Code}
-                      htmlFor={`branch-${branch.Code}`}
-                      className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                        formData.branch === branch.Code
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/50"
-                      }`}
-                    >
-                      <RadioGroupItem
-                        value={branch.Code}
-                        id={`branch-${branch.Code}`}
-                        className="mt-1"
-                      />
-                      <div className="ml-3 flex-1">
-                        <div className="font-semibold">
-                          {branch.Description}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {branch.Location} • ID: {branch.Code}
-                        </div>
-                      </div>
-                    </Label>
-                  ))}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Step 1: Branch Selection */}
+          {currentStep === 1 && (
+            <Card className="border-blue-200">
+              <CardHeader className=" border-b border-blue-200">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-blue-600" />
+                  <CardTitle className="text-blue-900">Step 1: Choose Your Branch</CardTitle>
                 </div>
-              </RadioGroup>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 2: Service Selection */}
-      {currentStep === 2 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Briefcase className="w-5 h-5 text-primary" />
-              <CardTitle>Step 2: Select Service</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading.branchDetails ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                <span className="text-muted-foreground">
-                  Loading services...
-                </span>
-              </div>
-            ) : getServices().length === 0 ? (
-              <p className="text-muted-foreground">No services available</p>
-            ) : (
-              <RadioGroup
-                value={formData.service}
-                onValueChange={(value) => handleInputChange("service", value)}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {getServices().map((service) => (
-                    <Label
-                      key={service.BookingParameterValueId}
-                      htmlFor={`service-${service.BookingParameterValueId}`}
-                      className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-                        formData.service ===
-                        service.BookingParameterValueId.toString()
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/50"
-                      }`}
-                    >
-                      <RadioGroupItem
-                        value={service.BookingParameterValueId.toString()}
-                        id={`service-${service.BookingParameterValueId}`}
-                      />
-                      <div className="ml-3">
-                        <div className="font-medium">
-                          {service.BookingParamterValueDescription}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {service.BookingParameterValueDuration} mins •{" "}
-                          {service.BookingParameterValueCode}
-                        </div>
-                      </div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 3: Staff & Dynamic Parameters Selection */}
-      {currentStep === 3 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary" />
-              <CardTitle>Step 3: Select Staff & Options</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Staff Selection */}
-            <div>
-              <h3 className="text-lg font-medium mb-4">Select Staff</h3>
-              {loading.staffAssignments ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                  <span className="text-muted-foreground">
-                    Loading staff...
-                  </span>
-                </div>
-              ) : staffAssignments.length === 0 ? (
-                <p className="text-muted-foreground">
-                  No staff available for this service
-                </p>
-              ) : (
-                <RadioGroup
-                  value={formData.staff}
-                  onValueChange={(value) => handleInputChange("staff", value)}
-                >
-                  <div className="space-y-2">
-                    {staffAssignments.map((staff) => (
-                      <Label
-                        key={staff.StaffId}
-                        htmlFor={`staff-${staff.StaffId}`}
-                        className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-                          formData.staff === staff.StaffId.toString()
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50"
-                        }`}
-                      >
-                        <RadioGroupItem
-                          value={staff.StaffId.toString()}
-                          id={`staff-${staff.StaffId}`}
-                        />
-                        <div className="ml-3">
-                          <div className="font-medium">{staff.StaffName}</div>
-                          <div className="text-sm text-muted-foreground">
-                            ID: {staff.StaffCode}
-                          </div>
-                        </div>
-                      </Label>
-                    ))}
+              </CardHeader>
+              <CardContent className="pt-6">
+                {loading.branches ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" />
+                    <span className="text-blue-700">
+                      Loading branches...
+                    </span>
                   </div>
-                </RadioGroup>
-              )}
-            </div>
-
-            {/* Dynamic Parameters */}
-            {formData.staff && getDynamicParameters().length > 0 && (
-              <>
-                <Separator />
-                <div>
-                  <h3 className="text-lg font-medium mb-4">
-                    Additional Options
-                  </h3>
-                  <div className="space-y-6">
-                    {getDynamicParameters().map((parameter) => (
-                      <div key={parameter.BookingParameterId}>
-                        <h4 className="font-medium mb-3">
-                          {parameter.BookingParameterCode}
-                        </h4>
-                        <RadioGroup
-                          value={
-                            formData[parameter.BookingParameterId.toString()]
-                          }
-                          onValueChange={(value) =>
-                            handleDynamicParameterChange(
-                              parameter.BookingParameterId,
-                              value
-                            )
-                          }
-                        >
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {parameter.BookingParameterValue.map((value) => (
-                              <Label
-                                key={value.BookingParameterValueId}
-                                htmlFor={`param-${parameter.BookingParameterId}-${value.BookingParameterValueId}`}
-                                className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-                                  formData[
-                                    parameter.BookingParameterId.toString()
-                                  ] === value.BookingParameterValueId.toString()
-                                    ? "border-primary bg-primary/5"
-                                    : "border-border hover:border-primary/50"
-                                }`}
-                              >
-                                <RadioGroupItem
-                                  value={value.BookingParameterValueId.toString()}
-                                  id={`param-${parameter.BookingParameterId}-${value.BookingParameterValueId}`}
-                                />
-                                <div className="ml-3">
-                                  <div className="font-medium">
-                                    {value.BookingParamterValueDescription}
-                                  </div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {value.BookingParameterValueCode}
-                                  </div>
-                                </div>
-                              </Label>
-                            ))}
-                          </div>
-                        </RadioGroup>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 4: Date & Time Selection */}
-      {currentStep === 4 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-primary" />
-              <CardTitle>Step 4: Select Date & Time</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Date Selection - Left Side */}
-              <div className="space-y-4">
-                <div>
-                  <Label
-                    htmlFor="booking-date"
-                    className="text-base font-medium mb-2 block"
+                ) : branches.length === 0 ? (
+                  <p className="text-center text-blue-600 py-8">
+                    No branches available
+                  </p>
+                ) : (
+                  <RadioGroup
+                    value={formData.branch}
+                    onValueChange={(value) => handleInputChange("branch", value)}
                   >
-                    Select Date
-                  </Label>
-                  <Input
-                    id="booking-date"
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => handleInputChange("date", e.target.value)}
-                    min={new Date().toISOString().split("T")[0]}
-                    className="text-base"
-                  />
-                  {formData.date && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Selected date:{" "}
-                      {new Date(formData.date).toLocaleDateString()}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {branches.map((branch) => (
+                        <Label
+                          key={branch.Code}
+                          htmlFor={`branch-${branch.Code}`}
+                          className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                            formData.branch === branch.Code
+                              ? "border-blue-600"
+                              : "border-blue-200 hover:border-blue-400"
+                          }`}
+                        >
+                          <RadioGroupItem
+                            value={branch.Code}
+                            id={`branch-${branch.Code}`}
+                            className="mt-1 text-blue-600"
+                          />
+                          <div className="ml-3 flex-1">
+                            <div className="font-semibold text-blue-900">
+                              {branch.Description}
+                            </div>
+                            <div className="text-sm text-blue-600">
+                              {branch.Location} • ID: {branch.Code}
+                            </div>
+                          </div>
+                        </Label>
+                      ))}
+                    </div>
+                  </RadioGroup>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 2: Service Selection */}
+          {currentStep === 2 && (
+            <Card className="border-blue-200">
+              <CardHeader className=" border-b border-blue-200">
+                <div className="flex items-center gap-2">
+                  <Briefcase className="w-5 h-5 text-blue-600" />
+                  <CardTitle className="text-blue-900">Step 2: Select Service</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {loading.branchDetails ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" />
+                    <span className="text-blue-700">
+                      Loading services...
+                    </span>
+                  </div>
+                ) : getServices().length === 0 ? (
+                  <p className="text-blue-600">No services available</p>
+                ) : (
+                  <RadioGroup
+                    value={formData.service}
+                    onValueChange={(value) => handleInputChange("service", value)}
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {getServices().map((service) => (
+                        <Label
+                          key={service.BookingParameterValueId}
+                          htmlFor={`service-${service.BookingParameterValueId}`}
+                          className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                            formData.service ===
+                            service.BookingParameterValueId.toString()
+                              ? "border-blue-600"
+                              : "border-blue-200 hover:border-blue-400"
+                          }`}
+                        >
+                          <RadioGroupItem
+                            value={service.BookingParameterValueId.toString()}
+                            id={`service-${service.BookingParameterValueId}`}
+                            className="text-blue-600"
+                          />
+                          <div className="ml-3">
+                            <div className="font-medium text-blue-900">
+                              {service.BookingParamterValueDescription}
+                            </div>
+                            <div className="text-sm text-blue-600">
+                              {service.BookingParameterValueDuration} mins •{" "}
+                              {service.BookingParameterValueCode}
+                            </div>
+                          </div>
+                        </Label>
+                      ))}
+                    </div>
+                  </RadioGroup>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 3: Staff & Dynamic Parameters Selection */}
+          {currentStep === 3 && (
+            <Card className="border-blue-200">
+              <CardHeader className="border-b border-blue-200">
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-blue-600" />
+                  <CardTitle className="text-blue-900">Step 3: Select Staff & Options</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-6">
+                {/* Staff Selection */}
+                <div>
+                  <h3 className="text-lg font-medium mb-4 text-blue-900">Select Staff</h3>
+                  {loading.staffAssignments ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" />
+                      <span className="text-blue-700">
+                        Loading staff...
+                      </span>
+                    </div>
+                  ) : staffAssignments.length === 0 ? (
+                    <p className="text-blue-600">
+                      No staff available for this service
                     </p>
+                  ) : (
+                    <RadioGroup
+                      value={formData.staff}
+                      onValueChange={(value) => handleInputChange("staff", value)}
+                    >
+                      <div className="space-y-2">
+                        {staffAssignments.map((staff) => (
+                          <Label
+                            key={staff.StaffId}
+                            htmlFor={`staff-${staff.StaffId}`}
+                            className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                              formData.staff === staff.StaffId.toString()
+                                ? "border-blue-600"
+                                : "border-blue-200 hover:border-blue-400"
+                            }`}
+                          >
+                            <RadioGroupItem
+                              value={staff.StaffId.toString()}
+                              id={`staff-${staff.StaffId}`}
+                              className="text-blue-600"
+                            />
+                            <div className="ml-3">
+                              <div className="font-medium text-blue-900">{staff.StaffName}</div>
+                              <div className="text-sm text-blue-600">
+                                ID: {staff.StaffCode}
+                              </div>
+                            </div>
+                          </Label>
+                        ))}
+                      </div>
+                    </RadioGroup>
                   )}
                 </div>
 
-                {/* Quick Stats */}
-                {formData.date && availableTimeSlots.length > 0 && (
-                  <Card className="bg-muted/50">
-                    <CardContent className="p-4">
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div>
-                          <div className="text-2xl font-bold text-foreground">
-                            {availableTimeSlots.length}
+                {/* Dynamic Parameters */}
+                {formData.staff && getDynamicParameters().length > 0 && (
+                  <>
+                    <Separator className="bg-blue-200" />
+                    <div>
+                      <h3 className="text-lg font-medium mb-4 text-blue-900">
+                        Additional Options
+                      </h3>
+                      <div className="space-y-6">
+                        {getDynamicParameters().map((parameter) => (
+                          <div key={parameter.BookingParameterId}>
+                            <h4 className="font-medium mb-3 text-blue-800">
+                              {parameter.BookingParameterCode}
+                            </h4>
+                            <RadioGroup
+                              value={
+                                formData[parameter.BookingParameterId.toString()]
+                              }
+                              onValueChange={(value) =>
+                                handleDynamicParameterChange(
+                                  parameter.BookingParameterId,
+                                  value
+                                )
+                              }
+                            >
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                {parameter.BookingParameterValue.map((value) => (
+                                  <Label
+                                    key={value.BookingParameterValueId}
+                                    htmlFor={`param-${parameter.BookingParameterId}-${value.BookingParameterValueId}`}
+                                    className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                                      formData[
+                                        parameter.BookingParameterId.toString()
+                                      ] === value.BookingParameterValueId.toString()
+                                        ? "border-blue-600"
+                                        : "border-blue-200 hover:border-blue-400"
+                                    }`}
+                                  >
+                                    <RadioGroupItem
+                                      value={value.BookingParameterValueId.toString()}
+                                      id={`param-${parameter.BookingParameterId}-${value.BookingParameterValueId}`}
+                                      className="text-blue-600"
+                                    />
+                                    <div className="ml-3">
+                                      <div className="font-medium text-blue-900">
+                                        {value.BookingParamterValueDescription}
+                                      </div>
+                                      <div className="text-sm text-blue-600">
+                                        {value.BookingParameterValueCode}
+                                      </div>
+                                    </div>
+                                  </Label>
+                                ))}
+                              </div>
+                            </RadioGroup>
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            Total
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-2xl font-bold text-green-600">
-                            {
-                              availableTimeSlots.filter(
-                                (slot) => slot.available
-                              ).length
-                            }
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Available
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-2xl font-bold text-destructive">
-                            {
-                              availableTimeSlots.filter(
-                                (slot) => !slot.available
-                              ).length
-                            }
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Booked
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-
-              {/* Time Slot Selection - Right Side */}
-              {formData.date && (
-                <div className="space-y-4">
-                  <Label className="text-base font-medium block">
-                    Available Time Slots
-                  </Label>
-
-                  {loading.timeSlots ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                      <span className="text-muted-foreground">
-                        Loading available time slots...
-                      </span>
-                    </div>
-                  ) : availableTimeSlots.length > 0 ? (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-96 overflow-y-auto p-1">
-                        {availableTimeSlots.map((slot, index) => (
-                          <Button
-                            key={`${slot.id}-${index}`}
-                            type="button"
-                            onClick={() => handleTimeSlotClick(slot.time)}
-                            disabled={!slot.available}
-                            variant={
-                              formData.selectedTime === slot.time
-                                ? "default"
-                                : "outline"
-                            }
-                            className={`
-                        h-12 text-sm font-medium transition-all
-                        ${
-                          slot.available
-                            ? formData.selectedTime === slot.time
-                              ? "bg-green-600 hover:bg-green-700 text-white border-green-600"
-                              : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200 hover:border-green-300"
-                            : "bg-red-50 text-red-400 border-red-200 cursor-not-allowed opacity-60"
-                        }
-                      `}
-                          >
-                            <div className="flex flex-col items-center">
-                              <span>{slot.time}</span>
-                              {!slot.available && (
-                                <span className="text-xs">Unavailable</span>
-                              )}
-                            </div>
-                          </Button>
                         ))}
                       </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-                      {!formData.selectedTime && (
-                        <p className="text-sm text-muted-foreground text-center">
-                          Please select a time slot to continue
+          {/* Step 4: Date & Time Selection */}
+          {currentStep === 4 && (
+            <Card className="border-blue-200">
+              <CardHeader className="border-b border-blue-200">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                  <CardTitle className="text-blue-900">Step 4: Select Date & Time</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Date Selection - Left Side */}
+                  <div className="space-y-4">
+                    <div>
+                      <Label
+                        htmlFor="booking-date"
+                        className="text-base font-medium mb-2 block text-blue-900"
+                      >
+                        Select Date
+                      </Label>
+                      <Input
+                        id="booking-date"
+                        type="date"
+                        value={formData.date}
+                        onChange={(e) => handleInputChange("date", e.target.value)}
+                        min={new Date().toISOString().split("T")[0]}
+                        className="text-base border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                      {formData.date && (
+                        <p className="text-sm text-blue-600 mt-2">
+                          Selected date:{" "}
+                          {new Date(formData.date).toLocaleDateString()}
                         </p>
                       )}
+                    </div>
 
-                      {formData.selectedTime && (
-                        <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
-                          <div className="flex items-center justify-center gap-2 text-primary font-medium">
-                            <CheckCircle2 className="w-4 h-4" />
-                            Selected: {formData.selectedTime}
+                    {/* Quick Stats */}
+                    {formData.date && availableTimeSlots.length > 0 && (
+                      <Card className=" border-blue-200">
+                        <CardContent className="p-4">
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div>
+                              <div className="text-2xl font-bold text-blue-900">
+                                {availableTimeSlots.length}
+                              </div>
+                              <div className="text-xs text-blue-600">
+                                Total
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-2xl font-bold text-green-600">
+                                {
+                                  availableTimeSlots.filter(
+                                    (slot) => slot.available
+                                  ).length
+                                }
+                              </div>
+                              <div className="text-xs text-blue-600">
+                                Available
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-2xl font-bold text-red-600">
+                                {
+                                  availableTimeSlots.filter(
+                                    (slot) => !slot.available
+                                  ).length
+                                }
+                              </div>
+                              <div className="text-xs text-blue-600">
+                                Booked
+                              </div>
+                            </div>
                           </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+
+                  {/* Time Slot Selection - Right Side */}
+                  {formData.date && (
+                    <div className="space-y-4">
+                      <Label className="text-base font-medium block text-blue-900">
+                        Available Time Slots
+                      </Label>
+
+                      {loading.timeSlots ? (
+                        <div className="flex items-center justify-center py-12">
+                          <Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" />
+                          <span className="text-blue-700">
+                            Loading available time slots...
+                          </span>
+                        </div>
+                      ) : availableTimeSlots.length > 0 ? (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-96 overflow-y-auto p-1">
+                            {availableTimeSlots.map((slot, index) => (
+                              <Button
+                                key={`${slot.id}-${index}`}
+                                type="button"
+                                onClick={() => handleTimeSlotClick(slot.time)}
+                                disabled={!slot.available}
+                                variant={
+                                  formData.selectedTime === slot.time
+                                    ? "default"
+                                    : "outline"
+                                }
+                                className={`h-12 text-sm font-medium transition-all
+                                  ${
+                                    slot.available
+                                      ? formData.selectedTime === slot.time
+                                        ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+                                        : "bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300"
+                                      : "bg-red-50 text-red-400 border-red-200 cursor-not-allowed opacity-60"
+                                  }
+                                `}
+                              >
+                                <div className="flex flex-col items-center">
+                                  <span>{slot.time}</span>
+                                  {!slot.available && (
+                                    <span className="text-xs">Unavailable</span>
+                                  )}
+                                </div>
+                              </Button>
+                            ))}
+                          </div>
+
+                          {!formData.selectedTime && (
+                            <p className="text-sm text-blue-600 text-center">
+                              Please select a time slot to continue
+                            </p>
+                          )}
+
+                          {formData.selectedTime && (
+                            <div className="p-3 bg-blue-100 border border-blue-200 rounded-lg">
+                              <div className="flex items-center justify-center gap-2 text-blue-700 font-medium">
+                                <CheckCircle2 className="w-4 h-4" />
+                                Selected: {formData.selectedTime}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-center py-12 border-2 border-dashed border-blue-200 rounded-lg">
+                          <Calendar className="w-12 h-12 text-blue-300 mx-auto mb-3" />
+                          <p className="text-blue-600 font-medium">
+                            No available time slots
+                          </p>
+                          <p className="text-sm text-blue-500 mt-1">
+                            Please try selecting a different date
+                          </p>
                         </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="text-center py-12 border-2 border-dashed border-muted rounded-lg">
-                      <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                      <p className="text-muted-foreground font-medium">
-                        No available time slots
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Please try selecting a different date
-                      </p>
+                  )}
+
+                  {/* Empty State for Time Slots when no date selected */}
+                  {!formData.date && (
+                    <div className="flex items-center justify-center min-h-[200px] border-2 border-dashed border-blue-200 rounded-lg">
+                      <div className="text-center text-blue-500">
+                        <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p>Please select a date to see available time slots</p>
+                      </div>
                     </div>
                   )}
                 </div>
-              )}
+              </CardContent>
+            </Card>
+          )}
 
-              {/* Empty State for Time Slots when no date selected */}
-              {!formData.date && (
-                <div className="flex items-center justify-center min-h-[200px] border-2 border-dashed border-muted rounded-lg">
-                  <div className="text-center text-muted-foreground">
-                    <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>Please select a date to see available time slots</p>
+          {/* Step 5: Customer Selection */}
+          {currentStep === 5 && (
+            <>
+              <Card className="border-blue-200">
+                <CardHeader className=" border-b border-blue-200">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                    <CardTitle className="text-blue-900">
+                      {userRole === "global-admin" || userRole === "admin"
+                        ? "Step 5: Select Customer"
+                        : "Step 5: Your Information"}
+                    </CardTitle>
                   </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 5: Customer Selection */}
-      {currentStep === 5 && (
-        <>
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-primary" />
-                <CardTitle>
-                  {userRole === "global-admin" || userRole === "admin"
-                    ? "Step 5: Select Customer"
-                    : "Step 5: Your Information"}
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {userRole === "global-admin" || userRole === "admin" ? (
-                <>
-                  {loading.customers ? (
-                    <div className="flex items-center justify-center py-4">
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      <span className="text-muted-foreground">
-                        Loading customers...
-                      </span>
-                    </div>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  {userRole === "global-admin" || userRole === "admin" ? (
+                    <>
+                      {loading.customers ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="w-4 h-4 animate-spin mr-2 text-blue-600" />
+                          <span className="text-blue-700">
+                            Loading customers...
+                          </span>
+                        </div>
+                      ) : (
+                        <Select
+                          value={formData.customerNo}
+                          onValueChange={(value) =>
+                            handleInputChange("customerNo", value)
+                          }
+                        >
+                          <SelectTrigger className="border-blue-300 focus:border-blue-500 focus:ring-blue-500">
+                            <SelectValue placeholder="Select a customer" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {customers.map((customer) => (
+                              <SelectItem
+                                key={customer.id}
+                                value={customer.customerNo}
+                              >
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-blue-900">
+                                    {customer.name}
+                                  </span>
+                                  <span className="text-xs text-blue-600">
+                                    ID: {customer.customerNo}
+                                    {customer.email && ` • ${customer.email}`}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      {customers.length === 0 && !loading.customers && (
+                        <p className="text-sm text-blue-600 mt-2">
+                          No customers available
+                        </p>
+                      )}
+                    </>
                   ) : (
-                    <Select
+                    <Input
+                      type="text"
                       value={formData.customerNo}
-                      onValueChange={(value) =>
-                        handleInputChange("customerNo", value)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a customer" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {customers.map((customer) => (
-                          <SelectItem
-                            key={customer.id}
-                            value={customer.customerNo}
-                          >
-                            <div className="flex flex-col">
-                              <span className="font-medium">
-                                {customer.name}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                ID: {customer.customerNo}
-                                {customer.email && ` • ${customer.email}`}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      readOnly
+                      className="bg-blue-50 text-base font-semibold text-blue-900 border-blue-200"
+                    />
                   )}
-                  {customers.length === 0 && !loading.customers && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      No customers available
-                    </p>
-                  )}
-                </>
-              ) : (
-                <Input
-                  type="text"
-                  value={formData.customerNo}
-                  readOnly
-                  className="bg-muted text-base font-semibold"
-                />
-              )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
 
-          {/* Booking Note and Submit */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-primary" />
-                <CardTitle>Special Notes (Optional)</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={formData.bookingNote}
-                onChange={(e) =>
-                  handleInputChange("bookingNote", e.target.value)
-                }
-                rows={4}
-                placeholder="Any special requirements or notes about your appointment..."
-                className="resize-none"
-              />
-            </CardContent>
-          </Card>
+              {/* Booking Note and Submit */}
+              <Card className="border-blue-200">
+                <CardHeader className=" border-b border-blue-200">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                    <CardTitle className="text-blue-900">Special Notes (Optional)</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <Textarea
+                    value={formData.bookingNote}
+                    onChange={(e) =>
+                      handleInputChange("bookingNote", e.target.value)
+                    }
+                    rows={4}
+                    placeholder="Any special requirements or notes about your appointment..."
+                    className="resize-none border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardContent className="pt-6">
-              <Button
-                type="button"
-                onClick={handleSubmit}
-                disabled={
-                  loading.submitting ||
-                  !formData.selectedTime ||
-                  !formData.customerNo
-                }
-                className="w-full h-12 text-base"
-                size="lg"
-              >
-                {loading.submitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                    Creating Your Booking...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-5 h-5 mr-2" />
-                    Confirm Booking
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        </>
-      )}
+              <Card className="border-blue-200">
+                <CardContent className="pt-6">
+                  <Button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={
+                      loading.submitting ||
+                      !formData.selectedTime ||
+                      !formData.customerNo
+                    }
+                    className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700 text-white"
+                    size="lg"
+                  >
+                    {loading.submitting ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                        Creating Your Booking...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-5 h-5 mr-2" />
+                        Confirm Booking
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </div>
+
+        {/* Sidebar - Booking Summary */}
+        <div className="lg:col-span-1">
+          <BookingSummaryCard />
+        </div>
+      </div>
     </div>
   );
 }
