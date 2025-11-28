@@ -50,19 +50,21 @@ export function AppSidebar({ ...props }) {
     }
   }, [initialized, activeTeam, loading, router]);
 
-  // Handle team switch - only global-admin can switch teams
+  // Handle team switch - only global-admin can switch teams - FIXED NULL CHECK
   const handleTeamClick = React.useCallback((team: any) => {
-    if (userData?.role !== "global-admin") return;
+    if (!userData || userData.role !== "global-admin") return;
     setActiveTeam(team);
     router.push(`?code=${team.name}`, { scroll: false });
-  }, [userData?.role, setActiveTeam, router]);
+  }, [userData, setActiveTeam, router]);
 
-  // Filter teams based on role
+  // Filter teams based on role - FIXED NULL CHECKS
   const filteredTeams = React.useMemo(() => {
-    if (userData?.role === "global-admin") {
+    if (!userData) return [];
+    
+    if (userData.role === "global-admin") {
       // Global admin sees ALL teams
       return teams;
-    } else if (userData?.role === "admin") {
+    } else if (userData.role === "admin") {
       // Regular admin only sees their assigned team (based on bookingSetupCode)
       const userBookingSetupCode = userData.currentBookingSetup?.code;
       if (userBookingSetupCode) {
@@ -73,9 +75,9 @@ export function AppSidebar({ ...props }) {
       // Customer sees no teams
       return [];
     }
-  }, [teams, userData?.role, userData?.currentBookingSetup?.code]);
+  }, [teams, userData]);
 
-  // Set active team for regular admin automatically
+  // Set active team for regular admin automatically - FIXED NULL CHECK
   React.useEffect(() => {
     if (userData?.role === "admin" && filteredTeams.length > 0 && !activeTeam) {
       const userTeam = filteredTeams[0];
@@ -101,7 +103,7 @@ export function AppSidebar({ ...props }) {
           name: userData.name, 
           email: "Global Administrator", 
           avatar: "/avatars/global-admin.png", 
-          role: "admin" as const, 
+          role: "admin" as const, // Map global-admin to admin for NavUser compatibility
           staffCode: userData.staffCode 
         };
       case "admin":
@@ -122,9 +124,13 @@ export function AppSidebar({ ...props }) {
     }
   }, [userData]);
 
-  // Nav groups - global-admin and admin both get admin navigation
+  // Nav groups - global-admin and admin both get admin navigation - FIXED NULL CHECK
   const navGroups = React.useMemo(() => {
-    const isAdmin = userData?.role === "admin" || userData?.role === "global-admin";
+    if (!userData) {
+      return [{ label: "Booking", items: staticNavWithCode }];
+    }
+    
+    const isAdmin = userData.role === "admin" || userData.role === "global-admin";
     const groups = [{ label: isAdmin ? "Management" : "Booking", items: staticNavWithCode }];
     
     if (dynamicNav.length > 0 && isAdmin) {
@@ -132,7 +138,7 @@ export function AppSidebar({ ...props }) {
     }
     
     return groups;
-  }, [userData?.role, staticNavWithCode, dynamicNav]);
+  }, [userData, staticNavWithCode, dynamicNav]);
 
   // Don't render until initialized
   if (loading) {
@@ -145,11 +151,14 @@ export function AppSidebar({ ...props }) {
     );
   }
 
+  // FIXED: Check user role safely for header rendering with null check
+  const showTeamSwitcher = userData && (userData.role === "global-admin" || userData.role === "admin");
+
   return (
     <Sidebar collapsible="icon" className="bg-blue-900 border-blue-700 text-white" {...props}>
       
       {/* Header Section - Team Switcher */}
-      {userData?.role === "global-admin" || userData?.role === "admin" ? (
+      {showTeamSwitcher ? (
         <SidebarHeader className="bg-blue-800 border-b border-blue-700">
           <TeamSwitcher
             teams={filteredTeams}

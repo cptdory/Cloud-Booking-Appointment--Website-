@@ -96,7 +96,6 @@ export default function AccountForm() {
   // Function to fetch staff color for a single staff member
   const fetchStaffColor = async (bookingSetup: { code: string; parameterId: number; parameterValueId: number }) => {
     try {
-      console.log("🔄 Fetching staff color...");
       
       const requestBody = {
         _BookingSetupCode: bookingSetup.code,
@@ -104,15 +103,11 @@ export default function AccountForm() {
         _BookingParameterValueId: bookingSetup.parameterValueId.toString(), // ✅ Use parameterValueId, not staffCode
       };
 
-      console.log("📤 Sent request body:", JSON.stringify(requestBody, null, 2));
-
       const res = await fetch("/api/booking-staff-auth/get-booking-staff-color", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
       });
-
-      console.log("📥 Response status:", res.status, res.statusText);
 
       if (!res.ok) {
         const errorText = await res.text();
@@ -121,17 +116,14 @@ export default function AccountForm() {
       }
 
       const data = await res.json();
-      console.log("✅ Staff colors response:", data);
 
       // Parse the response to get the color
       if (data.staffColors && data.staffColors[bookingSetup.parameterValueId]) {
         const newColor = data.staffColors[bookingSetup.parameterValueId].background;
-        console.log("🎨 Found staff color:", newColor);
         setStaffColor(newColor);
         setUserData((prev) => prev ? { ...prev, staffColor: newColor } : null);
       } else {
         console.warn("⚠️ No StaffColor found in response for parameter value ID:", bookingSetup.parameterValueId);
-        console.log("🔍 Available staff colors:", data.staffColors);
         // Set default color if none found
         setStaffColor("#3b82f6");
       }
@@ -210,8 +202,6 @@ export default function AccountForm() {
         _StaffColor: staffColor,
       };
 
-      console.log("📤 Sending staff color update request:", requestBody);
-
       const res = await fetch(
         "/api/booking-staff-auth/update-booking-staff-auth-details",
         {
@@ -228,7 +218,6 @@ export default function AccountForm() {
       }
 
       const responseData = await res.json();
-      console.log("✅ Staff color update successful:", responseData);
 
       // Refresh the staff color after update
       await fetchStaffColor(userData.currentBookingSetup);
@@ -263,14 +252,6 @@ export default function AccountForm() {
     { value: "#6366f1", label: "Indigo" },
     { value: "#6b7280", label: "Gray" },
   ];
-
-  // Also log when component loads and when staffColor changes
-  useEffect(() => {
-    if (isAdmin && staffColor) {
-      console.log("🎨 Current staff color on load:", staffColor);
-      console.log("👤 Current user data:", userData);
-    }
-  }, [isAdmin, staffColor, userData]);
 
   if (loading) {
     return (

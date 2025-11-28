@@ -9,7 +9,6 @@ import {
   FileText,
   Users,
   Briefcase,
-  DoorOpen,
   CheckCircle2,
   User,
   ChevronRight,
@@ -212,7 +211,6 @@ export default function BookingForm() {
         }
 
         const data = await res.json();
-        console.log("📦 Branches API response:", data);
 
         // Data is already parsed by API route
         const branchesData = data.value || [];
@@ -249,8 +247,6 @@ export default function BookingForm() {
       if (!res.ok) throw new Error("Failed to fetch branch details");
       const data = await res.json();
 
-      console.log("📦 Booking setup response:", data);
-
       // Parse the stringified JSON from API
       let setupData = data.value;
       if (typeof setupData === "string") {
@@ -259,7 +255,6 @@ export default function BookingForm() {
 
       // Handle array response
       const finalData = Array.isArray(setupData) ? setupData[0] : setupData;
-      console.log("✅ Parsed booking setup:", finalData);
 
       setBookingSetup(finalData);
       setCurrentStep(2);
@@ -301,7 +296,6 @@ export default function BookingForm() {
       }
 
       const data = await res.json();
-      console.log("📦 Staff assignments response:", data);
 
       // Parse the staff assignments data
       let staffData = data.value;
@@ -309,7 +303,6 @@ export default function BookingForm() {
         staffData = JSON.parse(staffData || "[]");
       }
 
-      console.log("👥 Parsed staff assignments:", staffData);
       setStaffAssignments(staffData || []);
       setCurrentStep(3);
     } catch (error: any) {
@@ -324,10 +317,12 @@ export default function BookingForm() {
     }
   };
 
-  // Fetch customers if user is admin
+  // Fetch customers if user is global-admin or admin
   useEffect(() => {
     const fetchCustomers = async () => {
-      if (userRole !== "admin") return;
+      // Skip if role hasn't been determined yet
+      if (!userRole || (userRole !== "global-admin" && userRole !== "admin"))
+        return;
 
       setLoading((prev) => ({ ...prev, customers: true }));
       try {
@@ -340,7 +335,6 @@ export default function BookingForm() {
         }
 
         const data = await res.json();
-        console.log("📦 Customers response:", data);
 
         // Parse customers data
         let customersData = data.value || [];
@@ -355,7 +349,6 @@ export default function BookingForm() {
           email: customer.EMail || customer.Email,
         }));
 
-        console.log("👥 Processed customers:", customerOptions);
         setCustomers(customerOptions);
       } catch (error: any) {
         console.error("❌ Error fetching customers:", error);
@@ -369,7 +362,7 @@ export default function BookingForm() {
       }
     };
 
-    if (userRole === "admin") {
+    if (userRole === "global-admin" || userRole === "admin") {
       fetchCustomers();
     }
   }, [userRole]);
@@ -429,7 +422,6 @@ export default function BookingForm() {
       }
 
       const data = await response.json();
-      console.log("📦 Available time slots response:", data);
 
       // Data is already parsed by the API route
       const slotsData = data.value || [];
@@ -471,55 +463,6 @@ export default function BookingForm() {
   const handleStepSelection = (step: number) => {
     if (step < currentStep) {
       setCurrentStep(step);
-
-      // Reset subsequent steps data
-      const resetData: Partial<FormData> = {};
-      if (step < 2) resetData.branch = "";
-      if (step < 3) resetData.service = "";
-      if (step < 4) {
-        resetData.staff = "";
-        // Reset dynamic parameters
-        const dynamicParameters = getDynamicParameters();
-        dynamicParameters.forEach((param) => {
-          resetData[param.BookingParameterId.toString()] = "";
-        });
-      }
-      if (step < 5) {
-        resetData.date = "";
-        resetData.selectedTime = "";
-        setAvailableTimeSlots([]);
-      }
-
-      setFormData((prev) => {
-        const updated: FormData = {
-          branch: resetData.branch ?? prev.branch,
-          service: resetData.service ?? prev.service,
-          staff: resetData.staff ?? prev.staff,
-          date: resetData.date ?? prev.date,
-          selectedTime: resetData.selectedTime ?? prev.selectedTime,
-          customerNo: prev.customerNo, // Keep customerNo as it might be pre-filled
-          bookingNote: prev.bookingNote, // Keep booking note
-        };
-
-        // Handle dynamic parameters
-        const dynamicParameters = getDynamicParameters();
-        dynamicParameters.forEach((param) => {
-          const paramId = param.BookingParameterId.toString();
-          updated[paramId] =
-            resetData[paramId] ?? prev[paramId as keyof FormData] ?? "";
-        });
-
-        return updated;
-      });
-
-      // Reset data states for subsequent steps
-      if (step < 2) {
-        setBookingSetup(null);
-        setStaffAssignments([]);
-      }
-      if (step < 3) {
-        setStaffAssignments([]);
-      }
     }
   };
 
@@ -611,7 +554,6 @@ export default function BookingForm() {
     // Auto-advance to customer step after selecting time
     setCurrentStep(5);
   };
-
   // Get services from booking setup
   const getServices = () => {
     return (
@@ -620,14 +562,6 @@ export default function BookingForm() {
       )?.BookingParameterValue || []
     );
   };
-
-  // Get staff parameter
-  const getStaffParameter = () => {
-    return bookingSetup?.BookingParameter?.find(
-      (param) => param.BookingParameterStaff
-    );
-  };
-
   // Get dynamic parameters (all parameters except service and staff)
   const getDynamicParameters = (): BookingParameter[] => {
     if (!bookingSetup?.BookingParameter) return [];
@@ -636,7 +570,6 @@ export default function BookingForm() {
       (param) => !param.BookingParameterService && !param.BookingParameterStaff
     ).sort((a, b) => a.BookingParameterSequence - b.BookingParameterSequence);
   };
-
   const handleSubmit = async (
     e: React.MouseEvent<HTMLButtonElement>
   ): Promise<void> => {
@@ -705,7 +638,6 @@ export default function BookingForm() {
       if (!response.ok) throw new Error("Failed to create booking");
       const result = await response.json();
 
-      console.log("✅ Booking created:", result);
       showAlert(
         "Booking Confirmed!",
         "Your appointment has been successfully scheduled."
@@ -767,7 +699,6 @@ export default function BookingForm() {
       </div>
     );
   }
-
   return (
     <div className="container mx-auto p-6 max-w-6xl space-y-6">
       {/* Alert Component */}
@@ -1095,7 +1026,6 @@ export default function BookingForm() {
                                   </div>
                                   <div className="text-sm text-muted-foreground">
                                     {value.BookingParameterValueCode}
-                                    
                                   </div>
                                 </div>
                               </Label>
@@ -1112,168 +1042,176 @@ export default function BookingForm() {
         </Card>
       )}
 
-{/* Step 4: Date & Time Selection */}
-{currentStep === 4 && (
-  <Card>
-    <CardHeader>
-      <div className="flex items-center gap-2">
-        <Calendar className="w-5 h-5 text-primary" />
-        <CardTitle>Step 4: Select Date & Time</CardTitle>
-      </div>
-    </CardHeader>
-    <CardContent>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Date Selection - Left Side */}
-        <div className="space-y-4">
-          <div>
-            <Label
-              htmlFor="booking-date"
-              className="text-base font-medium mb-2 block"
-            >
-              Select Date
-            </Label>
-            <Input
-              id="booking-date"
-              type="date"
-              value={formData.date}
-              onChange={(e) => handleInputChange("date", e.target.value)}
-              min={new Date().toISOString().split("T")[0]}
-              className="text-base"
-            />
-            {formData.date && (
-              <p className="text-sm text-muted-foreground mt-2">
-                Selected date: {new Date(formData.date).toLocaleDateString()}
-              </p>
-            )}
-          </div>
-
-          {/* Quick Stats */}
-          {formData.date && availableTimeSlots.length > 0 && (
-            <Card className="bg-muted/50">
-              <CardContent className="p-4">
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <div className="text-2xl font-bold text-foreground">
-                      {availableTimeSlots.length}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Total</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-green-600">
-                      {
-                        availableTimeSlots.filter(
-                          (slot) => slot.available
-                        ).length
-                      }
-                    </div>
-                    <div className="text-xs text-muted-foreground">Available</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-destructive">
-                      {
-                        availableTimeSlots.filter(
-                          (slot) => !slot.available
-                        ).length
-                      }
-                    </div>
-                    <div className="text-xs text-muted-foreground">Booked</div>
-                  </div>
+      {/* Step 4: Date & Time Selection */}
+      {currentStep === 4 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-primary" />
+              <CardTitle>Step 4: Select Date & Time</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Date Selection - Left Side */}
+              <div className="space-y-4">
+                <div>
+                  <Label
+                    htmlFor="booking-date"
+                    className="text-base font-medium mb-2 block"
+                  >
+                    Select Date
+                  </Label>
+                  <Input
+                    id="booking-date"
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => handleInputChange("date", e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
+                    className="text-base"
+                  />
+                  {formData.date && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Selected date:{" "}
+                      {new Date(formData.date).toLocaleDateString()}
+                    </p>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
 
-        {/* Time Slot Selection - Right Side */}
-        {formData.date && (
-          <div className="space-y-4">
-            <Label className="text-base font-medium block">
-              Available Time Slots
-            </Label>
-            
-            {loading.timeSlots ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                <span className="text-muted-foreground">
-                  Loading available time slots...
-                </span>
+                {/* Quick Stats */}
+                {formData.date && availableTimeSlots.length > 0 && (
+                  <Card className="bg-muted/50">
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div>
+                          <div className="text-2xl font-bold text-foreground">
+                            {availableTimeSlots.length}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Total
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-green-600">
+                            {
+                              availableTimeSlots.filter(
+                                (slot) => slot.available
+                              ).length
+                            }
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Available
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-destructive">
+                            {
+                              availableTimeSlots.filter(
+                                (slot) => !slot.available
+                              ).length
+                            }
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Booked
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
-            ) : availableTimeSlots.length > 0 ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-96 overflow-y-auto p-1">
-                  {availableTimeSlots.map((slot, index) => (
-                    <Button
-                      key={`${slot.id}-${index}`}
-                      type="button"
-                      onClick={() => handleTimeSlotClick(slot.time)}
-                      disabled={!slot.available}
-                      variant={
-                        formData.selectedTime === slot.time
-                          ? "default"
-                          : "outline"
-                      }
-                      className={`
+
+              {/* Time Slot Selection - Right Side */}
+              {formData.date && (
+                <div className="space-y-4">
+                  <Label className="text-base font-medium block">
+                    Available Time Slots
+                  </Label>
+
+                  {loading.timeSlots ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                      <span className="text-muted-foreground">
+                        Loading available time slots...
+                      </span>
+                    </div>
+                  ) : availableTimeSlots.length > 0 ? (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-96 overflow-y-auto p-1">
+                        {availableTimeSlots.map((slot, index) => (
+                          <Button
+                            key={`${slot.id}-${index}`}
+                            type="button"
+                            onClick={() => handleTimeSlotClick(slot.time)}
+                            disabled={!slot.available}
+                            variant={
+                              formData.selectedTime === slot.time
+                                ? "default"
+                                : "outline"
+                            }
+                            className={`
                         h-12 text-sm font-medium transition-all
-                        ${slot.available 
-                          ? formData.selectedTime === slot.time
-                            ? "bg-green-600 hover:bg-green-700 text-white border-green-600"
-                            : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200 hover:border-green-300"
-                          : "bg-red-50 text-red-400 border-red-200 cursor-not-allowed opacity-60"
+                        ${
+                          slot.available
+                            ? formData.selectedTime === slot.time
+                              ? "bg-green-600 hover:bg-green-700 text-white border-green-600"
+                              : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200 hover:border-green-300"
+                            : "bg-red-50 text-red-400 border-red-200 cursor-not-allowed opacity-60"
                         }
                       `}
-                    >
-                      <div className="flex flex-col items-center">
-                        <span>{slot.time}</span>
-                        {!slot.available && (
-                          <span className="text-xs">Unavailable</span>
-                        )}
+                          >
+                            <div className="flex flex-col items-center">
+                              <span>{slot.time}</span>
+                              {!slot.available && (
+                                <span className="text-xs">Unavailable</span>
+                              )}
+                            </div>
+                          </Button>
+                        ))}
                       </div>
-                    </Button>
-                  ))}
-                </div>
 
-                {!formData.selectedTime && (
-                  <p className="text-sm text-muted-foreground text-center">
-                    Please select a time slot to continue
-                  </p>
-                )}
+                      {!formData.selectedTime && (
+                        <p className="text-sm text-muted-foreground text-center">
+                          Please select a time slot to continue
+                        </p>
+                      )}
 
-                {formData.selectedTime && (
-                  <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
-                    <div className="flex items-center justify-center gap-2 text-primary font-medium">
-                      <CheckCircle2 className="w-4 h-4" />
-                      Selected: {formData.selectedTime}
+                      {formData.selectedTime && (
+                        <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                          <div className="flex items-center justify-center gap-2 text-primary font-medium">
+                            <CheckCircle2 className="w-4 h-4" />
+                            Selected: {formData.selectedTime}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-12 border-2 border-dashed border-muted rounded-lg">
-                <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground font-medium">
-                  No available time slots
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Please try selecting a different date
-                </p>
-              </div>
-            )}
-          </div>
-        )}
+                  ) : (
+                    <div className="text-center py-12 border-2 border-dashed border-muted rounded-lg">
+                      <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                      <p className="text-muted-foreground font-medium">
+                        No available time slots
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Please try selecting a different date
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
-        {/* Empty State for Time Slots when no date selected */}
-        {!formData.date && (
-          <div className="flex items-center justify-center min-h-[200px] border-2 border-dashed border-muted rounded-lg">
-            <div className="text-center text-muted-foreground">
-              <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>Please select a date to see available time slots</p>
+              {/* Empty State for Time Slots when no date selected */}
+              {!formData.date && (
+                <div className="flex items-center justify-center min-h-[200px] border-2 border-dashed border-muted rounded-lg">
+                  <div className="text-center text-muted-foreground">
+                    <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>Please select a date to see available time slots</p>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        )}
-      </div>
-    </CardContent>
-  </Card>
-)}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Step 5: Customer Selection */}
       {currentStep === 5 && (
@@ -1283,14 +1221,14 @@ export default function BookingForm() {
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-primary" />
                 <CardTitle>
-                  {userRole === "admin"
+                  {userRole === "global-admin" || userRole === "admin"
                     ? "Step 5: Select Customer"
                     : "Step 5: Your Information"}
                 </CardTitle>
               </div>
             </CardHeader>
             <CardContent>
-              {userRole === "admin" ? (
+              {userRole === "global-admin" || userRole === "admin" ? (
                 <>
                   {loading.customers ? (
                     <div className="flex items-center justify-center py-4">

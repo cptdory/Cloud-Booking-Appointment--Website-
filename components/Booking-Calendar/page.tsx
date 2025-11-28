@@ -159,7 +159,6 @@ export default function BookingCalendar() {
 
         if (staffParam) {
           const parameterId = staffParam.BookingParameterId.toString();
-          console.log("✅ Found staff parameter:", parameterId);
           setBookingParameterId(parameterId);
           
           const mappings: StaffMapping = {};
@@ -167,7 +166,6 @@ export default function BookingCalendar() {
             mappings[value.BookingParameterValueCode] = value.BookingParameterValueId;
           });
           
-          console.log("🗺️ Staff mappings:", mappings);
           setStaffMappings(mappings);
           return { mappings, parameterId };
         }
@@ -206,8 +204,6 @@ export default function BookingCalendar() {
         _BookingParameterId: parameterId,
       };
 
-      console.log("🎨 Loading staff colors with ARRAY body:", body);
-
       const res = await fetch("/api/booking-staff-auth/get-booking-staff-color", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -217,7 +213,6 @@ export default function BookingCalendar() {
       const data = await res.json();
       
       if (res.ok && data.staffColors) {
-        console.log("✅ Staff colors response:", data.staffColors);
         
         // Convert back from BookingParameterValueId to StaffCode
         const convertedColors: { [key: string]: StaffColor } = {};
@@ -229,11 +224,9 @@ export default function BookingCalendar() {
           
           if (staffCode) {
             convertedColors[staffCode] = data.staffColors[parameterValueId];
-            console.log(`🎨 Mapped color: ${staffCode} (ID: ${parameterValueId}) -> ${data.staffColors[parameterValueId].background}`);
           }
         });
         
-        console.log("🔄 Final converted colors:", convertedColors);
         return convertedColors;
       } else {
         console.warn("⚠️ Failed to load staff colors:", data.error);
@@ -280,8 +273,6 @@ export default function BookingCalendar() {
       const endDateTime = `${endDate}T${entry.BookingEndTime || entry.BookingStartTime}`;
 
       const staffColor = getStaffColor(entry.StaffCode);
-
-      console.log(`🎨 Creating event for ${entry.StaffCode}:`, staffColor);
 
       return {
         id: entry.EntryNo.toString(),
@@ -341,7 +332,6 @@ export default function BookingCalendar() {
   // Update events when staffColors change
   useEffect(() => {
     if (bookingEntries.length > 0) {
-      console.log("🔄 Updating events with new staff colors:", staffColors);
       const newEvents = createEvents(bookingEntries);
       setEvents(newEvents);
     }
@@ -413,10 +403,7 @@ export default function BookingCalendar() {
       // Get unique staff codes
       const uniqueStaffCodes = [...new Set(entries.map(entry => entry.StaffCode))].filter(Boolean);
       
-      console.log("👥 Unique staff codes found:", uniqueStaffCodes);
-      
       if (uniqueStaffCodes.length > 0 && parameterId && Object.keys(mappings).length > 0) {
-        console.log("🎨 Loading colors for staff codes:", uniqueStaffCodes);
         const loadedColors = await loadStaffColors(uniqueStaffCodes, mappings, parameterId);
         
         // Update staff colors state
@@ -437,8 +424,6 @@ export default function BookingCalendar() {
             background: "#6b7280",
             text: "#ffffff"
           };
-
-          console.log(`🎨 Initial event for ${entry.StaffCode}:`, staffColor);
 
           return {
             id: entry.EntryNo.toString(),
@@ -508,7 +493,6 @@ export default function BookingCalendar() {
       }
 
       const data = await response.json();
-      console.log("✅ Status updated successfully:", data);
 
       // Update the event in the local state
       setEvents(prevEvents =>

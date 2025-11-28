@@ -4,13 +4,7 @@ import jwt from "jsonwebtoken";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-
-    // Console the incoming request body
-    console.log("Incoming request body:", JSON.stringify(body, null, 2));
-
     const { _PortalUsername, _PortalPassword, _IsAdminLogin } = body;
-
-    console.log("Login attempt:", { _PortalUsername, _IsAdminLogin });
 
     if (!_PortalUsername || !_PortalPassword) {
       return NextResponse.json(
@@ -32,7 +26,6 @@ export async function POST(request: Request) {
     });
 
     const bcData = await res.json();
-    console.log("BC API Response:", bcData);
 
     if (!res.ok) {
       return NextResponse.json(
@@ -45,7 +38,6 @@ export async function POST(request: Request) {
     let loginResult = null;
     try {
       loginResult = JSON.parse(bcData.value)[0];
-      console.log("Parsed login result:", loginResult);
     } catch (err) {
       console.error("Parse error:", err);
       return NextResponse.json(
@@ -66,7 +58,6 @@ export async function POST(request: Request) {
     if (isAdmin) {
       // ADMIN LOGIN: Validate staff data
       if (!loginResult.StaffCode) {
-        console.log("Admin validation failed - missing staff fields");
         return NextResponse.json(
           { error: "Invalid admin credentials" },
           { status: 401 }
@@ -75,7 +66,6 @@ export async function POST(request: Request) {
     } else {
       // CUSTOMER LOGIN: Must have CustomerNo (adjust based on your BC customer response)
       if (!loginResult.CustomerNo) {
-        console.log("Customer validation failed - missing CustomerNo");
         return NextResponse.json(
           { error: "Invalid customer credentials" },
           { status: 401 }

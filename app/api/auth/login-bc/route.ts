@@ -40,8 +40,6 @@ async function authLogin(accessToken: string, body: any, retry = true): Promise<
     _IsAdminLogin: String(body._IsAdminLogin || "false") // Ensure it's always a string
   };
 
-  console.log('BC Login Request:', { url, body: requestBody });
-
   const res = await fetch(url, {
     method: "POST",
     headers: {
@@ -65,14 +63,12 @@ async function authLogin(accessToken: string, body: any, retry = true): Promise<
   }
 
   const result = await res.json();
-  console.log('BC Login Response:', result);
   return result;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    console.log('Received login request:', body);
     
     const accessToken = await getAccessToken();
     const result = await authLogin(accessToken, body);
