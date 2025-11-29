@@ -204,7 +204,6 @@ export const useSidebarStore = create<SidebarState>()((set, get) => ({
         else if (lower.includes("bed")) icon = BedDouble;
         else if (lower.includes("service")) icon = BriefcaseBusiness;
 
-        // Determine URL based on BookingParameterStaff and BookingParameterService
         let url = "";
         if (p.BookingParameterStaff) {
           // Route to staff page
