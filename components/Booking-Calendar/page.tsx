@@ -140,7 +140,7 @@ export default function BookingCalendar() {
         } else {
           // Show service name and customer name
           const serviceName = entry.ServiceName || "-";
-          const customerName = entry.Name2 || entry.Name || entry.CustomerNo || "-";
+          const customerName = entry.Name || entry.CustomerNo || "-";
           eventTitle = `${serviceName} - ${customerName}`;
         }
 
