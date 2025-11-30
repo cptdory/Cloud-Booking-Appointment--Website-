@@ -566,8 +566,7 @@ export default function AccountForm() {
 
                 {/* Editable Fields */}
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
+                                      <div className="space-y-2">
                       <Label htmlFor="name">Full Name</Label>
                       <Input
                         id="name"
@@ -581,13 +580,28 @@ export default function AccountForm() {
                         placeholder="John Doe"
                       />
                     </div>
-
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <div className="space-y-2">
+                    <Label htmlFor="birthDate">Birth Date</Label>
+                    <Input
+                      id="birthDate"
+                      type="date"
+                      value={customerDetails.birthDate}
+                      onChange={(e) =>
+                        setCustomerDetails({
+                          ...customerDetails,
+                          birthDate: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
                     <div className="space-y-2">
                       <Label htmlFor="age">Age</Label>
                       <Input
                         id="age"
                         type="number"
                         value={customerDetails.age}
+                        disabled
                         onChange={(e) =>
                           setCustomerDetails({
                             ...customerDetails,
@@ -636,21 +650,6 @@ export default function AccountForm() {
                         placeholder="+1 (555) 123-4567"
                       />
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="birthDate">Birth Date</Label>
-                    <Input
-                      id="birthDate"
-                      type="date"
-                      value={customerDetails.birthDate}
-                      onChange={(e) =>
-                        setCustomerDetails({
-                          ...customerDetails,
-                          birthDate: e.target.value,
-                        })
-                      }
-                    />
                   </div>
 
                   <div className="space-y-2">

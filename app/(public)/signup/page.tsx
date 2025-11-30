@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function SignupPage() {
   const router = useRouter();
-  
+
   // Customer Signup State
   const [showCustomerPassword, setShowCustomerPassword] = useState(false);
   const [name, setName] = useState("");
@@ -50,7 +50,7 @@ export default function SignupPage() {
           EMail: email,
           Address: address,
           Address2: address2,
-          Age: age,
+          Age: "",
           BirthDate: birthDate,
           PortalPassword: portalPassword,
           _IsAdminLogin: "false",
@@ -124,15 +124,19 @@ export default function SignupPage() {
                   </div>
                 </div>
 
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <Tabs
+                  value={activeTab}
+                  onValueChange={setActiveTab}
+                  className="w-full"
+                >
                   <TabsList className="grid w-full grid-cols-2 mb-8 bg-blue-100 dark:bg-gray-800 p-1 rounded-lg">
-                    <TabsTrigger 
+                    <TabsTrigger
                       value="customer"
                       className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md transition-colors text-blue-900 dark:text-gray-200"
                     >
                       Customer Signup
                     </TabsTrigger>
-                    <TabsTrigger 
+                    <TabsTrigger
                       value="admin"
                       className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md transition-colors text-blue-900 dark:text-gray-200"
                     >
@@ -171,6 +175,19 @@ export default function SignupPage() {
                           />
                         </div>
 
+                        {/* Birthdate */}
+                        <div>
+                          <Label className="mb-2 block text-sm font-medium text-blue-900 dark:text-white">
+                            Birthdate
+                          </Label>
+                          <Input
+                            type="date"
+                            value={birthDate}
+                            onChange={(e) => setBirthDate(e.target.value)}
+                            className="bg-blue-50 border-blue-200 text-blue-900 dark:bg-[#2C303B] dark:border-gray-600 dark:text-white"
+                          />
+                        </div>
+
                         {/* Phone Number */}
                         <div>
                           <Label className="mb-2 block text-sm font-medium text-blue-900 dark:text-white">
@@ -185,46 +202,19 @@ export default function SignupPage() {
                           />
                         </div>
 
-                        {/* Birthdate */}
+                        {/* Email */}
                         <div>
                           <Label className="mb-2 block text-sm font-medium text-blue-900 dark:text-white">
-                            Birthdate
+                            Email
                           </Label>
                           <Input
-                            type="date"
-                            value={birthDate}
-                            onChange={(e) => setBirthDate(e.target.value)}
-                            className="bg-blue-50 border-blue-200 text-blue-900 dark:bg-[#2C303B] dark:border-gray-600 dark:text-white"
-                          />
-                        </div>
-
-                        {/* Age */}
-                        <div>
-                          <Label className="mb-2 block text-sm font-medium text-blue-900 dark:text-white">
-                            Age
-                          </Label>
-                          <Input
-                            type="number"
-                            value={age}
-                            onChange={(e) => setAge(e.target.value)}
-                            placeholder="Age"
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="Enter your email"
                             className="bg-blue-50 border-blue-200 text-blue-900 placeholder-blue-400 dark:bg-[#2C303B] dark:border-gray-600 dark:text-white"
                           />
                         </div>
-                      </div>
-
-                      {/* Email (full width) */}
-                      <div className="mt-6">
-                        <Label className="mb-2 block text-sm font-medium text-blue-900 dark:text-white">
-                          Email
-                        </Label>
-                        <Input
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="Enter your email"
-                          className="bg-blue-50 border-blue-200 text-blue-900 placeholder-blue-400 dark:bg-[#2C303B] dark:border-gray-600 dark:text-white"
-                        />
                       </div>
 
                       {/* Address (full width textarea) */}
@@ -268,10 +258,16 @@ export default function SignupPage() {
                           />
                           <button
                             type="button"
-                            onClick={() => setShowCustomerPassword(!showCustomerPassword)}
+                            onClick={() =>
+                              setShowCustomerPassword(!showCustomerPassword)
+                            }
                             className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500 dark:text-gray-300 hover:text-blue-700 dark:hover:text-white"
                           >
-                            {showCustomerPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            {showCustomerPassword ? (
+                              <EyeOff size={18} />
+                            ) : (
+                              <Eye size={18} />
+                            )}
                           </button>
                         </div>
                       </div>
@@ -283,7 +279,9 @@ export default function SignupPage() {
                           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5"
                           disabled={isLoading}
                         >
-                          {isLoading ? "Creating account..." : "Sign up as Customer"}
+                          {isLoading
+                            ? "Creating account..."
+                            : "Sign up as Customer"}
                         </Button>
                       </div>
                     </form>
@@ -344,10 +342,16 @@ export default function SignupPage() {
                           />
                           <button
                             type="button"
-                            onClick={() => setShowAdminPassword(!showAdminPassword)}
+                            onClick={() =>
+                              setShowAdminPassword(!showAdminPassword)
+                            }
                             className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500 dark:text-gray-300 hover:text-blue-700 dark:hover:text-white"
                           >
-                            {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            {showAdminPassword ? (
+                              <EyeOff size={18} />
+                            ) : (
+                              <Eye size={18} />
+                            )}
                           </button>
                         </div>
                       </div>
@@ -359,7 +363,9 @@ export default function SignupPage() {
                           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5"
                           disabled={isLoading}
                         >
-                          {isLoading ? "Creating account..." : "Sign up as Admin"}
+                          {isLoading
+                            ? "Creating account..."
+                            : "Sign up as Admin"}
                         </Button>
                       </div>
                     </form>
