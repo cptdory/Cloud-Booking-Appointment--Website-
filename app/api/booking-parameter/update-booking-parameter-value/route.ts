@@ -40,8 +40,8 @@ export async function POST(req: Request) {
     const token = await getAccessToken();
 
     const tenantId = process.env.TENANT_ID!;
-    const environment = process.env.BC_ENV || "SandboxDev2";
-    const company = process.env.COMPANY || "SQUADLETHICS";
+    const environment = process.env.ENVIRONMENT!;
+    const company = process.env.COMPANY!;
 
     const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_UpdateBookingParameterValue?Company=${encodeURIComponent(company)}`;
 

@@ -49,8 +49,8 @@ async function getAccessToken() {
 // ─────────────────────────────────────────────
 async function fetchBookingDetails(accessToken: string, code: string) {
   const tenantId = process.env.TENANT_ID!;
-  const environment = "SandboxDev2";
-  const company = "SQUADLETHICS";
+  const environment = process.env.ENVIRONMENT!;
+  const company = process.env.COMPANY!;
 
   const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_GetBookingSetup?Company=${encodeURIComponent(company)}`;
 

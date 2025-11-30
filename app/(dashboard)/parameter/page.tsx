@@ -88,9 +88,8 @@ export default function ParameterPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>ID</TableHead>
                     <TableHead>Code</TableHead>
-                    <TableHead>Description</TableHead>
+                    <TableHead>Name</TableHead>
                     {checkDuration === "true" && <TableHead>Duration</TableHead>}
                     <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
@@ -99,7 +98,6 @@ export default function ParameterPage() {
                 <TableBody>
                   {values.map((v) => (
                     <TableRow key={v.BookingParameterValueId}>
-                      <TableCell>{v.BookingParameterValueId}</TableCell>
                       <TableCell>{v.BookingParameterValueCode}</TableCell>
                       <TableCell>{v.BookingParamterValueDescription}</TableCell>
                       {checkDuration === "true" && (

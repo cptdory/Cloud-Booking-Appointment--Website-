@@ -46,8 +46,8 @@ export async function POST(req: Request) {
 
     const accessToken = await getAccessToken();
     const tenantId = process.env.TENANT_ID;
-    const environment = "SandboxDev2";
-    const company = "SQUADLETHICS";
+    const environment = process.env.ENVIRONMENT!;
+    const company = process.env.COMPANY!;
 
     // Try different possible endpoints - one of these might be correct
     const possibleEndpoints = [

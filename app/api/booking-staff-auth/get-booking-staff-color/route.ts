@@ -68,8 +68,8 @@ export async function POST(req: Request) {
     console.log("🔑 Getting access token...");
     const accessToken = await getAccessToken();
     const tenantId = process.env.TENANT_ID;
-    const environment = "SandboxDev2";
-    const company = "SQUADLETHICS";
+    const environment = process.env.ENVIRONMENT!;
+    const company = process.env.COMPANY!;
 
     // Fetch colors for staff codes
     const staffColors: { [key: string]: { background: string; text: string } } = {};

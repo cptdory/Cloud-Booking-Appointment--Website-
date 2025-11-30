@@ -228,16 +228,14 @@ export default function StaffPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-20">ID</TableHead>
                     <TableHead>Code</TableHead>
-                    <TableHead>Description</TableHead>
+                    <TableHead>Name</TableHead>
                     <TableHead className="w-60 text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {values.map((v: any) => (
                     <TableRow key={v.BookingParameterValueId} className="hover:bg-muted/50">
-                      <TableCell>{v.BookingParameterValueId}</TableCell>
                       <TableCell className="font-medium">{v.BookingParameterValueCode}</TableCell>
                       <TableCell>{v.BookingParamterValueDescription}</TableCell>
                       <TableCell className="text-center">

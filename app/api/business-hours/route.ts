@@ -36,8 +36,8 @@ async function getAccessToken() {
 
 async function callBusinessCentralAPI(endpoint: string, body: any) {
   const tenantId = process.env.TENANT_ID!;
-  const environment = "SandboxDev2";
-  const company = "SQUADLETHICS";
+  const environment = process.env.ENVIRONMENT!;
+  const company = process.env.COMPANY!;
   const token = await getAccessToken();
 
   const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/${endpoint}?Company=${encodeURIComponent(company)}`;

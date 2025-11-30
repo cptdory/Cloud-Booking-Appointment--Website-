@@ -217,15 +217,6 @@ export default function StaffPage() {
         },
       }));
 
-      // success message via crud hook (reusing it)
-      // crud.setCreating(false) etc not relevant here; we set success directly
-      // but we'll write to crud's success by calling setSuccess if it existed — hook doesn't expose setter
-      // so we rely on local success via crud.success (the hook sets success on CRUD ops). We'll simply show local alert by using the hook's error/success fields when available.
-      // Instead set a transient success by toggling the hook's error? The hook does not expose setter. So we show a short on-screen message using a small local side-effect:
-      // For simplicity, call loadValues and show a browser alert? We'll use loading of values + setTimeout to mimic success shown with local small ephemeral alert below.
-      // But we do want to show consistent success UI — we'll create a tiny local success state for color/password only.
-
-      // We'll show a transient browser-native success via console & close dialog:
       setColorDialogOpen(false);
       setColorStaff(null);
       setSelectedColor("");
@@ -340,9 +331,8 @@ export default function StaffPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-20">ID</TableHead>
                     <TableHead>Code</TableHead>
-                    <TableHead>Description</TableHead>
+                    <TableHead>Name</TableHead>
                     <TableHead>Color</TableHead>
                     <TableHead className="w-48 text-center">Actions</TableHead>
                   </TableRow>
@@ -351,7 +341,6 @@ export default function StaffPage() {
                 <TableBody>
                   {values.map((v: any) => (
                     <TableRow key={v.BookingParameterValueId} className="hover:bg-muted/50">
-                      <TableCell>{v.BookingParameterValueId}</TableCell>
                       <TableCell className="font-medium">{v.BookingParameterValueCode}</TableCell>
                       <TableCell>{v.BookingParamterValueDescription}</TableCell>
                       <TableCell>{getColorBadge(String(v.BookingParameterValueId))}</TableCell>
@@ -507,22 +496,26 @@ export default function StaffPage() {
               </div>
 
               <div>
-                <Label>New Color</Label>
-                <Select value={selectedColor} onValueChange={setSelectedColor}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a color" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {colorOptions.map((color) => (
-                      <SelectItem key={color.value} value={color.value}>
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: color.value }} />
-                          <span>{color.label}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="staffColorInput">Select New Color</Label>
+                <div className="flex items-center gap-4 mt-2">
+                  <Input
+                    id="staffColorInput"
+                    type="color"
+                    value={selectedColor}
+                    onChange={(e) => setSelectedColor(e.target.value)}
+                    className="w-20 h-10 p-1 cursor-pointer"
+                  />
+                  <div className="flex-1">
+                    <Input
+                      value={selectedColor}
+                      onChange={(e) => setSelectedColor(e.target.value)}
+                      placeholder="#3b82f6"
+                    />
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Enter a color code or use the color picker
+                </p>
               </div>
 
               {selectedColor && (

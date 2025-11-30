@@ -562,7 +562,7 @@ export default function BookingCalendar() {
               weekends={true}
               nowIndicator={true}
               displayEventTime={false}
-  eventTimeFormat={{}}
+              eventTimeFormat={{}}
               eventDisplay={isMobile ? "list-item" : "auto"}
               dayHeaderFormat={
                 isMobile ? { weekday: "short" } : { weekday: "long" }

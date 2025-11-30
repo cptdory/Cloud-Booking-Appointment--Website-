@@ -239,20 +239,6 @@ export default function AccountForm() {
     }
   };
 
-  // Color options for the color picker
-  const colorOptions = [
-    { value: "#3b82f6", label: "Blue" },
-    { value: "#ef4444", label: "Red" },
-    { value: "#10b981", label: "Green" },
-    { value: "#f59e0b", label: "Yellow" },
-    { value: "#8b5cf6", label: "Purple" },
-    { value: "#ec4899", label: "Pink" },
-    { value: "#f97316", label: "Orange" },
-    { value: "#14b8a6", label: "Teal" },
-    { value: "#6366f1", label: "Indigo" },
-    { value: "#6b7280", label: "Gray" },
-  ];
-
   if (loading) {
     return (
       <div className="container mx-auto p-6 max-w-4xl">

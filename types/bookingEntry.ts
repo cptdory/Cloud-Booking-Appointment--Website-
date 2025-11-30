@@ -1,4 +1,7 @@
 export type BookingEntry = {
+  BookingParameterValueIds?: string;
+  ServiceId?: string;
+  StaffId?: string;
   EntryNo: number;
   BookingStartDate: string;
   BookingEndDate: string;
