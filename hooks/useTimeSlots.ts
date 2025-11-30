@@ -26,7 +26,7 @@ export function useTimeSlots() {
     setLoading(true);
 
     try {
-      const parameterIds = [
+      const parameterIds = [ //todoo
         "1",
         "2",
         ...dynamicParameters.map((p) => p.id),
