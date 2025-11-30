@@ -113,6 +113,17 @@ export default function SignupPage() {
           <div className="-mx-4 flex flex-wrap">
             <div className="w-full px-4">
               <div className="shadow-lg dark:bg-dark mx-auto max-w-[700px] rounded-xl bg-white px-6 py-10 sm:p-[60px] border border-blue-100 dark:border-gray-700">
+                {/* Branding Section */}
+                <div className="text-center">
+                  <div className="inline-block">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                        Squadlethics
+                      </h1>
+                    </div>
+                  </div>
+                </div>
+
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                   <TabsList className="grid w-full grid-cols-2 mb-8 bg-blue-100 dark:bg-gray-800 p-1 rounded-lg">
                     <TabsTrigger 

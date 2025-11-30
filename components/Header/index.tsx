@@ -41,14 +41,14 @@ export default function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center">
           <Image
-            src="/images/logo/logo-2.svg"
+            src="/images/logo/logo-1.svg"
             alt="Logo"
             width={140}
             height={40}
             className="dark:hidden"
           />
           <Image
-            src="/images/logo/logo-2.svg"
+            src="/images/logo/logo-1.svg"
             alt="Logo"
             width={140}
             height={40}
