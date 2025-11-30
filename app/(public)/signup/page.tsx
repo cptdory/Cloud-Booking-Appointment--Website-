@@ -170,9 +170,10 @@ export default function SignupPage() {
                         {/* Full Name */}
                         <div>
                           <Label className="mb-2 block text-sm font-medium text-blue-900 dark:text-white">
-                            Full Name
+                            Full Name <span className="text-red-600">*</span>
                           </Label>
                           <Input
+                            required
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
@@ -211,9 +212,10 @@ export default function SignupPage() {
                         {/* Email */}
                         <div>
                           <Label className="mb-2 block text-sm font-medium text-blue-900 dark:text-white">
-                            Email
+                            Email <span className="text-red-600">*</span>
                           </Label>
                           <Input
+                            required
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
@@ -252,10 +254,11 @@ export default function SignupPage() {
                       {/* Password */}
                       <div className="mt-6">
                         <Label className="mb-2 block text-sm font-medium text-blue-900 dark:text-white">
-                          Password
+                          Password <span className="text-red-600">*</span>
                         </Label>
                         <div className="relative">
                           <Input
+                            required
                             type={showCustomerPassword ? "text" : "password"}
                             value={portalPassword}
                             onChange={(e) => setPortalPassword(e.target.value)}
