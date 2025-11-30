@@ -12,7 +12,7 @@ export default function Footer() {
           {/* Logo */}
           <Link href="/" className="flex-shrink-0">
             <Image
-              src="/images/logo/logo-2.svg"
+              src="/images/logo/logo-1.svg"
               alt="Bookufy logo"
               width={140}
               height={30}

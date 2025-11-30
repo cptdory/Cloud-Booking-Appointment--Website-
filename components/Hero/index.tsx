@@ -4,7 +4,7 @@ import { ArrowRight, Calendar, Clock, Users } from "lucide-react";
 
 export default function Hero() {
   return (
-    <section className="relative z-10 overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 pb-20 pt-32 md:pb-40 md:pt-48 xl:pb-56 xl:pt-64">
+    <section className="relative z-10 overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 pb-20 pt-40 md:pb-40 md:pt-24 xl:pb-56 xl:pt-50">
       <div className="container mx-auto px-4">
         {/* Main Content */}
         <div className="flex flex-col items-center text-center max-w-4xl mx-auto mb-16">
