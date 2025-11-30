@@ -158,7 +158,7 @@ export default function BookingCalendar() {
             staffCode: entry.StaffCode,
             staffName: entry.StaffName,
             service: entry.ServiceName || "-",
-            customer: entry.Name2 || entry.Name || entry.CustomerNo,
+            customer: entry.Name || entry.CustomerNo,
             status: entry.BookingStatus,
             branch: entry.BookingSetupCode,
             room: entry.Address2,
