@@ -384,8 +384,8 @@ export default function BookingForm() {
 
     try {
       const parameterIds = [
-        "4",
-        "5",
+        "1",
+        "2",
         ...dynamicParameters.map((p) => p.BookingParameterId.toString()),
       ].join("|");
       
@@ -480,7 +480,7 @@ export default function BookingForm() {
     return (
       <Card className=" border-blue-200 shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-blue-900 flex items-center gap-2 text-lg">
+          <CardTitle className=" flex items-center gap-2 text-lg">
             <CheckCircle2 className="w-5 h-5" />
             Booking Summary
           </CardTitle>
@@ -489,7 +489,7 @@ export default function BookingForm() {
           {bookingSummary.branch && (
             <div className="flex justify-between items-start">
               <span className="text-blue-700 font-medium">Branch:</span>
-              <span className="text-blue-900 text-right">
+              <span className=" text-right">
                 {bookingSummary.branch.Description}
                 <br />
                 <span className="text-sm text-blue-600">{bookingSummary.branch.Location}</span>
@@ -500,11 +500,11 @@ export default function BookingForm() {
           {bookingSummary.service && (
             <div className="flex justify-between items-start">
               <span className="text-blue-700 font-medium">Service:</span>
-              <span className="text-blue-900 text-right">
+              <span className=" text-right">
                 {bookingSummary.service.name}
                 <br />
                 <span className="text-sm text-blue-600">
-                  {bookingSummary.service.duration} mins • {bookingSummary.service.code}
+                  {bookingSummary.service.duration} mins
                 </span>
               </span>
             </div>
@@ -513,22 +513,19 @@ export default function BookingForm() {
           {bookingSummary.staff && (
             <div className="flex justify-between items-start">
               <span className="text-blue-700 font-medium">Staff:</span>
-              <span className="text-blue-900 text-right">
+              <span className=" text-right">
                 {bookingSummary.staff.name}
-                <br />
-                <span className="text-sm text-blue-600">ID: {bookingSummary.staff.code}</span>
               </span>
             </div>
           )}
           
           {bookingSummary.dynamicParameters.length > 0 && (
             <div>
-              <span className="text-blue-700 font-medium block mb-1">Options:</span>
               <div className="space-y-1">
                 {bookingSummary.dynamicParameters.map((param, index) => (
                   <div key={index} className="flex justify-between">
-                    <span className="text-blue-600 text-sm">{param.parameterName}:</span>
-                    <span className="text-blue-900 text-sm">{param.valueName}</span>
+                    <span className="text-blue-700 font-medium">{param.parameterName}:</span>
+                    <span className=" text-sm">{param.valueName}</span>
                   </div>
                 ))}
               </div>
@@ -538,7 +535,7 @@ export default function BookingForm() {
           {bookingSummary.date && (
             <div className="flex justify-between">
               <span className="text-blue-700 font-medium">Date:</span>
-              <span className="text-blue-900">
+              <span className="">
                 {new Date(bookingSummary.date).toLocaleDateString()}
               </span>
             </div>
@@ -547,17 +544,15 @@ export default function BookingForm() {
           {bookingSummary.time && (
             <div className="flex justify-between">
               <span className="text-blue-700 font-medium">Time:</span>
-              <span className="text-blue-900">{bookingSummary.time}</span>
+              <span className="">{bookingSummary.time}</span>
             </div>
           )}
           
           {bookingSummary.customer && (
             <div className="flex justify-between items-start">
               <span className="text-blue-700 font-medium">Customer:</span>
-              <span className="text-blue-900 text-right">
+              <span className=" text-right">
                 {bookingSummary.customer.name}
-                <br />
-                <span className="text-sm text-blue-600">ID: {bookingSummary.customer.customerNo}</span>
               </span>
             </div>
           )}
@@ -606,7 +601,7 @@ export default function BookingForm() {
             <div className="flex items-center gap-3">
               <User className="w-5 h-5 text-blue-600" />
               <div>
-                <div className="font-semibold text-blue-900">
+                <div className="font-semibold ">
                   Welcome, {username || "User"}
                 </div>
                 <div className="flex items-center gap-2 text-sm text-blue-700">
@@ -697,7 +692,7 @@ export default function BookingForm() {
               <CardHeader className=" border-b border-blue-200">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-5 h-5 text-blue-600" />
-                  <CardTitle className="text-blue-900">Step 1: Choose Your Branch</CardTitle>
+                  <CardTitle className="">Step 1: Choose Your Branch</CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="pt-6">
@@ -731,14 +726,11 @@ export default function BookingForm() {
                           <RadioGroupItem
                             value={branch.Code}
                             id={`branch-${branch.Code}`}
-                            className="mt-1 text-blue-600"
+                            className="text-blue-600"
                           />
                           <div className="ml-3 flex-1">
-                            <div className="font-semibold text-blue-900">
+                            <div className="font-semibold ">
                               {branch.Description}
-                            </div>
-                            <div className="text-sm text-blue-600">
-                              {branch.Location} • ID: {branch.Code}
                             </div>
                           </div>
                         </Label>
@@ -756,7 +748,7 @@ export default function BookingForm() {
               <CardHeader className=" border-b border-blue-200">
                 <div className="flex items-center gap-2">
                   <Briefcase className="w-5 h-5 text-blue-600" />
-                  <CardTitle className="text-blue-900">Step 2: Select Service</CardTitle>
+                  <CardTitle className="">Step 2: Select Service</CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="pt-6">
@@ -792,12 +784,11 @@ export default function BookingForm() {
                             className="text-blue-600"
                           />
                           <div className="ml-3">
-                            <div className="font-medium text-blue-900">
+                            <div className="font-medium ">
                               {service.BookingParamterValueDescription}
                             </div>
                             <div className="text-sm text-blue-600">
-                              {service.BookingParameterValueDuration} mins •{" "}
-                              {service.BookingParameterValueCode}
+                              {service.BookingParameterValueDuration} mins
                             </div>
                           </div>
                         </Label>
@@ -815,13 +806,13 @@ export default function BookingForm() {
               <CardHeader className="border-b border-blue-200">
                 <div className="flex items-center gap-2">
                   <Users className="w-5 h-5 text-blue-600" />
-                  <CardTitle className="text-blue-900">Step 3: Select Staff & Options</CardTitle>
+                  <CardTitle className="">Step 3: Select Staff & Options</CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="pt-6 space-y-6">
                 {/* Staff Selection */}
                 <div>
-                  <h3 className="text-lg font-medium mb-4 text-blue-900">Select Staff</h3>
+                  <h3 className="text-lg font-medium mb-4 ">Select Staff</h3>
                   {staffLoading ? (
                     <div className="flex items-center justify-center py-4">
                       <Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" />
@@ -855,10 +846,7 @@ export default function BookingForm() {
                               className="text-blue-600"
                             />
                             <div className="ml-3">
-                              <div className="font-medium text-blue-900">{staff.StaffName}</div>
-                              <div className="text-sm text-blue-600">
-                                ID: {staff.StaffCode}
-                              </div>
+                              <div className="font-medium ">{staff.StaffName}</div>
                             </div>
                           </Label>
                         ))}
@@ -872,7 +860,7 @@ export default function BookingForm() {
                   <>
                     <Separator className="bg-blue-200" />
                     <div>
-                      <h3 className="text-lg font-medium mb-4 text-blue-900">
+                      <h3 className="text-lg font-medium mb-4 ">
                         Additional Options
                       </h3>
                       <div className="space-y-6">
@@ -911,11 +899,8 @@ export default function BookingForm() {
                                       className="text-blue-600"
                                     />
                                     <div className="ml-3">
-                                      <div className="font-medium text-blue-900">
+                                      <div className="font-medium ">
                                         {value.BookingParamterValueDescription}
-                                      </div>
-                                      <div className="text-sm text-blue-600">
-                                        {value.BookingParameterValueCode}
                                       </div>
                                     </div>
                                   </Label>
@@ -938,7 +923,7 @@ export default function BookingForm() {
               <CardHeader className="border-b border-blue-200">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-blue-600" />
-                  <CardTitle className="text-blue-900">Step 4: Select Date & Time</CardTitle>
+                  <CardTitle className="">Step 4: Select Date & Time</CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="pt-6">
@@ -948,7 +933,7 @@ export default function BookingForm() {
                     <div>
                       <Label
                         htmlFor="booking-date"
-                        className="text-base font-medium mb-2 block text-blue-900"
+                        className="text-base font-medium mb-2 block "
                       >
                         Select Date
                       </Label>
@@ -974,7 +959,7 @@ export default function BookingForm() {
                         <CardContent className="p-4">
                           <div className="grid grid-cols-3 gap-2 text-center">
                             <div>
-                              <div className="text-2xl font-bold text-blue-900">
+                              <div className="text-2xl font-bold ">
                                 {availableTimeSlots.length}
                               </div>
                               <div className="text-xs text-blue-600">
@@ -1014,7 +999,7 @@ export default function BookingForm() {
                   {/* Time Slot Selection - Right Side */}
                   {formData.date && (
                     <div className="space-y-4">
-                      <Label className="text-base font-medium block text-blue-900">
+                      <Label className="text-base font-medium block ">
                         Available Time Slots
                       </Label>
 
@@ -1109,7 +1094,7 @@ export default function BookingForm() {
                 <CardHeader className=" border-b border-blue-200">
                   <div className="flex items-center gap-2">
                     <FileText className="w-5 h-5 text-blue-600" />
-                    <CardTitle className="text-blue-900">
+                    <CardTitle className="">
                       {userRole === "global-admin" || userRole === "admin"
                         ? "Step 5: Select Customer"
                         : "Step 5: Your Information"}
@@ -1143,12 +1128,11 @@ export default function BookingForm() {
                                 value={customer.customerNo}
                               >
                                 <div className="flex flex-col">
-                                  <span className="font-medium text-blue-900">
+                                  <span className="font-medium ">
                                     {customer.name}
                                   </span>
                                   <span className="text-xs text-blue-600">
-                                    ID: {customer.customerNo}
-                                    {customer.email && ` • ${customer.email}`}
+                                    {customer.email && ` ${customer.email}`}
                                   </span>
                                 </div>
                               </SelectItem>
@@ -1167,7 +1151,7 @@ export default function BookingForm() {
                       type="text"
                       value={formData.customerNo}
                       readOnly
-                      className="bg-blue-50 text-base font-semibold text-blue-900 border-blue-200"
+                      className="bg-blue-50 text-base font-semibold  border-blue-200"
                     />
                   )}
                 </CardContent>
@@ -1178,7 +1162,7 @@ export default function BookingForm() {
                 <CardHeader className=" border-b border-blue-200">
                   <div className="flex items-center gap-2">
                     <FileText className="w-5 h-5 text-blue-600" />
-                    <CardTitle className="text-blue-900">Special Notes (Optional)</CardTitle>
+                    <CardTitle className="">Special Notes (Optional)</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-6">

@@ -64,3 +64,4 @@ next-env.d.ts
 # Cache / App-specific Ignored Files
 # ===========================
 app/api/auth/cache/token_cache.json
+.vercel

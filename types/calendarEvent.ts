@@ -9,6 +9,7 @@ export type CalendarEvent = {
     location?: string;
     staff: string;
     staffCode: string;
+    staffName: string;
     service: string;
     customer: string;
     status: string;

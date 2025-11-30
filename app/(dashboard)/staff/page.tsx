@@ -34,21 +34,6 @@ import { Edit, Trash2, Plus, Key, Palette, CheckCircle } from "lucide-react";
 import { useBookingParams } from "@/hooks/useBookingParams";
 import { useParameterCRUD } from "@/hooks/useParameterCRUD";
 
-/**
- * StaffPage — refactored to reuse hooks:
- *  - useBookingParams
- *  - useParameterCRUD
- *
- * Remaining responsibilities in this page:
- *  - staff color load / update
- *  - password update
- *  - rendering dialogs (create/edit/delete/color/password)
- *
- * Notes:
- *  - useBookingParams returns string flags ("true"/"false") so we pass them as-is to the CRUD hook (it expects them).
- *  - The CRUD hook handles messages & create/edit/delete flows.
- */
-
 export default function StaffPage() {
   // read url params
   const search =

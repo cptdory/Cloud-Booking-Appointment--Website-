@@ -31,7 +31,10 @@ import {
   Clock,
   User,
   Briefcase,
-  MapPin, Phone, Mail, Cake,
+  MapPin,
+  Phone,
+  Mail,
+  Cake,
   AlertCircle,
   Loader2,
   Smartphone,
@@ -58,16 +61,25 @@ export default function BookingCalendar() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const calendarRef = useRef<FullCalendar>(null);
-  
+
   // Use hooks
   const { userRole, username, customerNo, checkingAuth } = useAuth();
   const { alert, showAlert } = useAlert();
   const { staffColors, loadStaffColors, getStaffColor } = useStaffColors();
-  const { staffMappings, bookingParameterId, loadStaffMappings } = useStaffMappings();
-  const { bookingEntries, loading: entriesLoading, error: entriesError, fetchBookingEntries, updateBookingStatus } = useBookingEntries();
+  const { staffMappings, bookingParameterId, loadStaffMappings } =
+    useStaffMappings();
+  const {
+    bookingEntries,
+    loading: entriesLoading,
+    error: entriesError,
+    fetchBookingEntries,
+    updateBookingStatus,
+  } = useBookingEntries();
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
+    null
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [currentDateRange, setCurrentDateRange] = useState<{
@@ -86,7 +98,7 @@ export default function BookingCalendar() {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      
+
       if (mobile && calendarView !== "listWeek") {
         setCalendarView("listWeek");
         if (calendarRef.current) {
@@ -96,45 +108,52 @@ export default function BookingCalendar() {
         }
       }
     };
-    
+
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, [calendarView]);
 
   // Create events from booking entries with current staff colors
-  const createEvents = useCallback((entries: BookingEntry[]): CalendarEvent[] => {
-    return entries.map((entry: BookingEntry) => {
-      const startDateTime = `${entry.BookingStartDate}T${entry.BookingStartTime}`;
-      const endDate = entry.BookingEndDate && entry.BookingEndDate !== "0001-01-01"
-        ? entry.BookingEndDate
-        : entry.BookingStartDate;
-      const endDateTime = `${endDate}T${entry.BookingEndTime || entry.BookingStartTime}`;
+  const createEvents = useCallback(
+    (entries: BookingEntry[]): CalendarEvent[] => {
+      return entries.map((entry: BookingEntry) => {
+        const startDateTime = `${entry.BookingStartDate}T${entry.BookingStartTime}`;
+        const endDate =
+          entry.BookingEndDate && entry.BookingEndDate !== "0001-01-01"
+            ? entry.BookingEndDate
+            : entry.BookingStartDate;
+        const endDateTime = `${endDate}T${
+          entry.BookingEndTime || entry.BookingStartTime
+        }`;
 
-      const staffColor = getStaffColor(entry.StaffCode);
+        const staffColor = getStaffColor(entry.StaffCode);
 
-      return {
-        id: entry.EntryNo.toString(),
-        title: entry.StaffName || entry.StaffCode,
-        start: startDateTime,
-        end: endDateTime,
-        color: staffColor.background,
-        textColor: staffColor.text,
-        extendedProps: {
-          description: entry.BookingNote,
-          location: entry.Address2 || "-",
-          staff: entry.StaffName || entry.StaffCode,
-          staffCode: entry.StaffCode,
-          service: entry.ServiceName || "-",
-          customer: entry.Name2 || entry.Name || entry.CustomerNo,
-          status: entry.BookingStatus,
-          branch: entry.BookingSetupCode,
-          room: entry.Address2,
-          rawData: entry,
-        },
-      };
-    });
-  }, [getStaffColor]);
+        return {
+          id: entry.EntryNo.toString(),
+          title: entry.StaffName || entry.StaffCode,
+          start: startDateTime,
+          end: endDateTime,
+          color: staffColor.background,
+          textColor: staffColor.text,
+          extendedProps: {
+            description: entry.BookingNote,
+            location: entry.Address2 || "-",
+            staff: entry.StaffName || entry.StaffCode,
+            staffCode: entry.StaffCode,
+            staffName: entry.StaffName,
+            service: entry.ServiceName || "-",
+            customer: entry.Name2 || entry.Name || entry.CustomerNo,
+            status: entry.BookingStatus,
+            branch: entry.BookingSetupCode,
+            room: entry.Address2,
+            rawData: entry,
+          },
+        };
+      });
+    },
+    [getStaffColor]
+  );
 
   // Update events when booking entries change
   useEffect(() => {
@@ -151,22 +170,33 @@ export default function BookingCalendar() {
 
       try {
         setInitialLoading(true);
-        
+
         // Load staff mappings first
         const { mappings, parameterId } = await loadStaffMappings(branchCode);
-        
+
         if (Object.keys(mappings).length > 0 && parameterId) {
           const now = new Date();
           const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
           const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-          
+
           // Fetch booking entries
-          const entries = await fetchBookingEntries(branchCode, firstDay, lastDay);
-          
+          const entries = await fetchBookingEntries(
+            branchCode,
+            firstDay,
+            lastDay
+          );
+
           // Load staff colors for the entries
-          const uniqueStaffCodes = [...new Set(entries.map(entry => entry.StaffCode))].filter(Boolean);
+          const uniqueStaffCodes = [
+            ...new Set(entries.map((entry) => entry.StaffCode)),
+          ].filter(Boolean);
           if (uniqueStaffCodes.length > 0) {
-            await loadStaffColors(uniqueStaffCodes, mappings, parameterId, branchCode);
+            await loadStaffColors(
+              uniqueStaffCodes,
+              mappings,
+              parameterId,
+              branchCode
+            );
           }
         } else {
           showAlert(
@@ -191,30 +221,54 @@ export default function BookingCalendar() {
   }, [checkingAuth, branchCode]); // Removed problematic dependencies
 
   // Handle date changes
-  const handleDatesSet = useCallback(async (dateInfo: DatesSetArg) => {
-    setCurrentDateRange({ start: dateInfo.start, end: dateInfo.end });
-    setCurrentTitle(dateInfo.view.title);
-    
-    if (bookingParameterId && Object.keys(staffMappings).length > 0) {
-      try {
-        const entries = await fetchBookingEntries(branchCode, dateInfo.start, dateInfo.end);
-        
-        // Load colors for new entries if needed
-        const uniqueStaffCodes = [...new Set(entries.map(entry => entry.StaffCode))].filter(Boolean);
-        const newStaffCodes = uniqueStaffCodes.filter(code => !staffColors[code]);
-        
-        if (newStaffCodes.length > 0) {
-          await loadStaffColors(newStaffCodes, staffMappings, bookingParameterId, branchCode);
+  const handleDatesSet = useCallback(
+    async (dateInfo: DatesSetArg) => {
+      setCurrentDateRange({ start: dateInfo.start, end: dateInfo.end });
+      setCurrentTitle(dateInfo.view.title);
+
+      if (bookingParameterId && Object.keys(staffMappings).length > 0) {
+        try {
+          const entries = await fetchBookingEntries(
+            branchCode,
+            dateInfo.start,
+            dateInfo.end
+          );
+
+          // Load colors for new entries if needed
+          const uniqueStaffCodes = [
+            ...new Set(entries.map((entry) => entry.StaffCode)),
+          ].filter(Boolean);
+          const newStaffCodes = uniqueStaffCodes.filter(
+            (code) => !staffColors[code]
+          );
+
+          if (newStaffCodes.length > 0) {
+            await loadStaffColors(
+              newStaffCodes,
+              staffMappings,
+              bookingParameterId,
+              branchCode
+            );
+          }
+        } catch (error: any) {
+          showAlert(
+            "Load Error",
+            error.message || "Failed to load calendar data for selected period",
+            "destructive"
+          );
         }
-      } catch (error: any) {
-        showAlert(
-          "Load Error",
-          error.message || "Failed to load calendar data for selected period",
-          "destructive"
-        );
       }
-    }
-  }, [bookingParameterId, staffMappings, branchCode, staffColors, fetchBookingEntries, loadStaffColors, showAlert]);
+    },
+    [
+      bookingParameterId,
+      staffMappings,
+      branchCode,
+      staffColors,
+      fetchBookingEntries,
+      loadStaffColors,
+      showAlert,
+    ]
+  );
 
   // Event click handler
   const handleEventClick = useCallback((clickInfo: EventClickArg) => {
@@ -223,46 +277,67 @@ export default function BookingCalendar() {
   }, []);
 
   // Handle status change
-  const handleStatusChange = useCallback(async (newStatus: string) => {
-    if (!selectedEvent) return;
-    
-    setIsUpdatingStatus(true);
-    try {
-      const success = await updateBookingStatus(selectedEvent.id, newStatus);
-      if (success) {
-        showAlert("Status Updated", `Booking status changed to ${newStatus}`, "default");
-        
-        // Update selected event locally
-        setSelectedEvent(prev => prev ? {
-          ...prev,
-          extendedProps: {
-            ...prev.extendedProps,
-            status: newStatus,
-            rawData: prev.extendedProps.rawData
-              ? { ...prev.extendedProps.rawData, BookingStatus: newStatus }
-              : undefined,
-          },
-        } : null);
+  const handleStatusChange = useCallback(
+    async (newStatus: string) => {
+      if (!selectedEvent) return;
+
+      setIsUpdatingStatus(true);
+      try {
+        const success = await updateBookingStatus(selectedEvent.id, newStatus);
+        if (success) {
+          showAlert(
+            "Status Updated",
+            `Booking status changed to ${newStatus}`,
+            "default"
+          );
+
+          // Update selected event locally
+          setSelectedEvent((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  extendedProps: {
+                    ...prev.extendedProps,
+                    status: newStatus,
+                    rawData: prev.extendedProps.rawData
+                      ? {
+                          ...prev.extendedProps.rawData,
+                          BookingStatus: newStatus,
+                        }
+                      : undefined,
+                  },
+                }
+              : null
+          );
+        }
+      } catch (error: any) {
+        showAlert(
+          "Update Failed",
+          error.message || "Failed to update status",
+          "destructive"
+        );
+      } finally {
+        setIsUpdatingStatus(false);
       }
-    } catch (error: any) {
-      showAlert("Update Failed", error.message || "Failed to update status", "destructive");
-    } finally {
-      setIsUpdatingStatus(false);
-    }
-  }, [selectedEvent, updateBookingStatus, showAlert]);
+    },
+    [selectedEvent, updateBookingStatus, showAlert]
+  );
 
   // Handle view change - prevent non-list views on mobile
-  const handleViewChange = useCallback((view: string) => {
-    if (isMobile && view !== "listWeek") {
-      return;
-    }
-    setCalendarView(view);
-    if (calendarRef.current) {
-      const calendarApi = calendarRef.current.getApi();
-      calendarApi.changeView(view);
-      setCurrentTitle(calendarApi.view.title);
-    }
-  }, [isMobile]);
+  const handleViewChange = useCallback(
+    (view: string) => {
+      if (isMobile && view !== "listWeek") {
+        return;
+      }
+      setCalendarView(view);
+      if (calendarRef.current) {
+        const calendarApi = calendarRef.current.getApi();
+        calendarApi.changeView(view);
+        setCurrentTitle(calendarApi.view.title);
+      }
+    },
+    [isMobile]
+  );
 
   // Navigation handlers
   const handlePrev = useCallback(() => {
@@ -307,10 +382,14 @@ export default function BookingCalendar() {
               </div>
               <div className="space-y-2">
                 <p className="text-lg font-semibold text-foreground">
-                  {checkingAuth ? "Checking Authentication..." : "Loading Calendar"}
+                  {checkingAuth
+                    ? "Checking Authentication..."
+                    : "Loading Calendar"}
                 </p>
                 <p className="text-muted-foreground max-w-sm mx-auto">
-                  {checkingAuth ? "Verifying your access..." : "Preparing your schedule and staff..."}
+                  {checkingAuth
+                    ? "Verifying your access..."
+                    : "Preparing your schedule and staff..."}
                 </p>
               </div>
             </div>
@@ -320,7 +399,6 @@ export default function BookingCalendar() {
     );
   }
 
-  // The rest of your component JSX remains the same...
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-7xl space-y-6">
       {/* Alert Component */}
@@ -337,7 +415,10 @@ export default function BookingCalendar() {
 
       {/* Error Alert */}
       {entriesError && (
-        <Alert variant="destructive" className="border-l-4 border-l-destructive">
+        <Alert
+          variant="destructive"
+          className="border-l-4 border-l-destructive"
+        >
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{entriesError}</AlertDescription>
@@ -357,12 +438,14 @@ export default function BookingCalendar() {
                   View and manage appointments for {branchCode}
                 </CardDescription>
               </div>
-              
+
               {/* View Controls - Hidden on mobile since only list view is available */}
               <div className="flex items-center gap-2">
                 <div className="hidden sm:flex rounded-lg p-1">
                   <Button
-                    variant={calendarView === "dayGridMonth" ? "default" : "ghost"}
+                    variant={
+                      calendarView === "dayGridMonth" ? "default" : "ghost"
+                    }
                     size="sm"
                     onClick={() => handleViewChange("dayGridMonth")}
                     className="text-xs h-8 px-3"
@@ -370,7 +453,9 @@ export default function BookingCalendar() {
                     Month
                   </Button>
                   <Button
-                    variant={calendarView === "timeGridWeek" ? "default" : "ghost"}
+                    variant={
+                      calendarView === "timeGridWeek" ? "default" : "ghost"
+                    }
                     size="sm"
                     onClick={() => handleViewChange("timeGridWeek")}
                     className="text-xs h-8 px-3"
@@ -378,7 +463,9 @@ export default function BookingCalendar() {
                     Week
                   </Button>
                   <Button
-                    variant={calendarView === "timeGridDay" ? "default" : "ghost"}
+                    variant={
+                      calendarView === "timeGridDay" ? "default" : "ghost"
+                    }
                     size="sm"
                     onClick={() => handleViewChange("timeGridDay")}
                     className="text-xs h-8 px-3"
@@ -394,7 +481,7 @@ export default function BookingCalendar() {
                     List
                   </Button>
                 </div>
-                
+
                 {/* Mobile view indicator */}
                 {isMobile && (
                   <div className="sm:hidden flex items-center gap-2 text-sm text-muted-foreground bg-blue-50 px-3 py-1.5 rounded-lg border">
@@ -418,7 +505,7 @@ export default function BookingCalendar() {
                   <ChevronLeft className="w-4 h-4 mr-1" />
                   <span className="hidden sm:inline">Prev</span>
                 </Button>
-                
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -427,7 +514,7 @@ export default function BookingCalendar() {
                 >
                   Today
                 </Button>
-                
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -448,12 +535,17 @@ export default function BookingCalendar() {
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent className="p-4 md:p-6 relative">
           <div className="rounded-xl overflow-hidden border shadow-sm">
             <FullCalendar
               ref={calendarRef}
-              plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
+              plugins={[
+                dayGridPlugin,
+                timeGridPlugin,
+                listPlugin,
+                interactionPlugin,
+              ]}
               headerToolbar={false}
               initialView={getInitialView()}
               events={events}
@@ -465,23 +557,24 @@ export default function BookingCalendar() {
               dayMaxEvents={isMobile ? 1 : 3}
               weekends={true}
               nowIndicator={true}
-              eventTimeFormat={{
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-              }}
-              eventDisplay={isMobile ? 'list-item' : 'auto'}
-              dayHeaderFormat={isMobile ? { weekday: 'short' } : { weekday: 'long' }}
+              displayEventTime={false}
+  eventTimeFormat={{}}
+              eventDisplay={isMobile ? "list-item" : "auto"}
+              dayHeaderFormat={
+                isMobile ? { weekday: "short" } : { weekday: "long" }
+              }
               slotMinTime="06:00:00"
               slotMaxTime="22:00:00"
             />
           </div>
-          
+
           {entriesLoading && events.length > 0 && (
             <div className="absolute inset-0 bg-background/70 backdrop-blur-[1px] flex items-center justify-center rounded-xl">
               <div className="bg-white/90 border rounded-xl p-4 shadow-lg flex items-center gap-3">
                 <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                <span className="text-sm font-medium">Updating calendar...</span>
+                <span className="text-sm font-medium">
+                  Updating calendar...
+                </span>
               </div>
             </div>
           )}
@@ -495,10 +588,10 @@ export default function BookingCalendar() {
             <DialogTitle className="flex flex-col sm:flex-row sm:items-center gap-2 text-xl">
               <span className="truncate">{selectedEvent?.title}</span>
               {selectedEvent && (
-                <Badge 
+                <Badge
                   variant={
-                    selectedEvent.extendedProps.status === "Active" 
-                      ? "default" 
+                    selectedEvent.extendedProps.status === "Active"
+                      ? "default"
                       : selectedEvent.extendedProps.status === "Finalized"
                       ? "secondary"
                       : "destructive"
@@ -510,61 +603,90 @@ export default function BookingCalendar() {
               )}
             </DialogTitle>
             <DialogDescription className="text-base">
-              Booking #{selectedEvent?.id} • {selectedEvent?.extendedProps.branch}
+              Booking #{selectedEvent?.id} •{" "}
+              {selectedEvent?.extendedProps.branch}
             </DialogDescription>
           </DialogHeader>
 
           {selectedEvent && (
             <div className="space-y-6 py-5 px-6">
-              {/* Status Update Section */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                  Update Status
-                </h3>
-                <div className="flex gap-2 flex-wrap">
-                  <Button
-                    size="sm"
-                    variant={selectedEvent.extendedProps.status === "Active" ? "default" : "outline"}
-                    onClick={() => handleStatusChange("Active")}
-                    disabled={isUpdatingStatus || selectedEvent.extendedProps.status === "Active"}
-                    className="flex-1 sm:flex-none min-w-[90px]"
-                  >
-                    {isUpdatingStatus && selectedEvent.extendedProps.status !== "Active" ? (
-                      <Loader2 className="w-3 h-3 animate-spin mr-2" />
-                    ) : null}
-                    Active
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={selectedEvent.extendedProps.status === "Finalized" ? "default" : "outline"}
-                    onClick={() => handleStatusChange("Finalized")}
-                    disabled={isUpdatingStatus || selectedEvent.extendedProps.status === "Finalized"}
-                    className="flex-1 sm:flex-none min-w-[90px]"
-                  >
-                    {isUpdatingStatus && selectedEvent.extendedProps.status !== "Finalized" ? (
-                      <Loader2 className="w-3 h-3 animate-spin mr-2" />
-                    ) : null}
-                    Finalized
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={selectedEvent.extendedProps.status === "Cancelled" ? "destructive" : "outline"}
-                    onClick={() => handleStatusChange("Cancelled")}
-                    disabled={isUpdatingStatus || selectedEvent.extendedProps.status === "Cancelled"}
-                    className="flex-1 sm:flex-none min-w-[90px]"
-                  >
-                    {isUpdatingStatus && selectedEvent.extendedProps.status !== "Cancelled" ? (
-                      <Loader2 className="w-3 h-3 animate-spin mr-2" />
-                    ) : null}
-                    Cancelled
-                  </Button>
+              {/* Status Update Section — hide if TimeOff */}
+              {!selectedEvent.extendedProps.rawData?.TimeOff && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                    Update Status
+                  </h3>
+
+                  <div className="flex gap-2 flex-wrap">
+                    <Button
+                      size="sm"
+                      variant={
+                        selectedEvent.extendedProps.status === "Active"
+                          ? "default"
+                          : "outline"
+                      }
+                      onClick={() => handleStatusChange("Active")}
+                      disabled={
+                        isUpdatingStatus ||
+                        selectedEvent.extendedProps.status === "Active"
+                      }
+                      className="flex-1 sm:flex-none min-w-[90px]"
+                    >
+                      {isUpdatingStatus &&
+                      selectedEvent.extendedProps.status !== "Active" ? (
+                        <Loader2 className="w-3 h-3 animate-spin mr-2" />
+                      ) : null}
+                      Active
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant={
+                        selectedEvent.extendedProps.status === "Finalized"
+                          ? "default"
+                          : "outline"
+                      }
+                      onClick={() => handleStatusChange("Finalized")}
+                      disabled={
+                        isUpdatingStatus ||
+                        selectedEvent.extendedProps.status === "Finalized"
+                      }
+                      className="flex-1 sm:flex-none min-w-[90px]"
+                    >
+                      {isUpdatingStatus &&
+                      selectedEvent.extendedProps.status !== "Finalized" ? (
+                        <Loader2 className="w-3 h-3 animate-spin mr-2" />
+                      ) : null}
+                      Finalized
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant={
+                        selectedEvent.extendedProps.status === "Cancelled"
+                          ? "destructive"
+                          : "outline"
+                      }
+                      onClick={() => handleStatusChange("Cancelled")}
+                      disabled={
+                        isUpdatingStatus ||
+                        selectedEvent.extendedProps.status === "Cancelled"
+                      }
+                      className="flex-1 sm:flex-none min-w-[90px]"
+                    >
+                      {isUpdatingStatus &&
+                      selectedEvent.extendedProps.status !== "Cancelled" ? (
+                        <Loader2 className="w-3 h-3 animate-spin mr-2" />
+                      ) : null}
+                      Cancelled
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <Separator />
 
-              {/* Rest of the dialog content remains exactly the same */}
               {/* Date & Time Section */}
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
@@ -577,12 +699,15 @@ export default function BookingCalendar() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold">Date</p>
                       <p className="text-sm truncate">
-                        {new Date(selectedEvent.start).toLocaleDateString("en-US", {
-                          weekday: "long",
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
+                        {new Date(selectedEvent.start).toLocaleDateString(
+                          "en-US",
+                          {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          }
+                        )}
                       </p>
                     </div>
                   </div>
@@ -592,39 +717,47 @@ export default function BookingCalendar() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold">Time</p>
                       <p className="text-sm">
-                        {new Date(selectedEvent.start).toLocaleTimeString("en-US", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })} - {new Date(selectedEvent.end).toLocaleTimeString("en-US", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {new Date(selectedEvent.start).toLocaleTimeString(
+                          "en-US",
+                          {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }
+                        )}{" "}
+                        -{" "}
+                        {new Date(selectedEvent.end).toLocaleTimeString(
+                          "en-US",
+                          {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }
+                        )}
                       </p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* ... rest of the dialog JSX remains exactly the same ... */}
               {/* Service & Staff Section */}
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                  Service Details
+                  Details
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-3 rounded-lg border">
-                    <Briefcase className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold">Service</p>
-                      <p className="text-sm truncate">
-                        {selectedEvent.extendedProps.service}
-                        {selectedEvent.extendedProps.rawData?.ServiceCode && 
-                          ` (${selectedEvent.extendedProps.rawData.ServiceCode})`
-                        }
-                      </p>
+                  {!selectedEvent.extendedProps.rawData?.TimeOff && (
+                    <div className="flex items-start gap-3 p-3 rounded-lg border">
+                      <Briefcase className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold">Service</p>
+                        <p className="text-sm truncate">
+                          {selectedEvent.extendedProps.service}
+                          {selectedEvent.extendedProps.rawData?.ServiceCode &&
+                            ` (${selectedEvent.extendedProps.rawData.ServiceCode})`}
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="flex items-start gap-3 p-3 rounded-lg border">
                     <User className="w-5 h-5 mt-0.5 flex-shrink-0" />
@@ -632,9 +765,8 @@ export default function BookingCalendar() {
                       <p className="text-sm font-semibold">Staff Member</p>
                       <p className="text-sm truncate">
                         {selectedEvent.extendedProps.staff}
-                        {selectedEvent.extendedProps.staffCode && 
-                          ` (${selectedEvent.extendedProps.staffCode})`
-                        }
+                        {selectedEvent.extendedProps.staffName &&
+                          ` (${selectedEvent.extendedProps.staffCode})`}
                       </p>
                     </div>
                   </div>
@@ -643,78 +775,80 @@ export default function BookingCalendar() {
 
               <Separator />
 
-              {/* Customer Section */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
-                  Customer Information
-                </h3>
+              {/* Show Customer Section ONLY if NOT Time Off */}
+              {!selectedEvent.extendedProps.rawData?.TimeOff && (
                 <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-3 rounded-lg border">
-                    <User className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold">Customer</p>
-                      <p className="text-sm truncate">
-                        {selectedEvent.extendedProps.customer || "Not specified"}
-                        {selectedEvent.extendedProps.rawData?.CustomerNo && 
-                          ` (${selectedEvent.extendedProps.rawData.CustomerNo})`
-                        }
-                      </p>
-                    </div>
-                  </div>
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
+                    Customer Information
+                  </h3>
 
-                  {selectedEvent.extendedProps.rawData?.PhoneNo && (
+                  <div className="space-y-3">
                     <div className="flex items-start gap-3 p-3 rounded-lg border">
-                      <Phone className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                      <User className="w-5 h-5 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold">Phone</p>
-                        <p className="text-sm">
-                          {selectedEvent.extendedProps.rawData.PhoneNo}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedEvent.extendedProps.rawData?.EMail && (
-                    <div className="flex items-start gap-3 p-3 rounded-lg border">
-                      <Mail className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold">Email</p>
+                        <p className="text-sm font-semibold">Customer</p>
                         <p className="text-sm truncate">
-                          {selectedEvent.extendedProps.rawData.EMail}
+                          {selectedEvent.extendedProps.customer ||
+                            "Not specified"}
+                          {selectedEvent.extendedProps.rawData?.CustomerNo &&
+                            ` (${selectedEvent.extendedProps.rawData.CustomerNo})`}
                         </p>
                       </div>
                     </div>
-                  )}
 
-                  {(selectedEvent.extendedProps.rawData?.Age ?? 0) > 0 && (
-                    <div className="flex items-start gap-3 p-3 rounded-lg border">
-                      <Cake className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold">Age</p>
-                        <p className="text-sm">
-                          {selectedEvent.extendedProps.rawData?.Age} years old
-                        </p>
+                    {selectedEvent.extendedProps.rawData?.PhoneNo && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <Phone className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold">Phone</p>
+                          <p className="text-sm">
+                            {selectedEvent.extendedProps.rawData.PhoneNo}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {selectedEvent.extendedProps.rawData?.Address && (
-                    <div className="flex items-start gap-3 p-3 rounded-lg border">
-                      <MapPin className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold">Address</p>
-                        <p className="text-sm">
-                          {selectedEvent.extendedProps.rawData.Address}
-                          {selectedEvent.extendedProps.rawData.Address2 && 
-                            `, ${selectedEvent.extendedProps.rawData.Address2}`
-                          }
-                        </p>
+                    {selectedEvent.extendedProps.rawData?.EMail && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <Mail className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold">Email</p>
+                          <p className="text-sm truncate">
+                            {selectedEvent.extendedProps.rawData.EMail}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+
+                    {(selectedEvent.extendedProps.rawData?.Age ?? 0) > 0 && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <Cake className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold">Age</p>
+                          <p className="text-sm">
+                            {selectedEvent.extendedProps.rawData?.Age} years old
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedEvent.extendedProps.rawData?.Address && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <MapPin className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold">Address</p>
+                          <p className="text-sm">
+                            {selectedEvent.extendedProps.rawData.Address}
+                            {selectedEvent.extendedProps.rawData.Address2 &&
+                              `, ${selectedEvent.extendedProps.rawData.Address2}`}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Notes Section */}
               {selectedEvent.extendedProps.description && (
@@ -749,8 +883,8 @@ export default function BookingCalendar() {
           )}
 
           <DialogFooter className="px-6 py-4 border-t">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsModalOpen(false)}
               className="w-full sm:w-auto"
             >
