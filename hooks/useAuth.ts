@@ -6,6 +6,7 @@ export function useAuth() {
   const router = useRouter();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [staffCode, setStaffCode] = useState<string | null>(null);
   const [customerNo, setCustomerNo] = useState<string>("");
   const [checkingAuth, setCheckingAuth] = useState(true);
 
@@ -17,6 +18,7 @@ export function useAuth() {
           router.replace("/signin");
         } else {
           setUsername(data.user.name);
+          setStaffCode(data.user.staffCode);
           setUserRole(data.user.role);
           setCustomerNo(data.user.customerNo || "");
         }
@@ -29,5 +31,5 @@ export function useAuth() {
       });
   }, [router]);
 
-  return { userRole, username, customerNo, checkingAuth };
+  return { userRole, username,staffCode, customerNo, checkingAuth };
 }

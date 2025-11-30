@@ -65,7 +65,7 @@ export default function BookingCalendar() {
   const calendarRef = useRef<FullCalendar>(null);
 
   // Use hooks
-  const { userRole, username, customerNo, checkingAuth } = useAuth();
+  const { userRole, username, staffCode, customerNo, checkingAuth } = useAuth();
   const { alert, showAlert } = useAlert();
   const { staffColors, loadStaffColors, getStaffColor } = useStaffColors();
   const { staffMappings, bookingParameterId, loadStaffMappings } =
@@ -986,18 +986,34 @@ export default function BookingCalendar() {
 
           <DialogFooter className="px-6 py-4 border-t flex justify-between">
             <div className="flex gap-2">
-              {selectedEvent?.extendedProps.rawData?.TimeOff && (
-                <>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleDeleteTimeOff}
-                    disabled={isDeletingTimeOff}
-                  >
-                    {isDeletingTimeOff ? "Deleting..." : "Delete Time Off"}
-                  </Button>
-                  {(userRole === "global-admin" ||
-                    username === selectedEvent.extendedProps.staffCode) && (
+              {selectedEvent?.extendedProps.rawData?.TimeOff && (() => {
+                // Console logs for debugging
+                console.log("Auth staffCode:", staffCode);
+                console.log("Auth Role:", userRole);
+                console.log("Event Staff Code:", selectedEvent.extendedProps.staffCode);
+                
+                // Permission check logic
+                const isGlobalAdmin = userRole === "global-admin";
+                const isAdminWithMatchingStaff = userRole === "admin" && staffCode === selectedEvent.extendedProps.staffCode;
+                const isOwnTimeOff = staffCode === selectedEvent.extendedProps.staffCode;
+                
+                const hasPermission = isGlobalAdmin || isAdminWithMatchingStaff || isOwnTimeOff;
+                
+                console.log("Is Global Admin:", isGlobalAdmin);
+                console.log("Is Admin with Matching Staff:", isAdminWithMatchingStaff);
+                console.log("Is Own Time Off:", isOwnTimeOff);
+                console.log("Has Permission:", hasPermission);
+                
+                return hasPermission && (
+                  <>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDeleteTimeOff}
+                      disabled={isDeletingTimeOff}
+                    >
+                      {isDeletingTimeOff ? "Deleting..." : "Delete Time Off"}
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -1008,9 +1024,9 @@ export default function BookingCalendar() {
                     >
                       Edit Time Off
                     </Button>
-                  )}
-                </>
-              )}
+                  </>
+                );
+              })()}
             </div>
             <Button
               variant="outline"
