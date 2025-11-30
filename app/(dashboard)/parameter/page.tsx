@@ -8,18 +8,16 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
 import { Plus, Edit, Trash2, CheckCircle } from "lucide-react";
-
 import { useBookingParams } from "@/hooks/useBookingParams";
 import { useParameterCRUD } from "@/hooks/useParameterCRUD";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function ParameterPage() {
   // URL Params
@@ -54,6 +52,10 @@ export default function ParameterPage() {
     getItemType,
   });
 
+  // auth + permission
+  const { userRole } = useAuth();
+  const canEdit = userRole === "global-admin";
+
   return (
     <div className="flex flex-1 flex-col p-6 md:p-8">
       {/* SUCCESS */}
@@ -69,9 +71,12 @@ export default function ParameterPage() {
         <CardHeader className="flex justify-between items-center">
           <CardTitle>{parameterName}</CardTitle>
 
-          <Button onClick={() => crud.setCreating(true)} variant="outline" size="sm">
-            <Plus className="w-4 h-4 mr-2" /> New {getItemType()}
-          </Button>
+          {/* Only show New when global-admin */}
+          {canEdit && (
+            <Button onClick={() => crud.setCreating(true)} variant="outline" size="sm">
+              <Plus className="w-4 h-4 mr-2" /> New {getItemType()}
+            </Button>
+          )}
         </CardHeader>
 
         <CardContent>
@@ -91,7 +96,8 @@ export default function ParameterPage() {
                     <TableHead>Code</TableHead>
                     <TableHead>Name</TableHead>
                     {checkDuration === "true" && <TableHead>Duration</TableHead>}
-                    <TableHead className="text-center">Actions</TableHead>
+                    {/* Only show Actions header for global-admin */}
+                    {canEdit && <TableHead className="text-center">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
 
@@ -104,16 +110,19 @@ export default function ParameterPage() {
                         <TableCell>{v.BookingParameterValueDuration}</TableCell>
                       )}
 
-                      <TableCell className="text-center">
-                        <div className="flex justify-center gap-2">
-                          <Button size="sm" variant="ghost" onClick={() => crud.openEdit(v)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => crud.setDeleteItem(v)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                      {/* Only render action buttons when allowed */}
+                      {canEdit && (
+                        <TableCell className="text-center">
+                          <div className="flex justify-center gap-2">
+                            <Button size="sm" variant="ghost" onClick={() => crud.openEdit(v)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => crud.setDeleteItem(v)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

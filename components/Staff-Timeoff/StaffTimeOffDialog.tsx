@@ -81,37 +81,48 @@ export default function StaffTimeOffDialog() {
         const json = await res.json();
         const setup = json.value?.[0];
         
-        // Find Staff parameter (BookingParameterId: 2)
+        if (!setup) {
+          throw new Error("No booking setup found");
+        }
+
+        // Find Staff parameter by code "STAFF" (more reliable than ID)
         const staffParam = setup?.BookingParameter?.find(
-          (p: any) => p.BookingParameterId === 2
+          (p: any) => String(p.BookingParameterCode).toLowerCase() === "staff"
         );
         
-        if (staffParam?.BookingParameterValue) {
+        if (!staffParam) {
+          throw new Error("Staff parameter not found in booking setup");
+        }
+
+        if (staffParam?.BookingParameterValue && Array.isArray(staffParam.BookingParameterValue)) {
           let filteredStaff = staffParam.BookingParameterValue;
 
           // If admin role, filter to only the current user's staff
           if (userRole === "admin" && username) {
-            filteredStaff = filteredStaff.filter(
+            const adminFiltered = filteredStaff.filter(
               (staff: any) => staff.BookingParamterValueDescription === username
             );
             
-            // If no match found, set it anyway (in case username doesn't match exactly)
-            if (filteredStaff.length === 0) {
-              filteredStaff = staffParam.BookingParameterValue;
+            // Only use filtered list if we found matches
+            if (adminFiltered.length > 0) {
+              filteredStaff = adminFiltered;
             }
           }
           // If global-admin, load all staff (no filter)
 
           setStaffList(filteredStaff);
           
-          // Pre-select staff for admin users
+          // Pre-select first staff for admin users
           if (userRole === "admin" && filteredStaff.length > 0) {
             setSelectedStaffCode(filteredStaff[0].BookingParameterValueCode);
             setSelectedStaffName(filteredStaff[0].BookingParamterValueDescription);
           }
+        } else {
+          throw new Error("No staff values found");
         }
-      } catch (err) {
-        console.error("Failed to fetch staff:", err);
+      } catch (err: any) {
+        console.error("Failed to fetch staff:", err.message);
+        setSubmitError(`Failed to load staff: ${err.message}`);
       } finally {
         setLoadingStaff(false);
       }

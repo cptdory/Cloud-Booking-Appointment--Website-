@@ -29,6 +29,8 @@ import { CheckCircle, Edit, Trash2, Plus, Users } from "lucide-react";
 import { useBookingParams } from "@/hooks/useBookingParams";
 import { useParameterCRUD } from "@/hooks/useParameterCRUD";
 
+import { useAuth } from "@/hooks/useAuth";
+
 /**
  * Page: app/(dashboard)/staff/page.tsx
  *
@@ -193,6 +195,10 @@ export default function StaffPage() {
     }
   };
 
+  // auth + permission
+  const { userRole } = useAuth();
+  const canEdit = userRole === "global-admin";
+
   return (
     <div className="flex flex-1 flex-col p-6 md:p-8 space-y-6">
       {/* Success / Error from the CRUD hook */}
@@ -214,9 +220,12 @@ export default function StaffPage() {
           <CardTitle>{pageTitle}</CardTitle>
 
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => crud.setCreating(true)}>
-              <Plus className="w-4 h-4 mr-2" /> New Staff
-            </Button>
+            {/* Only show New button for global-admin */}
+            {canEdit && (
+              <Button size="sm" variant="outline" onClick={() => crud.setCreating(true)}>
+                <Plus className="w-4 h-4 mr-2" /> New Staff
+              </Button>
+            )}
           </div>
         </CardHeader>
 
@@ -230,7 +239,8 @@ export default function StaffPage() {
                   <TableRow>
                     <TableHead>Code</TableHead>
                     <TableHead>Name</TableHead>
-                    <TableHead className="w-60 text-center">Actions</TableHead>
+                    {/* Only show Actions header for global-admin */}
+                    {canEdit && <TableHead className="w-60 text-center">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -238,35 +248,33 @@ export default function StaffPage() {
                     <TableRow key={v.BookingParameterValueId} className="hover:bg-muted/50">
                       <TableCell className="font-medium">{v.BookingParameterValueCode}</TableCell>
                       <TableCell>{v.BookingParamterValueDescription}</TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <Button size="sm" variant="ghost" onClick={() => crud.openEdit(v)}>
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => crud.setDeleteItem(v)}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedService(v);
-                              setAssignDialogOpen(true);
-                            }}
-                          >
-                            Assign
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => openViewAssignedStaff(v)}>
-                            <Users className="w-4 h-4 mr-1" /> View
-                          </Button>
-                        </div>
-                      </TableCell>
+
+                      {/* Only render action buttons when allowed */}
+                      {canEdit && (
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button size="sm" variant="ghost" onClick={() => crud.openEdit(v)}><Edit className="w-4 h-4" /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => crud.setDeleteItem(v)}><Trash2 className="w-4 h-4" /></Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => { setSelectedService(v); setAssignDialogOpen(true); }}
+                            >
+                              Assign
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => openViewAssignedStaff(v)}>
+                              <Users className="w-4 h-4 mr-1" /> View
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
 
                   {values.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                      {/* Adjust colspan to visible columns */}
+                      <TableCell colSpan={canEdit ? 3 : 2} className="text-center py-6 text-muted-foreground">
                         No staff found
                       </TableCell>
                     </TableRow>
@@ -417,9 +425,12 @@ export default function StaffPage() {
               <Button variant="ghost" onClick={() => setAssignDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleAssignService} disabled={assigning}>
-                {assigning ? "Assigning..." : "Assign"}
-              </Button>
+              {/* Only allow Assign action for global-admin */}
+              {canEdit && (
+                <Button onClick={handleAssignService} disabled={assigning}>
+                  {assigning ? "Assigning..." : "Assign"}
+                </Button>
+              )}
             </DialogFooter>
           </div>
         </DialogContent>
@@ -447,7 +458,8 @@ export default function StaffPage() {
                       <TableHead>Staff ID</TableHead>
                       <TableHead>Staff Code</TableHead>
                       <TableHead>Description</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      {/* Only show Actions header for global-admin */}
+                      {canEdit && <TableHead className="text-right">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
 
@@ -459,11 +471,14 @@ export default function StaffPage() {
                           <TableCell>{assignment.StaffId}</TableCell>
                           <TableCell className="font-medium">{assignment.StaffCode}</TableCell>
                           <TableCell>{assignment.StaffName || staff?.BookingParamterValueDescription || "—"}</TableCell>
-                          <TableCell className="text-right">
-                            <Button size="sm" variant="destructive" onClick={() => deleteAssignedStaff(selectedService!.BookingParameterValueId, assignment.StaffId)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </TableCell>
+                          {/* Only render delete action when allowed */}
+                          {canEdit && (
+                            <TableCell className="text-right">
+                              <Button size="sm" variant="destructive" onClick={() => deleteAssignedStaff(selectedService!.BookingParameterValueId, assignment.StaffId)}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </TableCell>
+                          )}
                         </TableRow>
                       );
                     })}
@@ -476,9 +491,12 @@ export default function StaffPage() {
               <Button variant="ghost" onClick={() => setViewStaffDialogOpen(false)}>
                 Close
               </Button>
-              <Button onClick={() => { setViewStaffDialogOpen(false); setAssignDialogOpen(true); }}>
-                Assign More
-              </Button>
+              {/* Only allow Assign More for global-admin */}
+              {canEdit && (
+                <Button onClick={() => { setViewStaffDialogOpen(false); setAssignDialogOpen(true); }}>
+                  Assign More
+                </Button>
+              )}
             </DialogFooter>
           </div>
         </DialogContent>

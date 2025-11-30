@@ -33,6 +33,7 @@ import { Edit, Trash2, Plus, Key, Palette, CheckCircle } from "lucide-react";
 
 import { useBookingParams } from "@/hooks/useBookingParams";
 import { useParameterCRUD } from "@/hooks/useParameterCRUD";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function StaffPage() {
   // read url params
@@ -293,6 +294,10 @@ export default function StaffPage() {
   const displayError = bookingError || crud.error;
   const displaySuccess = crud.success;
 
+  // Add auth hook and determine permission
+  const { userRole } = useAuth();
+  const canEdit = userRole === "global-admin";
+
   // -------------------------
   // Render
   // -------------------------
@@ -311,9 +316,12 @@ export default function StaffPage() {
           <CardTitle>{parameterName || "Staff Management"}</CardTitle>
 
           <div>
-            <Button onClick={() => crud.setCreating(true)} size="sm" variant="outline">
-              <Plus className="w-4 h-4 mr-2" /> New Staff
-            </Button>
+            {/* Only show New Staff for global-admin */}
+            {canEdit && (
+              <Button onClick={() => crud.setCreating(true)} size="sm" variant="outline">
+                <Plus className="w-4 h-4 mr-2" /> New Staff
+              </Button>
+            )}
           </div>
         </CardHeader>
 
@@ -334,7 +342,8 @@ export default function StaffPage() {
                     <TableHead>Code</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Color</TableHead>
-                    <TableHead className="w-48 text-center">Actions</TableHead>
+                    {/* Only show Actions header for global-admin */}
+                    {canEdit && <TableHead className="w-48 text-center">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
 
@@ -344,28 +353,33 @@ export default function StaffPage() {
                       <TableCell className="font-medium">{v.BookingParameterValueCode}</TableCell>
                       <TableCell>{v.BookingParamterValueDescription}</TableCell>
                       <TableCell>{getColorBadge(String(v.BookingParameterValueId))}</TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Button size="sm" variant="ghost" onClick={() => crud.openEdit(v)} title="Edit Staff">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => openColorDialog(v)} title="Change Color">
-                            <Palette className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => openPasswordDialog(v)} title="Change Password">
-                            <Key className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => crud.setDeleteItem(v)} title="Delete Staff">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+
+                      {/* Only render action buttons when allowed */}
+                      {canEdit && (
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Button size="sm" variant="ghost" onClick={() => crud.openEdit(v)} title="Edit Staff">
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => openColorDialog(v)} title="Change Color">
+                              <Palette className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => openPasswordDialog(v)} title="Change Password">
+                              <Key className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => crud.setDeleteItem(v)} title="Delete Staff">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
 
                   {values.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                      {/* Adjust colspan to visible columns */}
+                      <TableCell colSpan={canEdit ? 4 : 3} className="text-center py-6 text-muted-foreground">
                         No staff found
                       </TableCell>
                     </TableRow>
