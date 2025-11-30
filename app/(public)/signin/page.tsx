@@ -152,11 +152,11 @@ export default function SigninPage() {
                   <TabsContent value="customer" className="space-y-6">
                     <div className="flex justify-center mb-0">
                       <Image
-                        src="/images/squadlethics-1.jpg"
+                        src="/images/squadlethics.jpg"
                         alt="Squadlethics Logo"
                         width={280}
                         height={100}
-                        className="h-auto w-auto"
+                        className="h-auto w-auto rounded-xl"
                         priority
                       />
                     </div>
@@ -190,11 +190,11 @@ export default function SigninPage() {
                   <TabsContent value="admin" className="space-y-6">
                     <div className="flex justify-center mb-0">
                       <Image
-                        src="/images/squadlethics-1.jpg"
+                        src="/images/squadlethics.jpg"
                         alt="Squadlethics Logo"
                         width={280}
                         height={100}
-                        className="h-auto w-auto"
+                        className="h-auto w-auto rounded-xl"
                         priority
                       />
                     </div>
