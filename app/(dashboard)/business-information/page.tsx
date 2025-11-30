@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { useAlert } from "@/hooks/useAlert";
+import { useBookingSetup } from "@/hooks/useBookingSetup";
 
 interface BusinessHour {
   DayOfWeek: string;
@@ -46,7 +48,7 @@ function convertTo24HourFormat(time12h: string): string {
   if (!time12h) return "09:00";
   
   // If it's already in 24h format (from API response)
-  if (time12h.includes(':')) {
+  if (time12h.includes(':') && !time12h.includes(' ')) {
     const [hours, minutes] = time12h.split(':');
     if (minutes && minutes.length === 2) {
       return `${hours.padStart(2, '0')}:${minutes}`;
@@ -252,51 +254,37 @@ function BusinessHoursForm({
   );
 }
 
-// Separate component that uses useSearchParams
-function BusinessHoursContent() {
-  const searchParams = useSearchParams();
-  const code = searchParams.get("code") || "";
-
+// Custom hook for business hours management
+function useBusinessHours(code: string) {
   const [businessHours, setBusinessHours] = useState<BusinessHour[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingHour, setEditingHour] = useState<BusinessHour | null>(null);
-  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; dayOfWeek: string }>({ open: false, dayOfWeek: "" });
-
-  useEffect(() => {
-    loadBusinessHours();
-  }, [code]);
+  const { showAlert } = useAlert();
+  const { fetchBookingSetup } = useBookingSetup();
 
   const loadBusinessHours = async () => {
     if (!code) return;
     
     try {
       setLoading(true);
-      const res = await fetch(`/api/booking-setup/get-booking-setup?code=${code}`);
-      const json = await res.json();
+      const setupData = await fetchBookingSetup(code);
       
-      if (json.value && json.value.length > 0) {
-        const hours = json.value[0].BookingBusinessHours || [];
+      if (setupData) {
+        const hours = setupData.BookingBusinessHours || [];
         setBusinessHours(hours);
       }
-    } catch (error) {
-      toast.error("Failed to load business hours");
+    } catch (error: any) {
+      console.error("Error loading business hours:", error);
+      showAlert(
+        "Failed to Load Business Hours",
+        error.message || "Please try again later.",
+        "destructive"
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreate = () => {
-    setEditingHour(null);
-    setShowForm(true);
-  };
-
-  const handleEdit = (hour: BusinessHour) => {
-    setEditingHour(hour);
-    setShowForm(true);
-  };
-
-  const handleDelete = async (dayOfWeek: string) => {
+  const deleteBusinessHour = async (dayOfWeek: string) => {
     try {
       const res = await fetch("/api/business-hours", {
         method: "POST",
@@ -311,14 +299,65 @@ function BusinessHoursContent() {
           },
         }),
       });
-      console.log (dayOfWeek);
+
       if (!res.ok) throw new Error("Failed to delete");
 
       toast.success("Business hour deleted successfully");
-      loadBusinessHours();
+      await loadBusinessHours();
+      return true;
+    } catch (error: any) {
+      console.error("Error deleting business hour:", error);
+      showAlert(
+        "Failed to Delete",
+        error.message || "Please try again.",
+        "destructive"
+      );
+      return false;
+    }
+  };
+
+  return {
+    businessHours,
+    loading,
+    loadBusinessHours,
+    deleteBusinessHour,
+  };
+}
+
+// Separate component that uses useSearchParams
+function BusinessHoursContent() {
+  const searchParams = useSearchParams();
+  const code = searchParams.get("code") || "";
+
+  const {
+    businessHours,
+    loading,
+    loadBusinessHours,
+    deleteBusinessHour,
+  } = useBusinessHours(code);
+
+  const [showForm, setShowForm] = useState(false);
+  const [editingHour, setEditingHour] = useState<BusinessHour | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; dayOfWeek: string }>({ open: false, dayOfWeek: "" });
+
+  useEffect(() => {
+    loadBusinessHours();
+  }, [code]);
+
+  const handleCreate = () => {
+    setEditingHour(null);
+    setShowForm(true);
+  };
+
+  const handleEdit = (hour: BusinessHour) => {
+    setEditingHour(hour);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (dayOfWeek: string) => {
+    const success = await deleteBusinessHour(dayOfWeek);
+    if (success) {
       setDeleteDialog({ open: false, dayOfWeek: "" });
-    } catch (error) {
-      toast.error("Failed to delete business hour");
     }
   };
 

@@ -73,7 +73,8 @@ async function bookTimeSlot(
     _BookingParameterIDs: String(body._BookingParameterIDs || ''),
     _BookingParameterValueIDs: String(body._BookingParameterValueIDs || ''),
     _CustomerNo: String(body._CustomerNo || ''),
-    _BookingNote: String(body._BookingNote || '')
+    _BookingNote: String(body._BookingNote || ''),
+    _BookingEntryNo: String(body._BookingEntryNo || '')
   };
 
   console.log("Calling Business Central API to book time slot:", url);

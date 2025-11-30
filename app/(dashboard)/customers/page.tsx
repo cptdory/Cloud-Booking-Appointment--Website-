@@ -38,19 +38,7 @@ import {
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-
-interface Customer {
-  CustomerNo: string;
-  Name: string;
-  Name2?: string;
-  PhoneNo?: string;
-  EMail?: string;
-  Address?: string;
-  Address2?: string;
-  Age?: number;
-  BirthDate?: string;
-  // Add any other fields that might be in the response
-}
+import { Customer } from "@/types/customer";
 
 export default function CustomerPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);

@@ -20,65 +20,44 @@ import {
 export function AppSidebar({ ...props }) {
   const router = useRouter();
 
-  // Get everything from store
-  const { 
-    userData, 
-    teams, 
-    activeTeam, 
-    staticNav, 
-    dynamicNav, 
-    loading, 
-    initialized,
-    initialize, 
-    setActiveTeam 
-  } = useSidebarStore();
+  // Only subscribe to specific fields we need (prevents re-renders on unrelated changes)
+  const userData = useSidebarStore((state) => state.userData);
+  const teams = useSidebarStore((state) => state.teams);
+  const activeTeam = useSidebarStore((state) => state.activeTeam);
+  const staticNav = useSidebarStore((state) => state.staticNav);
+  const dynamicNav = useSidebarStore((state) => state.dynamicNav);
+  const loading = useSidebarStore((state) => state.loading);
+  const initialized = useSidebarStore((state) => state.initialized);
+  const initialize = useSidebarStore((state) => state.initialize);
+  const setActiveTeam = useSidebarStore((state) => state.setActiveTeam);
 
-  // Initialize on mount
+  // Initialize on mount only
   React.useEffect(() => {
-    initialize();
-  }, [initialize]);
+    const initAsync = async () => {
+      await initialize();
+    };
+    initAsync();
+  }, []); // Empty dependency array - only run once on mount
 
-  // Sync URL once after init
-  const hasSyncedUrl = React.useRef(false);
+  // Sync URL once after init - separate effect to avoid stale closures
+  const urlSyncRef = React.useRef(false);
   React.useEffect(() => {
-    if (!initialized || !activeTeam || loading || hasSyncedUrl.current) return;
-    hasSyncedUrl.current = true;
-    
+    if (loading || !initialized || !activeTeam || urlSyncRef.current) return;
+    urlSyncRef.current = true;
+
     const currentCode = new URLSearchParams(window.location.search).get("code");
     if (!currentCode) {
       router.replace(`?code=${activeTeam.name}`, { scroll: false });
     }
-  }, [initialized, activeTeam, loading, router]);
+  }, [initialized, loading, activeTeam, router]); // Only dependencies that actually matter
 
-  // Safe way to check if user is global admin without type errors
+  // Memoize role check to avoid recalculation
   const isGlobalAdmin = React.useMemo(() => {
     if (!userData) return false;
-    
-    // Method 1: Check extended properties (safe from type errors)
-    const extendedUserData = userData as any;
-    if (extendedUserData.role === "global-admin" || extendedUserData.isGlobalAdmin) {
-      return true;
-    }
-    
-    // Method 2: Check by email or other identifying property
-    if (userData.email === "Global Administrator" || userData.email.includes("global-admin")) {
-      return true;
-    }
-    
-    // Method 3: Check by name pattern or other field
-    if (userData.name?.includes("Global Admin") || userData.staffCode?.includes("GLOBAL")) {
-      return true;
-    }
-    
-    return false;
-  }, [userData]);
+    return userData.role === "global-admin";
+  }, [userData?.role]); // Only depend on role, not entire userData object
 
-  const handleTeamClick = React.useCallback((team: any) => {
-    if (!userData || !isGlobalAdmin) return;
-    setActiveTeam(team);
-    router.push(`?code=${team.name}`, { scroll: false });
-  }, [userData, isGlobalAdmin, setActiveTeam, router]);
-
+  // Memoize team filtering
   const filteredTeams = React.useMemo(() => {
     if (!userData) return [];
     
@@ -86,29 +65,27 @@ export function AppSidebar({ ...props }) {
       return teams;
     } else if (userData.role === "admin") {
       const userBookingSetupCode = userData.currentBookingSetup?.code;
-      if (userBookingSetupCode) {
-        return teams.filter(team => team.name === userBookingSetupCode);
-      }
-      return [];
-    } else {
-      return [];
+      return userBookingSetupCode 
+        ? teams.filter(team => team.name === userBookingSetupCode)
+        : [];
     }
-  }, [teams, userData, isGlobalAdmin]);
+    return [];
+  }, [teams, userData?.role, userData?.currentBookingSetup?.code, isGlobalAdmin]);
 
-  React.useEffect(() => {
-    if (userData?.role === "admin" && filteredTeams.length > 0 && !activeTeam) {
-      const userTeam = filteredTeams[0];
-      setActiveTeam(userTeam);
-    }
-  }, [userData?.role, filteredTeams, activeTeam, setActiveTeam]);
+  // Handle team click - memoized
+  const handleTeamClick = React.useCallback((team: any) => {
+    if (!userData || !isGlobalAdmin) return;
+    setActiveTeam(team);
+    router.push(`?code=${team.name}`, { scroll: false });
+  }, [userData, isGlobalAdmin, setActiveTeam, router]);
 
-  // Build nav URLs with active team code
+  // Memoize static nav with code
   const staticNavWithCode = React.useMemo(() => {
-    const code = activeTeam?.name || "";
-    return staticNav.map((item) => ({ ...item, url: `${item.url}?code=${code}` }));
+    if (!activeTeam?.name) return staticNav;
+    return staticNav.map((item) => ({ ...item, url: `${item.url}?code=${activeTeam.name}` }));
   }, [staticNav, activeTeam?.name]);
 
-  // User display info
+  // Memoize user display info - only recalculate when needed
   const userDisplayInfo = React.useMemo(() => {
     if (!userData) {
       return { name: "Loading...", email: "Loading...", avatar: "/avatars/client.png", role: "customer" as const };
@@ -118,7 +95,7 @@ export function AppSidebar({ ...props }) {
       return { 
         name: userData.name, 
         email: "Global Administrator", 
-        avatar: "/avatars/global-admin.png", 
+        avatar: "/avatars/admin.png", 
         role: "admin" as const,
         staffCode: userData.staffCode 
       };
@@ -130,17 +107,17 @@ export function AppSidebar({ ...props }) {
         role: "admin" as const, 
         staffCode: userData.staffCode 
       };
-    } else {
-      return { 
-        name: userData.name, 
-        email: userData.email, 
-        avatar: "/avatars/client.png", 
-        role: "customer" as const 
-      };
     }
-  }, [userData, isGlobalAdmin]);
+    
+    return { 
+      name: userData.name, 
+      email: userData.email, 
+      avatar: "/avatars/client.png", 
+      role: "customer" as const 
+    };
+  }, [userData?.name, userData?.email, userData?.role, userData?.staffCode, isGlobalAdmin]);
 
-  // Nav groups
+  // Memoize nav groups
   const navGroups = React.useMemo(() => {
     if (!userData) {
       return [{ label: "Booking", items: staticNavWithCode }];
@@ -154,9 +131,9 @@ export function AppSidebar({ ...props }) {
     }
     
     return groups;
-  }, [userData, staticNavWithCode, dynamicNav, isGlobalAdmin]);
+  }, [userData?.role, isGlobalAdmin, staticNavWithCode, dynamicNav]);
 
-  // Don't render until initialized
+  // Loading state
   if (loading) {
     return (
       <Sidebar collapsible="icon" className="bg-blue-900 border-blue-700 text-white" {...props}>
@@ -172,26 +149,20 @@ export function AppSidebar({ ...props }) {
   return (
     <Sidebar collapsible="icon" className="bg-blue-900 border-blue-700 text-white" {...props}>
       
-      {/* Header Section - Team Switcher */}
       {showTeamSwitcher ? (
         <SidebarHeader className="bg-blue-800 border-b border-blue-700">
           <TeamSwitcher
             teams={filteredTeams}
             activeTeam={activeTeam}
             onTeamSelect={handleTeamClick}
-            // Disable team selection for regular admin (locked to single team)
             disabled={userData?.role === "admin" && !isGlobalAdmin}
           />
         </SidebarHeader>
       ) : (
-        // Customer - No team switcher, just system title
         <SidebarHeader className="bg-blue-800 border-b border-blue-700">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                className="data-[slot=sidebar-menu-button]:!p-1.5"
-              >
+              <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
                 <a href="#">
                   <span className="!size-5" />
                   <span className="text-base font-semibold">Booking System</span>
@@ -202,12 +173,10 @@ export function AppSidebar({ ...props }) {
         </SidebarHeader>
       )}
 
-      {/* Content - Navigation */}
       <SidebarContent className="bg-blue-900">
         <NavMain groups={navGroups} />
       </SidebarContent>
 
-      {/* Footer - User Info */}
       <SidebarFooter className="bg-blue-800 border-t border-blue-700">
         <NavUser user={userDisplayInfo} />
       </SidebarFooter>

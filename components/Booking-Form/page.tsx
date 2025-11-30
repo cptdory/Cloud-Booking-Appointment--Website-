@@ -1,3 +1,4 @@
+// page.tsx (refactored)
 "use client";
 
 import { useState, useEffect } from "react";
@@ -31,74 +32,32 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info, XCircle } from "lucide-react";
+import { Branch } from "@/types/branch";
+import { BookingSetup } from "@/types/bookingSetup";
+import { BookingParameter } from "@/types/bookingParameter";
+import { StaffAssignment } from "@/types/staffAssignment";
+
+// Import hooks
+import { useAuth } from "@/hooks/useAuth";
+import { useBranches } from "@/hooks/useBranches";
+import { useBookingSetup } from "@/hooks/useBookingSetup";
+import { useStaffAssignments } from "@/hooks/useStaffAssignments";
+import { useCustomers } from "@/hooks/useCustomers";
+import { useTimeSlots } from "@/hooks/useTimeSlots";
+import { useAlert } from "@/hooks/useAlert";
+import { useBookingParams } from "@/hooks/useBookingParams";
 
 interface FormData {
   branch: string;
   service: string;
   staff: string;
-  [key: string]: string; // For dynamic parameters
+  [key: string]: string;
   date: string;
   selectedTime: string;
   customerNo: string;
   bookingNote: string;
 }
 
-interface Branch {
-  Code: string;
-  Description: string;
-  Location: string;
-}
-
-interface BookingParameter {
-  BookingParameterId: number;
-  BookingParameterCode: string;
-  BookingParameterSequence: number;
-  BookingParameterCheckAvailability: boolean;
-  BookingParameterCheckDuration: boolean;
-  BookingParameterStaff: boolean;
-  BookingParameterService: boolean;
-  BookingParameterValue: {
-    BookingParameterValueId: number;
-    BookingParameterValueCode: string;
-    BookingParamterValueDescription: string;
-    BookingParameterValueDuration: number;
-  }[];
-}
-
-interface BookingSetup {
-  BookingSetupCode: string;
-  BookingSetupDescription: string;
-  BookingSetupTimeIncrement: number;
-  BookingSetupAllowableTime: number;
-  BookingParameter: BookingParameter[];
-  BookingServiceStaffRela: any[];
-  BookingServiceDefaultValue: any[];
-  BookingBusinessHours: any[];
-}
-
-interface StaffAssignment {
-  BookingSetupCode: string;
-  BookingParameterId_Staff: number;
-  ServiceId: number;
-  StaffId: number;
-  StaffCode: string;
-  StaffName: string;
-}
-
-interface Customer {
-  id: string;
-  customerNo: string;
-  name: string;
-  email?: string;
-}
-
-interface AvailableTimeSlot {
-  id: number;
-  time: string;
-  available: boolean;
-}
-
-// Add this interface for booking summary
 interface BookingSummary {
   branch: Branch | null;
   service: {
@@ -126,44 +85,17 @@ interface BookingSummary {
 
 export default function BookingForm() {
   const router = useRouter();
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [username, setUsername] = useState<string | null>(null);
-  const [customerNo, setCustomerNo] = useState<string>("");
+  
+  // Use hooks
+  const { userRole, username, customerNo, checkingAuth } = useAuth();
+  const { branches, loading: branchesLoading, fetchBranches } = useBranches();
+  const { bookingSetup, loading: setupLoading, fetchBookingSetup } = useBookingSetup();
+  const { staffAssignments, loading: staffLoading, fetchStaffAssignments } = useStaffAssignments();
+  const { customers, loading: customersLoading } = useCustomers(userRole);
+  const { availableTimeSlots, loading: timeSlotsLoading, fetchAvailableTimeSlots } = useTimeSlots();
+  const { alert, showAlert } = useAlert();
+
   const [currentStep, setCurrentStep] = useState<number>(1);
-
-  // Data states
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [bookingSetup, setBookingSetup] = useState<BookingSetup | null>(null);
-  const [staffAssignments, setStaffAssignments] = useState<StaffAssignment[]>(
-    []
-  );
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [availableTimeSlots, setAvailableTimeSlots] = useState<
-    AvailableTimeSlot[]
-  >([]);
-
-  // Alert states
-  const [alert, setAlert] = useState<{
-    show: boolean;
-    title: string;
-    description: string;
-    variant: "default" | "destructive";
-  }>({
-    show: false,
-    title: "",
-    description: "",
-    variant: "default",
-  });
-
-  const [loading, setLoading] = useState({
-    branches: false,
-    branchDetails: false,
-    staffAssignments: false,
-    timeSlots: false,
-    submitting: false,
-    customers: false,
-  });
-
   const [formData, setFormData] = useState<FormData>({
     branch: "",
     service: "",
@@ -174,9 +106,6 @@ export default function BookingForm() {
     bookingNote: "",
   });
 
-  const [checkingAuth, setCheckingAuth] = useState(true);
-
-  // Booking summary state
   const [bookingSummary, setBookingSummary] = useState<BookingSummary>({
     branch: null,
     service: null,
@@ -186,6 +115,22 @@ export default function BookingForm() {
     time: "",
     customer: null,
   });
+
+  const [submitting, setSubmitting] = useState(false);
+
+  // Use booking params hook for dynamic parameters
+  const dynamicParametersData = useBookingParams(formData.branch, "dynamic-param-id");
+
+  // Fetch branches on mount
+  useEffect(() => {
+    fetchBranches().catch((error) => {
+      showAlert(
+        "Failed to Load Branches",
+        error.message || "Please try again later.",
+        "destructive"
+      );
+    });
+  }, []);
 
   // Update booking summary when form data changes
   useEffect(() => {
@@ -255,323 +200,13 @@ export default function BookingForm() {
     updateBookingSummary();
   }, [formData, branches, bookingSetup, staffAssignments, customers, userRole, customerNo, username]);
 
-  // Show alert function
-  const showAlert = (
-    title: string,
-    description: string,
-    variant: "default" | "destructive" = "default"
-  ) => {
-    setAlert({
-      show: true,
-      title,
-      description,
-      variant,
-    });
-
-    // Auto-hide after 6 seconds
-    setTimeout(() => {
-      setAlert((prev) => ({ ...prev, show: false }));
-    }, 6000);
-  };
-
-  // Authentication check
-  useEffect(() => {
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.authenticated) {
-          router.replace("/signin");
-        } else {
-          setUsername(data.user.name);
-          setUserRole(data.user.role);
-          setCustomerNo(data.user.customerNo || "");
-        }
-      })
-      .catch(() => {
-        router.replace("/signin");
-      })
-      .finally(() => {
-        setCheckingAuth(false);
-      });
-  }, [router]);
-
-  // Step 1: Fetch branches
-  useEffect(() => {
-    const fetchBranches = async () => {
-      setLoading((prev) => ({ ...prev, branches: true }));
-      try {
-        const res = await fetch("/api/booking-setup/get-booking-setup-list", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({}),
-        });
-
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(
-            errorData.error || `HTTP error! status: ${res.status}`
-          );
-        }
-
-        const data = await res.json();
-
-        // Data is already parsed by API route
-        const branchesData = data.value || [];
-        setBranches(branchesData);
-      } catch (error: any) {
-        console.error("❌ Error fetching branches:", error);
-        showAlert(
-          "Failed to Load Branches",
-          error.message || "Please try again later.",
-          "destructive"
-        );
-      } finally {
-        setLoading((prev) => ({ ...prev, branches: false }));
-      }
-    };
-
-    fetchBranches();
-  }, []);
-
-  // Step 2: Fetch booking setup when branch is selected
-  const fetchBranchDetails = async (branchCode: string) => {
-    setLoading((prev) => ({ ...prev, branchDetails: true }));
-    try {
-      const res = await fetch("/api/booking-setup/get-booking-setup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          _BookingSetupCode: branchCode,
-        }),
-      });
-
-      if (!res.ok) throw new Error("Failed to fetch branch details");
-      const data = await res.json();
-
-      // Parse the stringified JSON from API
-      let setupData = data.value;
-      if (typeof setupData === "string") {
-        setupData = JSON.parse(setupData);
-      }
-
-      // Handle array response
-      const finalData = Array.isArray(setupData) ? setupData[0] : setupData;
-
-      setBookingSetup(finalData);
-      setCurrentStep(2);
-    } catch (error) {
-      console.error("❌ Error fetching branch details:", error);
-      showAlert(
-        "Failed to Load Branch Details",
-        "Please try selecting a different branch or try again later.",
-        "destructive"
-      );
-    } finally {
-      setLoading((prev) => ({ ...prev, branchDetails: false }));
-    }
-  };
-
-  // Step 3: Fetch staff assignments when service is selected
-  const fetchStaffAssignments = async (serviceId: string) => {
-    setLoading((prev) => ({ ...prev, staffAssignments: true }));
-    try {
-      const res = await fetch(
-        "/api/booking-service-staff-rela/get-booking-service-staff-rela",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            _BookingSetupCode: formData.branch,
-            _ServiceId: serviceId,
-          }),
-        }
-      );
-
-      if (!res.ok) {
-        const errorData = await res
-          .json()
-          .catch(() => ({ error: "Unknown error" }));
-        throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
-      }
-
-      const data = await res.json();
-
-      // Parse the staff assignments data
-      let staffData = data.value;
-      if (typeof staffData === "string") {
-        staffData = JSON.parse(staffData || "[]");
-      }
-
-      setStaffAssignments(staffData || []);
-      setCurrentStep(3);
-    } catch (error: any) {
-      console.error("❌ Error fetching staff assignments:", error);
-      showAlert(
-        "Failed to Load Staff Assignments",
-        error.message || "Please try selecting a different service.",
-        "destructive"
-      );
-    } finally {
-      setLoading((prev) => ({ ...prev, staffAssignments: false }));
-    }
-  };
-
-  // Fetch customers if user is global-admin or admin
-  useEffect(() => {
-    const fetchCustomers = async () => {
-      // Skip if role hasn't been determined yet
-      if (!userRole || (userRole !== "global-admin" && userRole !== "admin"))
-        return;
-
-      setLoading((prev) => ({ ...prev, customers: true }));
-      try {
-        const res = await fetch("/api/customer/get-customers");
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(
-            errorData.error || `HTTP error! status: ${res.status}`
-          );
-        }
-
-        const data = await res.json();
-
-        // Parse customers data
-        let customersData = data.value || [];
-        if (typeof customersData === "string") {
-          customersData = JSON.parse(customersData);
-        }
-
-        const customerOptions = customersData.map((customer: any) => ({
-          id: customer.CustomerNo || customer.No || customer.id,
-          customerNo: customer.CustomerNo || customer.No,
-          name: customer.Name || customer.DisplayName,
-          email: customer.EMail || customer.Email,
-        }));
-
-        setCustomers(customerOptions);
-      } catch (error: any) {
-        console.error("❌ Error fetching customers:", error);
-        showAlert(
-          "Failed to Load Customers",
-          error.message || "Customer data could not be loaded.",
-          "destructive"
-        );
-      } finally {
-        setLoading((prev) => ({ ...prev, customers: false }));
-      }
-    };
-
-    if (userRole === "global-admin" || userRole === "admin") {
-      fetchCustomers();
-    }
-  }, [userRole]);
-
-  // Fetch available time slots when all prerequisites are met
-  const fetchAvailableTimeSlots = async () => {
-    if (
-      !formData.branch ||
-      !formData.service ||
-      !formData.staff ||
-      !formData.date
-    ) {
-      setAvailableTimeSlots([]);
-      return;
-    }
-
-    // Build parameter IDs and values for dynamic parameters
-    const dynamicParameters = getDynamicParameters();
-    const parameterIds = [
-      "4",
-      "5",
-      ...dynamicParameters.map((p) => p.BookingParameterId.toString()),
-    ].join("|");
-    const parameterValues = [
-      formData.service,
-      formData.staff,
-      ...dynamicParameters.map(
-        (p) => formData[p.BookingParameterId.toString()] || ""
-      ),
-    ].join("|");
-
-    setLoading((prev) => ({ ...prev, timeSlots: true }));
-
-    try {
-      const response = await fetch(
-        "/api/available-timeslot/get-available-timeslot",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            _BookingSetupCode: formData.branch,
-            _BookingDate: formData.date,
-            _BookingParameterCount: (2 + dynamicParameters.length).toString(),
-            _BookingParameterIDs: parameterIds,
-            _BookingParameterValueIDs: parameterValues,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.error || "Failed to fetch available time slots"
-        );
-      }
-
-      const data = await response.json();
-
-      // Data is already parsed by the API route
-      const slotsData = data.value || [];
-      setAvailableTimeSlots(slotsData);
-    } catch (error: any) {
-      console.error("❌ Error fetching time slots:", error);
-      showAlert(
-        "Failed to Load Time Slots",
-        error.message || "Please try selecting a different date or time.",
-        "destructive"
-      );
-      setAvailableTimeSlots([]);
-    } finally {
-      setLoading((prev) => ({ ...prev, timeSlots: false }));
-    }
-  };
-
-  // Load time slots when date is selected and all prerequisites are met
-  useEffect(() => {
-    if (
-      currentStep >= 4 &&
-      formData.date &&
-      formData.branch &&
-      formData.service &&
-      formData.staff
-    ) {
-      // Check if all dynamic parameters are selected
-      const dynamicParameters = getDynamicParameters();
-      const allDynamicSelected = dynamicParameters.every(
-        (param) => formData[param.BookingParameterId.toString()]
-      );
-
-      if (allDynamicSelected) {
-        fetchAvailableTimeSlots();
-      }
-    }
-  }, [formData.date, currentStep]);
-
   const handleStepSelection = (step: number) => {
     if (step < currentStep) {
       setCurrentStep(step);
     }
   };
 
-  const handleInputChange = (field: keyof FormData, value: string): void => {
+  const handleInputChange = async (field: keyof FormData, value: string): Promise<void> => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -579,7 +214,16 @@ export default function BookingForm() {
 
     // Auto-advance steps based on selection with correct sequence
     if (field === "branch" && value) {
-      fetchBranchDetails(value);
+      try {
+        await fetchBookingSetup(value);
+        setCurrentStep(2);
+      } catch (error: any) {
+        showAlert(
+          "Failed to Load Branch Details",
+          error.message || "Please try selecting a different branch or try again later.",
+          "destructive"
+        );
+      }
     } else if (field === "service" && value && currentStep === 2) {
       // Reset staff and dynamic parameters when service changes
       setFormData((prev) => {
@@ -599,12 +243,18 @@ export default function BookingForm() {
         return updated;
       });
 
-      setStaffAssignments([]); // Clear previous staff assignments
-      fetchStaffAssignments(value);
-    } else if (field === "staff" && value && currentStep === 3) {
-      // Stay on step 3 for dynamic parameters
+      try {
+        await fetchStaffAssignments(formData.branch, value);
+        setCurrentStep(3);
+      } catch (error: any) {
+        showAlert(
+          "Failed to Load Staff Assignments",
+          error.message || "Please try selecting a different service.",
+          "destructive"
+        );
+      }
     } else if (currentStep === 3) {
-      // Check if this is a dynamic parameter field (numeric string)
+      // Check if this is a dynamic parameter field
       const dynamicParameters = getDynamicParameters();
       const isDynamicField = dynamicParameters.some(
         (param) => param.BookingParameterId.toString() === field
@@ -614,20 +264,17 @@ export default function BookingForm() {
         // Check if all dynamic parameters are filled to auto-advance
         const allDynamicSelected = dynamicParameters.every((param) => {
           const paramId = param.BookingParameterId.toString();
-          // Use current value for the field being changed, otherwise use formData
           return paramId === field
             ? value
             : formData[paramId as keyof FormData];
         });
 
         if (allDynamicSelected) {
-          setCurrentStep(4); // Move to date & time
+          setCurrentStep(4);
         }
       }
-    } else if (field === "date" && value && currentStep === 4) {
-      // Stay on step 4 - don't auto-advance
     } else if (field === "selectedTime" && value && currentStep === 4) {
-      setCurrentStep(5); // Move to customer
+      setCurrentStep(5);
     }
   };
 
@@ -639,7 +286,6 @@ export default function BookingForm() {
   };
 
   const handleTimeSlotClick = (time: string): void => {
-    // Format time to ensure 2-digit hour (09:00 AM instead of 9:00 AM)
     const formatTime = (time: string): string => {
       const timeMatch = time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
       if (timeMatch) {
@@ -657,9 +303,39 @@ export default function BookingForm() {
       selectedTime: formattedTime,
     }));
 
-    // Auto-advance to customer step after selecting time
     setCurrentStep(5);
   };
+
+  // Fetch time slots when all prerequisites are met
+  useEffect(() => {
+    if (currentStep >= 4 && formData.date && formData.branch && formData.service && formData.staff) {
+      const dynamicParameters = getDynamicParameters();
+      const allDynamicSelected = dynamicParameters.every(
+        (param) => formData[param.BookingParameterId.toString()]
+      );
+
+      if (allDynamicSelected) {
+        const dynamicParamsData = dynamicParameters.map((param) => ({
+          id: param.BookingParameterId.toString(),
+          value: formData[param.BookingParameterId.toString()] || "",
+        }));
+
+        fetchAvailableTimeSlots(
+          formData.branch,
+          formData.date,
+          formData.service,
+          formData.staff,
+          dynamicParamsData
+        ).catch((error) => {
+          showAlert(
+            "Failed to Load Time Slots",
+            error.message || "Please try selecting a different date or time.",
+            "destructive"
+          );
+        });
+      }
+    }
+  }, [formData.date, currentStep]);
 
   // Get services from booking setup
   const getServices = () => {
@@ -679,12 +355,9 @@ export default function BookingForm() {
     ).sort((a, b) => a.BookingParameterSequence - b.BookingParameterSequence);
   };
 
-  const handleSubmit = async (
-    e: React.MouseEvent<HTMLButtonElement>
-  ): Promise<void> => {
+  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>): Promise<void> => {
     e.preventDefault();
 
-    // Validate all required fields including dynamic parameters
     const dynamicParameters = getDynamicParameters();
     const allDynamicSelected = dynamicParameters.every(
       (param) => formData[param.BookingParameterId.toString()]
@@ -707,15 +380,15 @@ export default function BookingForm() {
       return;
     }
 
-    setLoading((prev) => ({ ...prev, submitting: true }));
+    setSubmitting(true);
 
     try {
-      // Build parameter IDs and values for dynamic parameters
       const parameterIds = [
         "4",
         "5",
         ...dynamicParameters.map((p) => p.BookingParameterId.toString()),
       ].join("|");
+      
       const parameterValues = [
         formData.service,
         formData.staff,
@@ -740,19 +413,17 @@ export default function BookingForm() {
             _BookingParameterValueIDs: parameterValues,
             _CustomerNo: formData.customerNo,
             _BookingNote: formData.bookingNote || "-",
+            _BookingEntryNo: ""
           }),
         }
       );
 
       if (!response.ok) throw new Error("Failed to create booking");
-      const result = await response.json();
+      await response.json();
 
-      showAlert(
-        "Booking Confirmed!",
-        "Your appointment has been successfully scheduled."
-      );
+      showAlert("Booking Confirmed!", "Your appointment has been successfully scheduled.");
 
-      // Reset form - use the same dynamicParameters variable
+      // Reset form
       const resetData: FormData = {
         branch: "",
         service: "",
@@ -763,16 +434,12 @@ export default function BookingForm() {
         bookingNote: "",
       };
 
-      // Reset dynamic parameters using the existing variable
       dynamicParameters.forEach((param) => {
         resetData[param.BookingParameterId.toString()] = "";
       });
 
       setFormData(resetData);
       setCurrentStep(1);
-      setAvailableTimeSlots([]);
-      setBookingSetup(null);
-      setStaffAssignments([]);
       setBookingSummary({
         branch: null,
         service: null,
@@ -790,7 +457,7 @@ export default function BookingForm() {
         "destructive"
       );
     } finally {
-      setLoading((prev) => ({ ...prev, submitting: false }));
+      setSubmitting(false);
     }
   };
 
@@ -804,21 +471,7 @@ export default function BookingForm() {
     }
   }, [customerNo, userRole, currentStep]);
 
-  // Show loading while checking authentication
-  if (checkingAuth) {
-    return (
-      <div className="container mx-auto p-6 max-w-6xl flex items-center justify-center min-h-64">
-        <div className="flex items-center gap-2">
-          <Loader2 className="w-6 h-6 animate-spin" />
-          <span className="text-muted-foreground">
-            Checking authentication...
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  // Booking Summary Component
+  // Booking Summary Component (keep the same as before)
   const BookingSummaryCard = () => {
     const hasSummary = bookingSummary.branch || bookingSummary.service || bookingSummary.staff || bookingSummary.date;
     
@@ -912,6 +565,21 @@ export default function BookingForm() {
       </Card>
     );
   };
+
+  // Show loading while checking authentication
+  if (checkingAuth) {
+    return (
+      <div className="container mx-auto p-6 max-w-6xl flex items-center justify-center min-h-64">
+        <div className="flex items-center gap-2">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <span className="text-muted-foreground">
+            Checking authentication...
+          </span>
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="container mx-auto p-6 max-w-6xl space-y-6">
@@ -1008,7 +676,7 @@ export default function BookingForm() {
           <Button
             variant="outline"
             onClick={() => handleStepSelection(currentStep - 1)}
-            disabled={loading.submitting}
+            disabled={submitting}
             className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -1033,7 +701,7 @@ export default function BookingForm() {
                 </div>
               </CardHeader>
               <CardContent className="pt-6">
-                {loading.branches ? (
+                {branchesLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" />
                     <span className="text-blue-700">
@@ -1092,7 +760,7 @@ export default function BookingForm() {
                 </div>
               </CardHeader>
               <CardContent className="pt-6">
-                {loading.branchDetails ? (
+                {setupLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" />
                     <span className="text-blue-700">
@@ -1154,7 +822,7 @@ export default function BookingForm() {
                 {/* Staff Selection */}
                 <div>
                   <h3 className="text-lg font-medium mb-4 text-blue-900">Select Staff</h3>
-                  {loading.staffAssignments ? (
+                  {staffLoading ? (
                     <div className="flex items-center justify-center py-4">
                       <Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" />
                       <span className="text-blue-700">
@@ -1350,7 +1018,7 @@ export default function BookingForm() {
                         Available Time Slots
                       </Label>
 
-                      {loading.timeSlots ? (
+                      {timeSlotsLoading ? (
                         <div className="flex items-center justify-center py-12">
                           <Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" />
                           <span className="text-blue-700">
@@ -1451,7 +1119,7 @@ export default function BookingForm() {
                 <CardContent className="pt-6">
                   {userRole === "global-admin" || userRole === "admin" ? (
                     <>
-                      {loading.customers ? (
+                      {customersLoading ? (
                         <div className="flex items-center justify-center py-4">
                           <Loader2 className="w-4 h-4 animate-spin mr-2 text-blue-600" />
                           <span className="text-blue-700">
@@ -1488,7 +1156,7 @@ export default function BookingForm() {
                           </SelectContent>
                         </Select>
                       )}
-                      {customers.length === 0 && !loading.customers && (
+                      {customers.length === 0 && !customersLoading && (
                         <p className="text-sm text-blue-600 mt-2">
                           No customers available
                         </p>
@@ -1532,14 +1200,14 @@ export default function BookingForm() {
                     type="button"
                     onClick={handleSubmit}
                     disabled={
-                      loading.submitting ||
+                      submitting ||
                       !formData.selectedTime ||
                       !formData.customerNo
                     }
                     className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700 text-white"
                     size="lg"
                   >
-                    {loading.submitting ? (
+                    {submitting ? (
                       <>
                         <Loader2 className="w-5 h-5 animate-spin mr-2" />
                         Creating Your Booking...

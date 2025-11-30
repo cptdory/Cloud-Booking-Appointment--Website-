@@ -1,0 +1,25 @@
+export type BookingEntry = {
+  EntryNo: number;
+  BookingStartDate: string;
+  BookingEndDate: string;
+  BookingStartTime: string;
+  BookingEndTime: string;
+  BookingNote: string;
+  BookingStatus: string;
+  BookingSetupCode: string;
+  ServiceType: string;
+  ServiceCode: string;
+  ServiceName: string;
+  StaffCode: string;
+  StaffName: string;
+  TimeOff: boolean;
+  CustomerNo: string;
+  Name: string;
+  Name2: string;
+  PhoneNo: string;
+  EMail: string;
+  Age: number;
+  BirthDate: string;
+  Address: string;
+  Address2: string;
+};
