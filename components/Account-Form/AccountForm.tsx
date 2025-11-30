@@ -21,6 +21,8 @@ import {
   AlertCircle,
   Lock,
   Palette,
+  Mail,
+  Phone,
 } from "lucide-react";
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -41,6 +43,16 @@ interface UserData {
   };
 }
 
+interface CustomerDetails {
+  name: string;
+  phoneNo: string;
+  email: string;
+  address: string;
+  address2: string;
+  age: number;
+  birthDate: string;
+}
+
 export default function AccountForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -51,6 +63,7 @@ export default function AccountForm() {
 
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isCustomer, setIsCustomer] = useState(false);
 
   // Password tab states
   const [newPassword, setNewPassword] = useState("");
@@ -60,6 +73,18 @@ export default function AccountForm() {
   // Staff color state (for admin)
   const [staffColor, setStaffColor] = useState("");
   const [changingColor, setChangingColor] = useState(false);
+
+  // Customer details state
+  const [customerDetails, setCustomerDetails] = useState<CustomerDetails>({
+    name: "",
+    phoneNo: "",
+    email: "",
+    address: "",
+    address2: "",
+    age: 0,
+    birthDate: "",
+  });
+  const [updatingCustomerDetails, setUpdatingCustomerDetails] = useState(false);
 
   // Fetch user data and initial staff color
   useEffect(() => {
@@ -76,11 +101,20 @@ export default function AccountForm() {
         }
 
         setUserData(authData.user);
-        setIsAdmin(authData.user?.role === "admin" || authData.user?.role === "global-admin");
+        const isAdminRole = authData.user?.role === "admin" || authData.user?.role === "global-admin";
+        const isCustomerRole = authData.user?.role === "customer";
+        
+        setIsAdmin(isAdminRole);
+        setIsCustomer(isCustomerRole);
 
         // If admin, fetch the current staff color
-        if (authData.user?.role === "admin" && authData.user?.currentBookingSetup) {
+        if (isAdminRole && authData.user?.currentBookingSetup) {
           await fetchStaffColor(authData.user.currentBookingSetup);
+        }
+
+        // If customer, fetch their details
+        if (isCustomerRole && authData.user?.customerNo) {
+          await fetchCustomerDetails(authData.user.customerNo);
         }
       } catch (error) {
         console.error("Error loading data:", error);
@@ -96,11 +130,10 @@ export default function AccountForm() {
   // Function to fetch staff color for a single staff member
   const fetchStaffColor = async (bookingSetup: { code: string; parameterId: number; parameterValueId: number }) => {
     try {
-      
       const requestBody = {
         _BookingSetupCode: bookingSetup.code,
         _BookingParameterId: bookingSetup.parameterId.toString(),
-        _BookingParameterValueId: bookingSetup.parameterValueId.toString(), // ✅ Use parameterValueId, not staffCode
+        _BookingParameterValueId: bookingSetup.parameterValueId.toString(),
       };
 
       const res = await fetch("/api/booking-staff-auth/get-booking-staff-color", {
@@ -110,26 +143,51 @@ export default function AccountForm() {
       });
 
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error("❌ Failed to fetch staff color:", errorText);
+        console.error("❌ Failed to fetch staff color");
         return;
       }
 
       const data = await res.json();
 
-      // Parse the response to get the color
       if (data.staffColors && data.staffColors[bookingSetup.parameterValueId]) {
         const newColor = data.staffColors[bookingSetup.parameterValueId].background;
         setStaffColor(newColor);
         setUserData((prev) => prev ? { ...prev, staffColor: newColor } : null);
       } else {
-        console.warn("⚠️ No StaffColor found in response for parameter value ID:", bookingSetup.parameterValueId);
-        // Set default color if none found
         setStaffColor("#3b82f6");
       }
     } catch (error) {
       console.error("❌ Error fetching staff color:", error);
-      setStaffColor("#3b82f6"); // Fallback color
+      setStaffColor("#3b82f6");
+    }
+  };
+
+  // Fetch customer details
+  const fetchCustomerDetails = async (customerNo: string) => {
+    try {
+      const res = await fetch("/api/customer/get-customer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customerNo }),
+      });
+
+      if (!res.ok) {
+        console.error("Failed to fetch customer details");
+        return;
+      }
+
+      const data = await res.json();
+      setCustomerDetails({
+        name: data.name || "",
+        phoneNo: data.phoneNo || "",
+        email: data.email || "",
+        address: data.address || "",
+        address2: data.address2 || "",
+        age: data.age || 0,
+        birthDate: data.birthDate || "",
+      });
+    } catch (error) {
+      console.error("Error fetching customer details:", error);
     }
   };
 
@@ -163,9 +221,25 @@ export default function AccountForm() {
               _BookingParameterId: userData.currentBookingSetup.parameterId.toString(),
               _BookingParameterValueId: userData.currentBookingSetup.parameterValueId.toString(),
               _PortalPassword: newPassword,
-            }), 
+            }),
           }
         );
+
+        if (!res.ok) throw new Error("Password change failed");
+
+        setMessage({ type: "success", text: "Password updated successfully!" });
+        setNewPassword("");
+        setConfirmPassword("");
+      } else if (isCustomer && userData?.customerNo) {
+        // Customer password change
+        const res = await fetch("/api/customer/update-customer-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            _CustomerNo: userData.customerNo,
+            _PortalPassword: newPassword,
+          }),
+        });
 
         if (!res.ok) throw new Error("Password change failed");
 
@@ -211,15 +285,8 @@ export default function AccountForm() {
         }
       );
 
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error("❌ Staff color update failed:", errorText);
-        throw new Error("Color update failed");
-      }
+      if (!res.ok) throw new Error("Color update failed");
 
-      const responseData = await res.json();
-
-      // Refresh the staff color after update
       await fetchStaffColor(userData.currentBookingSetup);
 
       setMessage({
@@ -239,17 +306,39 @@ export default function AccountForm() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="container mx-auto p-6 max-w-4xl">
-        <Card>
-          <CardContent className="flex items-center justify-center py-12">
-            <Loader2 className="w-12 h-12 animate-spin text-primary" />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const handleCustomerDetailsChange = async () => {
+    if (!userData?.customerNo) {
+      setMessage({ type: "error", text: "Customer number is missing" });
+      return;
+    }
+
+    setUpdatingCustomerDetails(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/customer/update-customer-details", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerNo: userData.customerNo,
+          ...customerDetails,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update details");
+
+      setMessage({ type: "success", text: "Profile updated successfully!" });
+      setTimeout(() => setMessage(null), 3000);
+    } catch (error) {
+      console.error("Error updating details:", error);
+      setMessage({
+        type: "error",
+        text: "Failed to update profile. Try again.",
+      });
+    } finally {
+      setUpdatingCustomerDetails(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -272,7 +361,9 @@ export default function AccountForm() {
           <CardDescription>
             {isAdmin
               ? "Manage your staff preferences"
-              : "Manage your personal information and account preferences"}
+              : isCustomer
+              ? "Manage your personal information and account preferences"
+              : "Account Settings"}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -289,7 +380,7 @@ export default function AccountForm() {
         </Alert>
       )}
 
-      {/* Admin View - Only Staff Color and Password */}
+      {/* Admin View - Staff Color and Password */}
       {isAdmin ? (
         <Tabs defaultValue="color" className="w-full">
           <TabsList className="grid grid-cols-2 w-full">
@@ -438,17 +529,242 @@ export default function AccountForm() {
             </Card>
           </TabsContent>
         </Tabs>
+      ) : isCustomer ? (
+        // Customer View - Profile Details and Password
+        <Tabs defaultValue="details" className="w-full">
+          <TabsList className="grid grid-cols-2 w-full">
+            <TabsTrigger value="details">Profile Details</TabsTrigger>
+            <TabsTrigger value="password">Change Password</TabsTrigger>
+          </TabsList>
+
+          {/* PROFILE DETAILS TAB */}
+          <TabsContent value="details">
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="w-5 h-5 text-primary" />
+                  Profile Information
+                </CardTitle>
+                <CardDescription>
+                  Update your personal information
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-6">
+                {/* Customer No - Read Only */}
+                <div className="space-y-2 p-3 bg-muted rounded-lg">
+                  <Label className="text-sm font-medium">Customer Number</Label>
+                  <Input
+                    value={userData?.customerNo || ""}
+                    disabled
+                    className="bg-background"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This cannot be changed
+                  </p>
+                </div>
+
+                {/* Editable Fields */}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name</Label>
+                      <Input
+                        id="name"
+                        value={customerDetails.name}
+                        onChange={(e) =>
+                          setCustomerDetails({
+                            ...customerDetails,
+                            name: e.target.value,
+                          })
+                        }
+                        placeholder="John Doe"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="age">Age</Label>
+                      <Input
+                        id="age"
+                        type="number"
+                        value={customerDetails.age}
+                        onChange={(e) =>
+                          setCustomerDetails({
+                            ...customerDetails,
+                            age: parseInt(e.target.value) || 0,
+                          })
+                        }
+                        placeholder="30"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="flex items-center gap-2">
+                        <Mail className="w-4 h-4" />
+                        Email
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={customerDetails.email}
+                        onChange={(e) =>
+                          setCustomerDetails({
+                            ...customerDetails,
+                            email: e.target.value,
+                          })
+                        }
+                        placeholder="john@example.com"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="phoneNo" className="flex items-center gap-2">
+                        <Phone className="w-4 h-4" />
+                        Phone Number
+                      </Label>
+                      <Input
+                        id="phoneNo"
+                        value={customerDetails.phoneNo}
+                        onChange={(e) =>
+                          setCustomerDetails({
+                            ...customerDetails,
+                            phoneNo: e.target.value,
+                          })
+                        }
+                        placeholder="+1 (555) 123-4567"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="birthDate">Birth Date</Label>
+                    <Input
+                      id="birthDate"
+                      type="date"
+                      value={customerDetails.birthDate}
+                      onChange={(e) =>
+                        setCustomerDetails({
+                          ...customerDetails,
+                          birthDate: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Address</Label>
+                    <Input
+                      id="address"
+                      value={customerDetails.address}
+                      onChange={(e) =>
+                        setCustomerDetails({
+                          ...customerDetails,
+                          address: e.target.value,
+                        })
+                      }
+                      placeholder="123 Main Street"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="address2">Address Line 2</Label>
+                    <Input
+                      id="address2"
+                      value={customerDetails.address2}
+                      onChange={(e) =>
+                        setCustomerDetails({
+                          ...customerDetails,
+                          address2: e.target.value,
+                        })
+                      }
+                      placeholder="Apt, Suite, etc."
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  className="w-full"
+                  disabled={updatingCustomerDetails}
+                  onClick={handleCustomerDetailsChange}
+                >
+                  {updatingCustomerDetails ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* PASSWORD TAB */}
+          <TabsContent value="password">
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lock className="w-5 h-5 text-primary" />
+                  Change Password
+                </CardTitle>
+                <CardDescription>
+                  Update your account password
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>New Password</Label>
+                  <Input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Confirm New Password</Label>
+                  <Input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                  />
+                </div>
+
+                <Button
+                  className="w-full mt-4"
+                  disabled={
+                    changingPassword || !newPassword || !confirmPassword
+                  }
+                  onClick={handlePasswordChange}
+                >
+                  {changingPassword ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Password"
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       ) : (
-        // Customer View - Show message that profile editing is not available
+        // Default fallback
         <Card>
           <CardContent className="flex items-center justify-center py-12">
             <div className="text-center space-y-4">
               <User className="w-12 h-12 mx-auto text-muted-foreground" />
-              <h3 className="text-lg font-medium">Profile Management</h3>
+              <h3 className="text-lg font-medium">Account Settings</h3>
               <p className="text-muted-foreground max-w-md">
-                Customer profile editing is currently not available in the
-                portal. Please contact support if you need to update your
-                personal information.
+                Unable to load your account settings.
               </p>
             </div>
           </CardContent>

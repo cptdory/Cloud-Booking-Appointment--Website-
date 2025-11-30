@@ -996,16 +996,19 @@ export default function BookingCalendar() {
                   >
                     {isDeletingTimeOff ? "Deleting..." : "Delete Time Off"}
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setIsModalOpen(false);
-                      setShowTimeOffDialog(true);
-                    }}
-                  >
-                    Edit Time Off
-                  </Button>
+                  {(userRole === "global-admin" ||
+                    username === selectedEvent.extendedProps.staffCode) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIsModalOpen(false);
+                        setShowTimeOffDialog(true);
+                      }}
+                    >
+                      Edit Time Off
+                    </Button>
+                  )}
                 </>
               )}
             </div>

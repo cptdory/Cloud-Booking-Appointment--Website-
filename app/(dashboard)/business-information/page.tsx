@@ -15,6 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner";
 import { useAlert } from "@/hooks/useAlert";
 import { useBookingSetup } from "@/hooks/useBookingSetup";
+import { useAuth } from "@/hooks/useAuth";
 
 interface BusinessHour {
   DayOfWeek: string;
@@ -340,6 +341,10 @@ function BusinessHoursContent() {
   const [editingHour, setEditingHour] = useState<BusinessHour | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; dayOfWeek: string }>({ open: false, dayOfWeek: "" });
 
+  // auth + permission
+  const { userRole } = useAuth();
+  const canEdit = userRole === "global-admin";
+
   useEffect(() => {
     loadBusinessHours();
   }, [code]);
@@ -407,10 +412,12 @@ function BusinessHoursContent() {
             Manage your business operating hours for {code}
           </p>
         </div>
-        <Button onClick={handleCreate} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add Business Hour
-        </Button>
+        {canEdit && (
+          <Button onClick={handleCreate} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Add Business Hour
+          </Button>
+        )}
       </div>
 
       {/* Business Hours Table */}
@@ -429,10 +436,12 @@ function BusinessHoursContent() {
               <p className="text-muted-foreground mb-4">
                 Add business hours to start accepting appointments
               </p>
-              <Button onClick={handleCreate}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add First Business Hour
-              </Button>
+              {canEdit && (
+                <Button onClick={handleCreate}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add First Business Hour
+                </Button>
+              )}
             </div>
           ) : (
             <Table>
@@ -442,7 +451,7 @@ function BusinessHoursContent() {
                   <TableHead>Start Time</TableHead>
                   <TableHead>End Time</TableHead>
                   <TableHead>Time Increment</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  {canEdit && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -462,24 +471,26 @@ function BusinessHoursContent() {
                         {hour.TimeIncrement} minutes
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(hour)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setDeleteDialog({ open: true, dayOfWeek: hour.DayOfWeek })}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                    {canEdit && (
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(hour)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDeleteDialog({ open: true, dayOfWeek: hour.DayOfWeek })}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
