@@ -216,7 +216,7 @@ export default function BookingForm() {
       2: ["service"],
       3: ["staff"],
       4: ["date", "selectedTime"],
-      5: ["customerNo"],
+      5: ["customerNo", "bookingNote"],
     };
 
     // Find which step this field belongs to
@@ -412,112 +412,117 @@ export default function BookingForm() {
       (param) => !param.BookingParameterService && !param.BookingParameterStaff
     ).sort((a, b) => a.BookingParameterSequence - b.BookingParameterSequence);
   };
+const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>): Promise<void> => {
+  e.preventDefault();
 
-  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>): Promise<void> => {
-    e.preventDefault();
+  const dynamicParameters = getDynamicParameters();
+  const allDynamicSelected = dynamicParameters.every(
+    (param) => formData[param.BookingParameterId.toString()]
+  );
 
-    const dynamicParameters = getDynamicParameters();
-    const allDynamicSelected = dynamicParameters.every(
-      (param) => formData[param.BookingParameterId.toString()]
+  if (
+    !formData.branch ||
+    !formData.service ||
+    !formData.staff ||
+    !allDynamicSelected ||
+    !formData.date ||
+    !formData.selectedTime ||
+    !formData.customerNo
+  ) {
+    showAlert(
+      "Missing Information",
+      "Please fill in all required fields before submitting.",
+      "destructive"
+    );
+    return;
+  }
+
+  setSubmitting(true);
+
+  try {
+    const parameterIds = [
+      "1",
+      "2",
+      ...dynamicParameters.map((p) => p.BookingParameterId.toString()),
+    ].join("|");
+    
+    const parameterValues = [
+      formData.service,
+      formData.staff,
+      ...dynamicParameters.map(
+        (p) => formData[p.BookingParameterId.toString()] || ""
+      ),
+    ].join("|");
+
+    // ✅ Build body and log it BEFORE sending
+    const bodyToSend = {
+      _BookingSetupCode: formData.branch,
+      _BookingDate: formData.date,
+      _BookingStartTime: formData.selectedTime,
+      _BookingParameterCount: (2 + dynamicParameters.length).toString(),
+      _BookingParameterIDs: parameterIds,
+      _BookingParameterValueIDs: parameterValues,
+      _CustomerNo: formData.customerNo,
+      _BookingNote: formData.bookingNote || "-",
+      _BookingEntryNo: ""
+    };
+
+    console.log("📤 Sent Body:", bodyToSend);
+
+    const response = await fetch(
+      "/api/available-timeslot/book-available-timeslot",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(bodyToSend),
+      }
     );
 
-    if (
-      !formData.branch ||
-      !formData.service ||
-      !formData.staff ||
-      !allDynamicSelected ||
-      !formData.date ||
-      !formData.selectedTime ||
-      !formData.customerNo
-    ) {
-      showAlert(
-        "Missing Information",
-        "Please fill in all required fields before submitting.",
-        "destructive"
-      );
-      return;
-    }
+    if (!response.ok) throw new Error("Failed to create booking");
+    await response.json();
 
-    setSubmitting(true);
+    showAlert("Booking Confirmed!", "Your appointment has been successfully scheduled.");
 
-    try {
-      const parameterIds = [
-        "1",
-        "2",
-        ...dynamicParameters.map((p) => p.BookingParameterId.toString()),
-      ].join("|");
-      
-      const parameterValues = [
-        formData.service,
-        formData.staff,
-        ...dynamicParameters.map(
-          (p) => formData[p.BookingParameterId.toString()] || ""
-        ),
-      ].join("|");
+    // Reset form
+    const resetData: FormData = {
+      branch: "",
+      service: "",
+      staff: "",
+      date: "",
+      selectedTime: "",
+      customerNo: userRole === "admin" ? "" : customerNo,
+      bookingNote: "",
+    };
 
-      const response = await fetch(
-        "/api/available-timeslot/book-available-timeslot",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            _BookingSetupCode: formData.branch,
-            _BookingDate: formData.date,
-            _BookingStartTime: formData.selectedTime,
-            _BookingParameterCount: (2 + dynamicParameters.length).toString(),
-            _BookingParameterIDs: parameterIds,
-            _BookingParameterValueIDs: parameterValues,
-            _CustomerNo: formData.customerNo,
-            _BookingNote: formData.bookingNote || "-",
-            _BookingEntryNo: ""
-          }),
-        }
-      );
+    dynamicParameters.forEach((param) => {
+      resetData[param.BookingParameterId.toString()] = "";
+    });
 
-      if (!response.ok) throw new Error("Failed to create booking");
-      await response.json();
+    setFormData(resetData);
+    setCurrentStep(1);
+    setBookingSummary({
+      branch: null,
+      service: null,
+      staff: null,
+      dynamicParameters: [],
+      date: "",
+      time: "",
+      customer: null,
+    });
+  } catch (error) {
+    console.error("❌ Error creating booking:", error);
+    showAlert(
+      "Booking Failed",
+      "Failed to create booking. Please try again.",
+      "destructive"
+    );
+  } finally {
+    setSubmitting(false);
+  }
+};
 
-      showAlert("Booking Confirmed!", "Your appointment has been successfully scheduled.");
-
-      // Reset form
-      const resetData: FormData = {
-        branch: "",
-        service: "",
-        staff: "",
-        date: "",
-        selectedTime: "",
-        customerNo: userRole === "admin" ? "" : customerNo,
-        bookingNote: "",
-      };
-
-      dynamicParameters.forEach((param) => {
-        resetData[param.BookingParameterId.toString()] = "";
-      });
-
-      setFormData(resetData);
-      setCurrentStep(1);
-      setBookingSummary({
-        branch: null,
-        service: null,
-        staff: null,
-        dynamicParameters: [],
-        date: "",
-        time: "",
-        customer: null,
-      });
-    } catch (error) {
-      console.error("❌ Error creating booking:", error);
-      showAlert(
-        "Booking Failed",
-        "Failed to create booking. Please try again.",
-        "destructive"
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   // Set customer number for non-admin users and auto-advance
   useEffect(() => {
