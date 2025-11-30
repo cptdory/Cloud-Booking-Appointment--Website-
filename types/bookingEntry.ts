@@ -2,7 +2,7 @@ export type BookingEntry = {
   BookingParameterValueIds?: string;
   ServiceId?: string;
   StaffId?: string;
-  EntryNo: number;
+  EntryNo: string;
   BookingStartDate: string;
   BookingEndDate: string;
   BookingStartTime: string;
@@ -16,6 +16,9 @@ export type BookingEntry = {
   StaffCode: string;
   StaffName: string;
   TimeOff: boolean;
+  TimeOffStartTime?: string;
+  TimeOffEndTime?: string;
+  TimeOffReason?: string;
   CustomerNo: string;
   Name: string;
   Name2: string;

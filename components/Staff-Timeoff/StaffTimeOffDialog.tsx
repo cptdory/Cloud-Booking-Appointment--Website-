@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -49,23 +49,54 @@ const timeOptions = [
   "20:00",
 ];
 
-export default function StaffTimeOffDialog() {
+interface StaffTimeOffDialogProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  initialData?: {
+    entryNo: string;
+    staffCode: string;
+    staffName: string;
+    date: Date;
+    startTime: string;
+    endTime: string;
+    wholeDay: boolean;
+    reason: string;
+  };
+  onSuccess?: () => void;
+}
+
+export default function StaffTimeOffDialog({
+  open: controlledOpen,
+  onOpenChange: controlledOpenChange,
+  initialData,
+  onSuccess,
+}: StaffTimeOffDialogProps) {
   const { userRole, username } = useAuth();
-  
-  const [open, setOpen] = useState(false);
-  const [date, setDate] = useState<Date | undefined>();
-  const [startTime, setStartTime] = useState<string>();
-  const [endTime, setEndTime] = useState<string>();
-  const [wholeDay, setWholeDay] = useState(false);
-  const [reason, setReason] = useState<string>();
-  
-  // Staff data
+
+  // Use controlled or internal state
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = (value: boolean) => {
+    if (controlledOpenChange) {
+      controlledOpenChange(value);
+    } else {
+      setInternalOpen(value);
+    }
+  };
+
+  const isEditMode = !!initialData;
+
+  const [date, setDate] = useState<Date | undefined>(initialData?.date);
+  const [startTime, setStartTime] = useState<string | undefined>(initialData?.startTime);
+  const [endTime, setEndTime] = useState<string | undefined>(initialData?.endTime);
+  const [wholeDay, setWholeDay] = useState(initialData?.wholeDay ?? false);
+  const [reason, setReason] = useState<string | undefined>(initialData?.reason);
+
   const [staffList, setStaffList] = useState<any[]>([]);
-  const [selectedStaffCode, setSelectedStaffCode] = useState<string>();
-  const [selectedStaffName, setSelectedStaffName] = useState<string>();
+  const [selectedStaffCode, setSelectedStaffCode] = useState<string | undefined>(initialData?.staffCode);
+  const [selectedStaffName, setSelectedStaffName] = useState<string | undefined>(initialData?.staffName);
   const [loadingStaff, setLoadingStaff] = useState(false);
 
-  // Submit state
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -138,12 +169,11 @@ export default function StaffTimeOffDialog() {
     setSelectedStaffName(staff?.BookingParamterValueDescription || "");
   };
 
-  // Submit handler
+  // Submit handler (create or update)
   const handleSubmit = async () => {
     setSubmitError(null);
     setSubmitSuccess(false);
 
-    // Validation
     if (!selectedStaffCode || !selectedStaffName || !date || (!wholeDay && (!startTime || !endTime))) {
       setSubmitError("Please fill in all required fields");
       return;
@@ -151,32 +181,55 @@ export default function StaffTimeOffDialog() {
 
     setSubmitting(true);
     try {
-      const body = {
-        _BookingSetupCode: "MAIN",
-        _StaffCode: selectedStaffCode,
-        _StaffName: selectedStaffName,
-        _TimeOffDate: format(date, "MM/dd/yyyy"),
-        _TimeOffStartTime: wholeDay ? "" : startTime,
-        _TimeOffEndTime: wholeDay ? "" : endTime,
-        _WholeDay: String(wholeDay),
-        _TimeOffReason: reason || "",
-      };
+      if (isEditMode) {
+        // UPDATE
+        const body = {
+          _BookingSetupCode: "MAIN",
+          _BookingEntryNo: String(initialData.entryNo),
+          _StaffCode: selectedStaffCode,
+          _StaffName: selectedStaffName,
+          _TimeOffDate: format(date, "MM/dd/yyyy"),
+          _TimeOffStartTime: wholeDay ? "" : startTime,
+          _TimeOffEndTime: wholeDay ? "" : endTime,
+          _WholeDay: String(wholeDay),
+          _TimeOffReason: reason || "",
+        };
 
-      const res = await fetch("/api/booking-staff-timeoff/create-booking-staff-timeoff", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
+        const res = await fetch("/api/booking-staff-timeoff/update-booking-staff-timeoff", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
 
-      const json = await res.json();
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Failed to update time off");
 
-      if (!res.ok) {
-        throw new Error(json.error || "Failed to create time off");
+        setSubmitSuccess(true);
+      } else {
+        // CREATE
+        const body = {
+          _BookingSetupCode: "MAIN",
+          _StaffCode: selectedStaffCode,
+          _StaffName: selectedStaffName,
+          _TimeOffDate: format(date, "MM/dd/yyyy"),
+          _TimeOffStartTime: wholeDay ? "" : startTime,
+          _TimeOffEndTime: wholeDay ? "" : endTime,
+          _WholeDay: String(wholeDay),
+          _TimeOffReason: reason || "",
+        };
+
+        const res = await fetch("/api/booking-staff-timeoff/create-booking-staff-timeoff", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Failed to create time off");
+
+        setSubmitSuccess(true);
       }
 
-      setSubmitSuccess(true);
       // Reset form
       setSelectedStaffCode("");
       setSelectedStaffName("");
@@ -185,9 +238,12 @@ export default function StaffTimeOffDialog() {
       setEndTime(undefined);
       setWholeDay(false);
       setReason("");
-      
+
       // Close dialog after 2 seconds
-      setTimeout(() => setOpen(false), 2000);
+      setTimeout(() => {
+        setOpen(false);
+        if (onSuccess) onSuccess();
+      }, 2000);
     } catch (err: any) {
       setSubmitError(err.message || "An error occurred");
     } finally {
@@ -207,9 +263,11 @@ export default function StaffTimeOffDialog() {
 
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader className="shrink-0">
-          <DialogTitle className="text-2xl">Add Staff Time Off</DialogTitle>
+          <DialogTitle className="text-2xl">
+            {isEditMode ? "Edit Staff Time Off" : "Add Staff Time Off"}
+          </DialogTitle>
           <DialogDescription className="text-base">
-            Record time off for staff members.
+            {isEditMode ? "Update time off details." : "Record time off for staff members."}
           </DialogDescription>
         </DialogHeader>
 
@@ -225,7 +283,11 @@ export default function StaffTimeOffDialog() {
             <div className="space-y-4">
               <div className="grid grid-cols-[120px_1fr] items-center gap-4">
                 <Label htmlFor="staff-code">Staff Code</Label>
-                <Select value={selectedStaffCode || ""} onValueChange={handleStaffCodeChange} disabled={loadingStaff || (userRole === "admin" && staffList.length === 1)}>
+                <Select
+                  value={selectedStaffCode || ""}
+                  onValueChange={handleStaffCodeChange}
+                  disabled={loadingStaff || (isEditMode) || (userRole === "admin" && staffList.length === 1)}
+                >
                   <SelectTrigger id="staff-code">
                     <SelectValue placeholder={loadingStaff ? "Loading..." : "Select staff code"} />
                   </SelectTrigger>
@@ -241,7 +303,12 @@ export default function StaffTimeOffDialog() {
 
               <div className="grid grid-cols-[120px_1fr] items-center gap-4">
                 <Label>Staff Name</Label>
-                <Input readOnly className="bg-muted/50" value={selectedStaffName} placeholder="Auto-filled from selection" />
+                <Input
+                  readOnly
+                  className="bg-muted/50"
+                  value={selectedStaffName}
+                  placeholder="Auto-filled from selection"
+                />
               </div>
             </div>
           </section>
@@ -291,7 +358,7 @@ export default function StaffTimeOffDialog() {
                   </PopoverTrigger>
                   <PopoverContent className="w-40 p-0">
                     <div className="max-h-60 overflow-y-auto">
-                      {timeOptions.map(t => (
+                      {timeOptions.map((t) => (
                         <Button
                           key={t}
                           variant="ghost"
@@ -322,7 +389,7 @@ export default function StaffTimeOffDialog() {
                   </PopoverTrigger>
                   <PopoverContent className="w-40 p-0">
                     <div className="max-h-60 overflow-y-auto">
-                      {timeOptions.map(t => (
+                      {timeOptions.map((t) => (
                         <Button
                           key={t}
                           variant="ghost"
@@ -368,7 +435,7 @@ export default function StaffTimeOffDialog() {
           {/* Success Message */}
           {submitSuccess && (
             <div className="p-3 bg-green-50 border border-green-200 rounded text-green-700 text-sm">
-              Time off created successfully!
+              {isEditMode ? "Time off updated successfully!" : "Time off created successfully!"}
             </div>
           )}
 
@@ -380,7 +447,7 @@ export default function StaffTimeOffDialog() {
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting ? "Creating..." : "Add Time Off"}
+            {submitting ? (isEditMode ? "Updating..." : "Creating...") : isEditMode ? "Update Time Off" : "Add Time Off"}
           </Button>
         </div>
       </DialogContent>

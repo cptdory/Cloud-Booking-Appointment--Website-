@@ -92,6 +92,8 @@ export default function BookingCalendar() {
   const [isMobile, setIsMobile] = useState(false);
   const [currentTitle, setCurrentTitle] = useState<string>("");
   const [initialLoading, setInitialLoading] = useState(true);
+  const [isDeletingTimeOff, setIsDeletingTimeOff] = useState(false);
+  const [showTimeOffDialog, setShowTimeOffDialog] = useState(false);
 
   const branchCode = searchParams.get("code") || "MAIN";
 
@@ -130,16 +132,16 @@ export default function BookingCalendar() {
         }`;
 
         const staffColor = getStaffColor(entry.StaffCode);
-        
+
         // Determine event title based on TimeOff flag
-        // For non-time-off: include service name with staff name
         let eventTitle = "";
         if (entry.TimeOff) {
           eventTitle = "Time Off";
         } else {
+          // Show service name and customer name
           const serviceName = entry.ServiceName || "-";
-          const staffName = entry.StaffName || entry.StaffCode;
-          eventTitle = `${serviceName} - ${staffName}`;
+          const customerName = entry.Name2 || entry.Name || entry.CustomerNo || "-";
+          eventTitle = `${serviceName} - ${customerName}`;
         }
 
         return {
@@ -335,6 +337,66 @@ export default function BookingCalendar() {
     },
     [selectedEvent, updateBookingStatus, showAlert]
   );
+
+  // Handle delete time off
+  const handleDeleteTimeOff = useCallback(async () => {
+    if (!selectedEvent?.extendedProps.rawData?.TimeOff) return;
+
+    if (!confirm("Are you sure you want to delete this time off?")) return;
+
+    setIsDeletingTimeOff(true);
+
+    try {
+      const body = {
+        _BookingEntryNo: selectedEvent.extendedProps.rawData.EntryNo.toString(),
+      };
+
+      // 🔥 Log the body being sent
+      console.log("Deleting Time Off Body:", body);
+
+      const res = await fetch(
+        "/api/booking-staff-timeoff/delete-booking-staff-timeoff",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        throw new Error(json.error || "Failed to delete time off");
+      }
+
+      showAlert("Success", "Time off deleted successfully", "default");
+
+      if (currentDateRange) {
+        await fetchBookingEntries(
+          branchCode,
+          currentDateRange.start,
+          currentDateRange.end
+        );
+      }
+
+      setIsModalOpen(false);
+      setSelectedEvent(null);
+    } catch (error: any) {
+      showAlert(
+        "Delete Failed",
+        error.message || "Failed to delete time off",
+        "destructive"
+      );
+    } finally {
+      setIsDeletingTimeOff(false);
+    }
+  }, [
+    selectedEvent,
+    branchCode,
+    currentDateRange,
+    fetchBookingEntries,
+    showAlert,
+  ]);
 
   // Handle view change - prevent non-list views on mobile
   const handleViewChange = useCallback(
@@ -572,7 +634,7 @@ export default function BookingCalendar() {
               dayMaxEvents={isMobile ? 1 : 3}
               weekends={true}
               nowIndicator={true}
-              displayEventTime={true}
+              displayEventTime={calendarView === "listWeek"}
               eventTimeFormat={{
                 hour: "2-digit",
                 minute: "2-digit",
@@ -602,7 +664,7 @@ export default function BookingCalendar() {
         </CardContent>
       </Card>
 
-      {/* Event Details Dialog - Keep the same JSX structure */}
+      {/* Event Details Dialog */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-0 gap-0">
           <DialogHeader className="px-6 py-5 border-b">
@@ -922,7 +984,31 @@ export default function BookingCalendar() {
             </div>
           )}
 
-          <DialogFooter className="px-6 py-4 border-t">
+          <DialogFooter className="px-6 py-4 border-t flex justify-between">
+            <div className="flex gap-2">
+              {selectedEvent?.extendedProps.rawData?.TimeOff && (
+                <>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleDeleteTimeOff}
+                    disabled={isDeletingTimeOff}
+                  >
+                    {isDeletingTimeOff ? "Deleting..." : "Delete Time Off"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setIsModalOpen(false);
+                      setShowTimeOffDialog(true);
+                    }}
+                  >
+                    Edit Time Off
+                  </Button>
+                </>
+              )}
+            </div>
             <Button
               variant="outline"
               onClick={() => setIsModalOpen(false)}
@@ -933,6 +1019,55 @@ export default function BookingCalendar() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Time Off Dialog (for create/update) */}
+      {showTimeOffDialog && (
+        <StaffTimeOffDialog
+          open={showTimeOffDialog}
+          onOpenChange={setShowTimeOffDialog}
+          initialData={
+            selectedEvent?.extendedProps.rawData?.TimeOff
+              ? {
+                  entryNo: selectedEvent.id,
+                  staffCode: selectedEvent.extendedProps.staffCode,
+                  staffName: selectedEvent.extendedProps.staff,
+                  date: new Date(selectedEvent.start),
+                  startTime: new Date(selectedEvent.start).toLocaleTimeString(
+                    "en-US",
+                    {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false,
+                    }
+                  ),
+                  endTime: new Date(selectedEvent.end).toLocaleTimeString(
+                    "en-US",
+                    {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false,
+                    }
+                  ),
+                  wholeDay:
+                    !selectedEvent.extendedProps.rawData.TimeOffStartTime ||
+                    !selectedEvent.extendedProps.rawData.TimeOffEndTime,
+                  reason: selectedEvent.extendedProps.description || "",
+                }
+              : undefined
+          }
+          onSuccess={() => {
+            setShowTimeOffDialog(false);
+            setIsModalOpen(false);
+            if (currentDateRange) {
+              fetchBookingEntries(
+                branchCode,
+                currentDateRange.start,
+                currentDateRange.end
+              );
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

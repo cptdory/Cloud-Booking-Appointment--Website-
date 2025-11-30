@@ -16,7 +16,7 @@ export function SiteHeader() {
         />
 
         <h1 className="text-lg font-semibold text-white">
-          CITS - Booking System
+          Booking System
         </h1>
       </div>
 
