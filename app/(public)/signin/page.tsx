@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Eye, EyeOff } from "lucide-react";
@@ -20,40 +21,38 @@ const LoginForm = ({ isAdmin = false }: { isAdmin?: boolean }) => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError("");
-  setIsLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
 
-  try {
-    const res = await fetch("/api/auth/login-user", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        _PortalUsername: username,
-        _PortalPassword: password,
-        _IsAdminLogin: isAdmin ? "true" : "false", 
-      }),
-      // Add cache control to prevent caching
-      cache: 'no-store',
-    });
+    try {
+      const res = await fetch("/api/auth/login-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          _PortalUsername: username,
+          _PortalPassword: password,
+          _IsAdminLogin: isAdmin ? "true" : "false",
+        }),
+        cache: "no-store",
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      setError(data.error || data.message || "Login failed");
+      if (!res.ok) {
+        setError(data.error || data.message || "Login failed");
+        setIsLoading(false);
+        return;
+      }
+
+      // Clear any cached data and redirect
+      window.location.href = isAdmin ? "/calendar" : "/booking";
+    } catch (err) {
+      setError("Something went wrong");
       setIsLoading(false);
-      return;
     }
-
-    // Clear any cached data and redirect
-    window.location.href = isAdmin ? "/calendar" : "/booking";
-    
-  } catch (err) {
-    setError("Something went wrong");
-    setIsLoading(false);
-  }
-};
+  };
 
   return (
     <form onSubmit={handleSubmit}>
@@ -73,14 +72,18 @@ const handleSubmit = async (e: React.FormEvent) => {
           type="text"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          placeholder={isAdmin ? "admin@example.com" : "email@example.com / C00101"}
+          placeholder={
+            isAdmin ? "admin@example.com" : "email@example.com / C00101"
+          }
           className="bg-blue-50 border-blue-200 text-blue-900 placeholder-blue-400 dark:bg-[#2C303B] dark:border-gray-600 dark:text-white"
         />
       </div>
 
       {/* Password */}
       <div className="mb-8">
-        <Label className="mb-3 block text-sm font-medium text-blue-900 dark:text-white">Password</Label>
+        <Label className="mb-3 block text-sm font-medium text-blue-900 dark:text-white">
+          Password
+        </Label>
         <div className="relative">
           <Input
             type={showPassword ? "text" : "password"}
@@ -106,7 +109,9 @@ const handleSubmit = async (e: React.FormEvent) => {
           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5"
           disabled={isLoading}
         >
-          {isLoading ? "Signing in..." : `Sign in as ${isAdmin ? "Admin" : "Customer"}`}
+          {isLoading
+            ? "Signing in..."
+            : `Sign in as ${isAdmin ? "Admin" : "Customer"}`}
         </Button>
       </div>
     </form>
@@ -124,26 +129,19 @@ export default function SigninPage() {
           <div className="-mx-4 flex flex-wrap">
             <div className="w-full px-4">
               <div className="shadow-lg dark:bg-dark mx-auto max-w-[500px] rounded-xl bg-white px-6 py-10 sm:p-[60px] border border-blue-100 dark:border-gray-700">
-                {/* Branding Section */}
-                <div className="text-center">
-                  <div className="inline-block">
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                        Squadlethics
-                      </h1>
-                    </div>
-                  </div>
-                </div>
-
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 mb-8 bg-blue-100 dark:bg-gray-800 p-1 rounded-lg">
-                    <TabsTrigger 
+                <Tabs
+                  value={activeTab}
+                  onValueChange={setActiveTab}
+                  className="w-full"
+                >
+                  <TabsList className="grid w-full grid-cols-2 mb-4 bg-blue-100 dark:bg-gray-800 p-1 rounded-lg">
+                    <TabsTrigger
                       value="customer"
                       className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md transition-colors text-blue-900 dark:text-gray-200"
                     >
                       Customer Login
                     </TabsTrigger>
-                    <TabsTrigger 
+                    <TabsTrigger
                       value="admin"
                       className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md transition-colors text-blue-900 dark:text-gray-200"
                     >
@@ -152,15 +150,32 @@ export default function SigninPage() {
                   </TabsList>
 
                   <TabsContent value="customer" className="space-y-6">
-                    <h3 className="mb-3 text-center text-2xl font-bold text-blue-900 sm:text-3xl dark:text-white">
-                      Sign in to your account
-                    </h3>
+                    <div className="flex justify-center mb-0">
+                      <Image
+                        src="/images/squadlethics-1.jpg"
+                        alt="Squadlethics Logo"
+                        width={280}
+                        height={100}
+                        className="h-auto w-auto"
+                        priority
+                      />
+                    </div>
+                    {/* Branding Section */}
+                    <div className="text-center">
+                      <div className="inline-block">
+                        <div className="flex items-center justify-center gap-2 mb-0">
+                          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                            Squadlethics
+                          </h1>
+                        </div>
+                      </div>
+                    </div>
                     <p className="text-blue-700 mb-6 text-center text-base font-medium dark:text-gray-300">
                       Login to your customer account.
                     </p>
-                    
+
                     <LoginForm isAdmin={false} />
-                    
+
                     <p className="text-blue-700 text-center text-base font-medium dark:text-gray-300">
                       Don't have an account?{" "}
                       <Link
@@ -173,15 +188,32 @@ export default function SigninPage() {
                   </TabsContent>
 
                   <TabsContent value="admin" className="space-y-6">
-                    <h3 className="mb-3 text-center text-2xl font-bold text-blue-900 sm:text-3xl dark:text-white">
-                      Admin Sign In
-                    </h3>
+                    <div className="flex justify-center mb-0">
+                      <Image
+                        src="/images/squadlethics-1.jpg"
+                        alt="Squadlethics Logo"
+                        width={280}
+                        height={100}
+                        className="h-auto w-auto"
+                        priority
+                      />
+                    </div>
+                    {/* Branding Section */}
+                    <div className="text-center">
+                      <div className="inline-block">
+                        <div className="flex items-center justify-center gap-2 mb-0">
+                          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                            Squadlethics
+                          </h1>
+                        </div>
+                      </div>
+                    </div>
                     <p className="text-blue-700 mb-6 text-center text-base font-medium dark:text-gray-300">
                       Login to your admin account.
                     </p>
-                    
+
                     <LoginForm isAdmin={true} />
-                    
+
                     <p className="text-blue-700 text-center text-base font-medium dark:text-gray-300">
                       Need customer access?{" "}
                       <button
@@ -197,7 +229,7 @@ export default function SigninPage() {
             </div>
           </div>
         </div>
-        
+
         {/* SVG Mask - Updated with blue theme */}
         <div className="absolute bottom-0 left-0 z-[-1]">
           <svg

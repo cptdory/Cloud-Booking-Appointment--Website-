@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
+import Image from "next/image";
 export default function SignupPage() {
   const router = useRouter();
 
@@ -113,17 +113,6 @@ export default function SignupPage() {
           <div className="-mx-4 flex flex-wrap">
             <div className="w-full px-4">
               <div className="shadow-lg dark:bg-dark mx-auto max-w-[700px] rounded-xl bg-white px-6 py-10 sm:p-[60px] border border-blue-100 dark:border-gray-700">
-                {/* Branding Section */}
-                <div className="text-center">
-                  <div className="inline-block">
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                        Squadlethics
-                      </h1>
-                    </div>
-                  </div>
-                </div>
-
                 <Tabs
                   value={activeTab}
                   onValueChange={setActiveTab}
@@ -146,9 +135,26 @@ export default function SignupPage() {
 
                   {/* Customer Signup Tab */}
                   <TabsContent value="customer" className="space-y-6">
-                    <h3 className="mb-3 text-center text-2xl font-bold text-blue-900 sm:text-3xl dark:text-white">
-                      Create Customer Account
-                    </h3>
+                    <div className="flex justify-center mb-0">
+                      <Image
+                        src="/images/squadlethics-1.jpg"
+                        alt="Squadlethics Logo"
+                        width={280}
+                        height={100}
+                        className="h-auto w-auto"
+                        priority
+                      />
+                    </div>
+                    {/* Branding Section */}
+                    <div className="text-center">
+                      <div className="inline-block">
+                        <div className="flex items-center justify-center gap-2 mb-0">
+                          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                            Squadlethics
+                          </h1>
+                        </div>
+                      </div>
+                    </div>
                     <p className="text-blue-700 mb-6 text-center text-base font-medium dark:text-gray-300">
                       Sign up as a customer to browse and make appointments.
                     </p>
@@ -299,9 +305,26 @@ export default function SignupPage() {
 
                   {/* Admin Signup Tab */}
                   <TabsContent value="admin" className="space-y-6">
-                    <h3 className="mb-3 text-center text-2xl font-bold text-blue-900 sm:text-3xl dark:text-white">
-                      Create Admin Account
-                    </h3>
+                    <div className="flex justify-center mb-0">
+                      <Image
+                        src="/images/squadlethics-1.jpg"
+                        alt="Squadlethics Logo"
+                        width={280}
+                        height={100}
+                        className="h-auto w-auto"
+                        priority
+                      />
+                    </div>
+                    {/* Branding Section */}
+                    <div className="text-center">
+                      <div className="inline-block">
+                        <div className="flex items-center justify-center gap-2 mb-0">
+                          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                            Squadlethics
+                          </h1>
+                        </div>
+                      </div>
+                    </div>
                     <p className="text-blue-700 mb-6 text-center text-base font-medium dark:text-gray-300">
                       Sign up as Global Admin to manage the platform.
                     </p>
