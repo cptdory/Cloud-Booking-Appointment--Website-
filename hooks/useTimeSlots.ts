@@ -27,8 +27,8 @@ export function useTimeSlots() {
 
     try {
       const parameterIds = [
-        "4",
-        "5",
+        "1",
+        "2",
         ...dynamicParameters.map((p) => p.id),
       ].join("|");
       
