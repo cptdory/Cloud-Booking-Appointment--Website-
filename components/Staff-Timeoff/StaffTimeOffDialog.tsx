@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { format, parse } from "date-fns";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -72,6 +73,8 @@ export default function StaffTimeOffDialog({
   onSuccess,
 }: StaffTimeOffDialogProps) {
   const { userRole, username } = useAuth();
+  const searchParams = useSearchParams();
+  const bookingSetupCode = searchParams.get("code") || "MAIN";
 
   // Use controlled or internal state
   const [internalOpen, setInternalOpen] = useState(false);
@@ -108,7 +111,7 @@ export default function StaffTimeOffDialog({
     const fetchStaff = async () => {
       setLoadingStaff(true);
       try {
-        const res = await fetch("/api/booking-setup/get-booking-setup?code=MAIN");
+        const res = await fetch(`/api/booking-setup/get-booking-setup?code=${bookingSetupCode}`);
         const json = await res.json();
         const setup = json.value?.[0];
         
@@ -160,7 +163,7 @@ export default function StaffTimeOffDialog({
     };
 
     fetchStaff();
-  }, [open, userRole, username]);
+  }, [open, userRole, username, bookingSetupCode]);
 
   // Auto-fill staff name when code is selected
   const handleStaffCodeChange = (code: string) => {
@@ -184,7 +187,7 @@ export default function StaffTimeOffDialog({
       if (isEditMode) {
         // UPDATE
         const body = {
-          _BookingSetupCode: "MAIN",
+          _BookingSetupCode: bookingSetupCode,
           _BookingEntryNo: String(initialData.entryNo),
           _StaffCode: selectedStaffCode,
           _StaffName: selectedStaffName,
@@ -208,7 +211,7 @@ export default function StaffTimeOffDialog({
       } else {
         // CREATE
         const body = {
-          _BookingSetupCode: "MAIN",
+          _BookingSetupCode: bookingSetupCode,
           _StaffCode: selectedStaffCode,
           _StaffName: selectedStaffName,
           _TimeOffDate: format(date, "MM/dd/yyyy"),

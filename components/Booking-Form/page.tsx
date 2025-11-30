@@ -97,6 +97,7 @@ export default function BookingForm() {
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [latestCompletedStep, setLatestCompletedStep] = useState<number>(1);
+  const [modifiedSteps, setModifiedSteps] = useState<Set<number>>(new Set());
   const [formData, setFormData] = useState<FormData>({
     branch: "",
     service: "",
@@ -202,8 +203,8 @@ export default function BookingForm() {
   }, [formData, branches, bookingSetup, staffAssignments, customers, userRole, customerNo, username]);
 
   const handleStepSelection = (step: number) => {
-    // Can only go back to the latest completed step or earlier
-    if (step <= latestCompletedStep) {
+    // Can click on any step up to latestCompletedStep, or any unmodified step
+    if (step <= latestCompletedStep || !modifiedSteps.has(step)) {
       setCurrentStep(step);
     }
   };
@@ -229,6 +230,13 @@ export default function BookingForm() {
 
     // If changing a field in a previous step and value is different
     if (fieldStep < currentStep && formData[field] !== value) {
+      // Mark all steps after this one as modified
+      const newModifiedSteps = new Set(modifiedSteps);
+      for (let i = fieldStep + 1; i <= 5; i++) {
+        newModifiedSteps.add(i);
+      }
+      setModifiedSteps(newModifiedSteps);
+      
       // Reset latestCompletedStep to this step
       setLatestCompletedStep(fieldStep);
     }
@@ -244,6 +252,11 @@ export default function BookingForm() {
         await fetchBookingSetup(value);
         setCurrentStep(2);
         setLatestCompletedStep(2);
+        
+        // Mark step 2 as not modified since we just auto-advanced
+        const newModifiedSteps = new Set(modifiedSteps);
+        newModifiedSteps.delete(2);
+        setModifiedSteps(newModifiedSteps);
       } catch (error: any) {
         showAlert(
           "Failed to Load Branch Details",
@@ -274,6 +287,11 @@ export default function BookingForm() {
         await fetchStaffAssignments(formData.branch, value);
         setCurrentStep(3);
         setLatestCompletedStep(3);
+        
+        // Mark step 3 as not modified since we just auto-advanced
+        const newModifiedSteps = new Set(modifiedSteps);
+        newModifiedSteps.delete(3);
+        setModifiedSteps(newModifiedSteps);
       } catch (error: any) {
         showAlert(
           "Failed to Load Staff Assignments",
@@ -300,11 +318,21 @@ export default function BookingForm() {
         if (allDynamicSelected) {
           setCurrentStep(4);
           setLatestCompletedStep(4);
+          
+          // Mark step 4 as not modified since we just auto-advanced
+          const newModifiedSteps = new Set(modifiedSteps);
+          newModifiedSteps.delete(4);
+          setModifiedSteps(newModifiedSteps);
         }
       }
     } else if (field === "selectedTime" && value && currentStep === 4) {
       setCurrentStep(5);
       setLatestCompletedStep(5);
+      
+      // Mark step 5 as not modified since we just auto-advanced
+      const newModifiedSteps = new Set(modifiedSteps);
+      newModifiedSteps.delete(5);
+      setModifiedSteps(newModifiedSteps);
     }
   };
 
@@ -656,37 +684,40 @@ export default function BookingForm() {
         <CardContent className="p-6">
           {/* Numbers + Chevrons */}
           <div className="grid grid-cols-5 gap-0">
-            {[1, 2, 3, 4, 5].map((step) => (
-              <div key={step} className="flex flex-col items-center">
-                <button
-                  onClick={() => handleStepSelection(step)}
-                  disabled={step > latestCompletedStep}
-                  className={`flex items-center justify-center w-8 h-8 rounded-full transition-all
-                    ${
-                      currentStep >= step
-                        ? "bg-blue-600 text-white"
-                        : "bg-blue-100 text-blue-400"
-                    }
-                    ${
-                      step <= latestCompletedStep
-                        ? "cursor-pointer hover:bg-blue-700"
-                        : "cursor-not-allowed opacity-60"
-                    }
-                  `}
-                >
-                  {step}
-                </button>
+            {[1, 2, 3, 4, 5].map((step) => {
+              const isClickable = step <= latestCompletedStep || !modifiedSteps.has(step);
+              const isCompleted = step <= latestCompletedStep;
+              
+              return (
+                <div key={step} className="flex flex-col items-center">
+                  <button
+                    onClick={() => handleStepSelection(step)}
+                    disabled={!isClickable}
+                    className={`flex items-center justify-center w-8 h-8 rounded-full transition-all font-semibold
+                      ${
+                        isCompleted
+                          ? "bg-blue-600 text-white"
+                          : isClickable
+                          ? "bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer"
+                          : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                      }
+                    `}
+                    title={!isClickable ? "This step has unsaved changes" : ""}
+                  >
+                    {step}
+                  </button>
 
-                {/* Chevron Below Circle (except last) */}
-                {step < 5 && (
-                  <ChevronRight
-                    className={`w-4 h-4 mt-1 ${
-                      currentStep > step ? "text-blue-600" : "text-blue-200"
-                    }`}
-                  />
-                )}
-              </div>
-            ))}
+                  {/* Chevron Below Circle (except last) */}
+                  {step < 5 && (
+                    <ChevronRight
+                      className={`w-4 h-4 mt-1 ${
+                        isCompleted ? "text-blue-600" : "text-blue-200"
+                      }`}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* Step Labels */}
