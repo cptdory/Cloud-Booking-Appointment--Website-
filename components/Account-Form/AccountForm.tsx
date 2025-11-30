@@ -101,9 +101,11 @@ export default function AccountForm() {
         }
 
         setUserData(authData.user);
-        const isAdminRole = authData.user?.role === "admin" || authData.user?.role === "global-admin";
+        const isAdminRole =
+          authData.user?.role === "admin" ||
+          authData.user?.role === "global-admin";
         const isCustomerRole = authData.user?.role === "customer";
-        
+
         setIsAdmin(isAdminRole);
         setIsCustomer(isCustomerRole);
 
@@ -128,7 +130,11 @@ export default function AccountForm() {
   }, [router]);
 
   // Function to fetch staff color for a single staff member
-  const fetchStaffColor = async (bookingSetup: { code: string; parameterId: number; parameterValueId: number }) => {
+  const fetchStaffColor = async (bookingSetup: {
+    code: string;
+    parameterId: number;
+    parameterValueId: number;
+  }) => {
     try {
       const requestBody = {
         _BookingSetupCode: bookingSetup.code,
@@ -136,11 +142,14 @@ export default function AccountForm() {
         _BookingParameterValueId: bookingSetup.parameterValueId.toString(),
       };
 
-      const res = await fetch("/api/booking-staff-auth/get-booking-staff-color", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
+      const res = await fetch(
+        "/api/booking-staff-auth/get-booking-staff-color",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+        }
+      );
 
       if (!res.ok) {
         console.error("❌ Failed to fetch staff color");
@@ -150,9 +159,12 @@ export default function AccountForm() {
       const data = await res.json();
 
       if (data.staffColors && data.staffColors[bookingSetup.parameterValueId]) {
-        const newColor = data.staffColors[bookingSetup.parameterValueId].background;
+        const newColor =
+          data.staffColors[bookingSetup.parameterValueId].background;
         setStaffColor(newColor);
-        setUserData((prev) => prev ? { ...prev, staffColor: newColor } : null);
+        setUserData((prev) =>
+          prev ? { ...prev, staffColor: newColor } : null
+        );
       } else {
         setStaffColor("#3b82f6");
       }
@@ -218,8 +230,10 @@ export default function AccountForm() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               _BookingSetupCode: userData.currentBookingSetup.code,
-              _BookingParameterId: userData.currentBookingSetup.parameterId.toString(),
-              _BookingParameterValueId: userData.currentBookingSetup.parameterValueId.toString(),
+              _BookingParameterId:
+                userData.currentBookingSetup.parameterId.toString(),
+              _BookingParameterValueId:
+                userData.currentBookingSetup.parameterValueId.toString(),
               _PortalPassword: newPassword,
             }),
           }
@@ -271,8 +285,10 @@ export default function AccountForm() {
     try {
       const requestBody = {
         _BookingSetupCode: userData.currentBookingSetup.code,
-        _BookingParameterId: userData.currentBookingSetup.parameterId.toString(),
-        _BookingParameterValueId: userData.currentBookingSetup.parameterValueId.toString(),
+        _BookingParameterId:
+          userData.currentBookingSetup.parameterId.toString(),
+        _BookingParameterValueId:
+          userData.currentBookingSetup.parameterValueId.toString(),
         _StaffColor: staffColor,
       };
 
@@ -566,35 +582,35 @@ export default function AccountForm() {
 
                 {/* Editable Fields */}
                 <div className="space-y-4">
-                                      <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
-                      <Input
-                        id="name"
-                        value={customerDetails.name}
-                        onChange={(e) =>
-                          setCustomerDetails({
-                            ...customerDetails,
-                            name: e.target.value,
-                          })
-                        }
-                        placeholder="John Doe"
-                      />
-                    </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                      <div className="space-y-2">
-                    <Label htmlFor="birthDate">Birth Date</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Full Name</Label>
                     <Input
-                      id="birthDate"
-                      type="date"
-                      value={customerDetails.birthDate}
+                      id="name"
+                      value={customerDetails.name}
                       onChange={(e) =>
                         setCustomerDetails({
                           ...customerDetails,
-                          birthDate: e.target.value,
+                          name: e.target.value,
                         })
                       }
+                      placeholder="John Doe"
                     />
                   </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="birthDate">Birth Date</Label>
+                      <Input
+                        id="birthDate"
+                        type="date"
+                        value={customerDetails.birthDate}
+                        onChange={(e) =>
+                          setCustomerDetails({
+                            ...customerDetails,
+                            birthDate: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="age">Age</Label>
                       <Input
@@ -615,7 +631,10 @@ export default function AccountForm() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="email" className="flex items-center gap-2">
+                      <Label
+                        htmlFor="email"
+                        className="flex items-center gap-2"
+                      >
                         <Mail className="w-4 h-4" />
                         Email
                       </Label>
@@ -634,7 +653,10 @@ export default function AccountForm() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="phoneNo" className="flex items-center gap-2">
+                      <Label
+                        htmlFor="phoneNo"
+                        className="flex items-center gap-2"
+                      >
                         <Phone className="w-4 h-4" />
                         Phone Number
                       </Label>
@@ -709,9 +731,7 @@ export default function AccountForm() {
                   <Lock className="w-5 h-5 text-primary" />
                   Change Password
                 </CardTitle>
-                <CardDescription>
-                  Update your account password
-                </CardDescription>
+                <CardDescription>Update your account password</CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-4">
