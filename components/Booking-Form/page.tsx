@@ -96,6 +96,7 @@ export default function BookingForm() {
   const { alert, showAlert } = useAlert();
 
   const [currentStep, setCurrentStep] = useState<number>(1);
+  const [latestCompletedStep, setLatestCompletedStep] = useState<number>(1);
   const [formData, setFormData] = useState<FormData>({
     branch: "",
     service: "",
@@ -201,12 +202,37 @@ export default function BookingForm() {
   }, [formData, branches, bookingSetup, staffAssignments, customers, userRole, customerNo, username]);
 
   const handleStepSelection = (step: number) => {
-    if (step < currentStep) {
+    // Can only go back to the latest completed step or earlier
+    if (step <= latestCompletedStep) {
       setCurrentStep(step);
     }
   };
 
   const handleInputChange = async (field: keyof FormData, value: string): Promise<void> => {
+    // Check if we're changing a value in a previous step
+    const previousStepFields: { [key: number]: (keyof FormData)[] } = {
+      1: ["branch"],
+      2: ["service"],
+      3: ["staff"],
+      4: ["date", "selectedTime"],
+      5: ["customerNo"],
+    };
+
+    // Find which step this field belongs to
+    let fieldStep = 0;
+    for (const [step, fields] of Object.entries(previousStepFields)) {
+      if ((fields as (keyof FormData)[]).includes(field)) {
+        fieldStep = parseInt(step);
+        break;
+      }
+    }
+
+    // If changing a field in a previous step and value is different
+    if (fieldStep < currentStep && formData[field] !== value) {
+      // Reset latestCompletedStep to this step
+      setLatestCompletedStep(fieldStep);
+    }
+
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -217,6 +243,7 @@ export default function BookingForm() {
       try {
         await fetchBookingSetup(value);
         setCurrentStep(2);
+        setLatestCompletedStep(2);
       } catch (error: any) {
         showAlert(
           "Failed to Load Branch Details",
@@ -246,6 +273,7 @@ export default function BookingForm() {
       try {
         await fetchStaffAssignments(formData.branch, value);
         setCurrentStep(3);
+        setLatestCompletedStep(3);
       } catch (error: any) {
         showAlert(
           "Failed to Load Staff Assignments",
@@ -271,10 +299,12 @@ export default function BookingForm() {
 
         if (allDynamicSelected) {
           setCurrentStep(4);
+          setLatestCompletedStep(4);
         }
       }
     } else if (field === "selectedTime" && value && currentStep === 4) {
       setCurrentStep(5);
+      setLatestCompletedStep(5);
     }
   };
 
@@ -630,13 +660,18 @@ export default function BookingForm() {
               <div key={step} className="flex flex-col items-center">
                 <button
                   onClick={() => handleStepSelection(step)}
-                  className={`flex items-center justify-center w-8 h-8 rounded-full
+                  disabled={step > latestCompletedStep}
+                  className={`flex items-center justify-center w-8 h-8 rounded-full transition-all
                     ${
                       currentStep >= step
-                        ? "bg-blue-600 text-white cursor-pointer"
-                        : "bg-blue-100 text-blue-400 cursor-default"
+                        ? "bg-blue-600 text-white"
+                        : "bg-blue-100 text-blue-400"
                     }
-                    ${step < currentStep ? "hover:bg-blue-700" : ""}
+                    ${
+                      step <= latestCompletedStep
+                        ? "cursor-pointer hover:bg-blue-700"
+                        : "cursor-not-allowed opacity-60"
+                    }
                   `}
                 >
                   {step}
@@ -670,7 +705,7 @@ export default function BookingForm() {
         <div className="flex justify-between">
           <Button
             variant="outline"
-            onClick={() => handleStepSelection(currentStep - 1)}
+            onClick={() => setCurrentStep(currentStep - 1)}
             disabled={submitting}
             className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
           >

@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BookingEntry } from "@/types/bookingEntry";
 import { CalendarEvent } from "@/types/calendarEvent";
+import StaffTimeOffDialog from "@/components/Staff-Timeoff/StaffTimeOffDialog";
 
 // Import hooks
 import { useAuth } from "@/hooks/useAuth";
@@ -439,8 +441,10 @@ export default function BookingCalendar() {
                 </CardDescription>
               </div>
 
-              {/* View Controls - Hidden on mobile since only list view is available */}
-              <div className="flex items-center gap-2">
+              {/* View Controls + Time Off Button */}
+              <div className="flex items-center gap-3">
+                <StaffTimeOffDialog />
+
                 <div className="hidden sm:flex rounded-lg p-1">
                   <Button
                     variant={
@@ -596,7 +600,15 @@ export default function BookingCalendar() {
                       ? "secondary"
                       : "destructive"
                   }
-                  className="capitalize shrink-0 text-xs px-2 py-1"
+                  className={cn(
+                    "capitalize shrink-0 text-xs px-2 py-1",
+                    selectedEvent.extendedProps.status === "Active" &&
+                      "bg-green-100 text-green-800 border-green-300",
+                    selectedEvent.extendedProps.status === "Finalized" &&
+                      "bg-yellow-100 text-yellow-800 border-yellow-300",
+                    selectedEvent.extendedProps.status === "Cancelled" &&
+                      "bg-red-100 text-red-800 border-red-300"
+                  )}
                 >
                   {selectedEvent.extendedProps.status}
                 </Badge>
@@ -618,6 +630,13 @@ export default function BookingCalendar() {
                     Update Status
                   </h3>
 
+                  {(selectedEvent.extendedProps.status === "Finalized" ||
+                    selectedEvent.extendedProps.status === "Cancelled") && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded text-amber-700 text-sm">
+                      Status is locked and cannot be changed.
+                    </div>
+                  )}
+
                   <div className="flex gap-2 flex-wrap">
                     <Button
                       size="sm"
@@ -629,7 +648,9 @@ export default function BookingCalendar() {
                       onClick={() => handleStatusChange("Active")}
                       disabled={
                         isUpdatingStatus ||
-                        selectedEvent.extendedProps.status === "Active"
+                        selectedEvent.extendedProps.status === "Active" ||
+                        selectedEvent.extendedProps.status === "Finalized" ||
+                        selectedEvent.extendedProps.status === "Cancelled"
                       }
                       className="flex-1 sm:flex-none min-w-[90px]"
                     >
@@ -650,7 +671,8 @@ export default function BookingCalendar() {
                       onClick={() => handleStatusChange("Finalized")}
                       disabled={
                         isUpdatingStatus ||
-                        selectedEvent.extendedProps.status === "Finalized"
+                        selectedEvent.extendedProps.status === "Finalized" ||
+                        selectedEvent.extendedProps.status === "Cancelled"
                       }
                       className="flex-1 sm:flex-none min-w-[90px]"
                     >
@@ -671,7 +693,8 @@ export default function BookingCalendar() {
                       onClick={() => handleStatusChange("Cancelled")}
                       disabled={
                         isUpdatingStatus ||
-                        selectedEvent.extendedProps.status === "Cancelled"
+                        selectedEvent.extendedProps.status === "Cancelled" ||
+                        selectedEvent.extendedProps.status === "Finalized"
                       }
                       className="flex-1 sm:flex-none min-w-[90px]"
                     >
