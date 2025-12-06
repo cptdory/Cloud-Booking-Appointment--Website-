@@ -37,7 +37,7 @@ async function authLogin(accessToken: string, body: any, retry = true): Promise<
   const requestBody = {
     _PortalUsername: String(body._PortalUsername || ""),
     _PortalPassword: String(body._PortalPassword || ""),
-    _IsAdminLogin: String(body._IsAdminLogin || "false") // Ensure it's always a string
+    _IsAdminLogin: String(body._IsAdminLogin || "false")
   };
 
   const res = await fetch(url, {

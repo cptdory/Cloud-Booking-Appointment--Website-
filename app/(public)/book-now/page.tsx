@@ -1,4 +1,4 @@
-// page.tsx (refactored)
+// page.tsx (Public Booking)
 "use client";
 
 import { useState, useEffect } from "react";
@@ -11,11 +11,10 @@ import {
   Users,
   Briefcase,
   CheckCircle2,
-  User,
   ChevronRight,
   ArrowLeft,
-  ChevronsUpDown,
   Mail,
+  User,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,27 +22,23 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info, XCircle } from "lucide-react";
 import { Branch } from "@/types/branch";
 import { BookingParameter } from "@/types/bookingParameter";
 
-// Import hooks
-import { useAuth } from "@/hooks/useAuth";
+// Import hooks (only those that don't require authentication)
 import { useBranches } from "@/hooks/useBranches";
 import { useBookingSetup } from "@/hooks/useBookingSetup";
 import { useStaffAssignments } from "@/hooks/useStaffAssignments";
-import { useCustomers } from "@/hooks/useCustomers";
 import { useTimeSlots } from "@/hooks/useTimeSlots";
 import { useAlert } from "@/hooks/useAlert";
 import { useBookingParams } from "@/hooks/useBookingParams";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+// Import OTP Dialog component
+import { OTPDialog } from "@/components/otp-dialog";
 
 interface FormData {
   branch: string;
@@ -52,9 +47,8 @@ interface FormData {
   [key: string]: string;
   date: string;
   selectedTime: string;
-  customerNo: string;
-  customerEmail: string;
   customerName: string;
+  customerEmail: string;
   bookingNote: string;
 }
 
@@ -81,17 +75,15 @@ interface BookingSummary {
   date: string;
   time: string;
   customer: {
-    customerNo: string;
     name: string;
     email: string;
   } | null;
 }
 
-export default function BookingForm() {
+export default function PublicBooking() {
   const router = useRouter();
 
-  // Use hooks
-  const { userRole, username, customerNo, checkingAuth } = useAuth();
+  // Use hooks (no auth hooks needed)
   const { branches, loading: branchesLoading, fetchBranches } = useBranches();
   const {
     bookingSetup,
@@ -103,7 +95,6 @@ export default function BookingForm() {
     loading: staffLoading,
     fetchStaffAssignments,
   } = useStaffAssignments();
-  const { customers, loading: customersLoading } = useCustomers(userRole);
   const {
     availableTimeSlots,
     loading: timeSlotsLoading,
@@ -120,9 +111,8 @@ export default function BookingForm() {
     staff: "",
     date: "",
     selectedTime: "",
-    customerNo: "",
-    customerEmail: "",
     customerName: "",
+    customerEmail: "",
     bookingNote: "",
   });
 
@@ -137,8 +127,12 @@ export default function BookingForm() {
   });
 
   const [submitting, setSubmitting] = useState(false);
-  const [isCustomerPopoverOpen, setCustomerPopoverOpen] = useState(false);
-  const [customerSearch, setCustomerSearch] = useState("");
+  
+  // OTP Flow States
+  const [showOTPDialog, setShowOTPDialog] = useState(false);
+  const [isOTPVerified, setIsOTPVerified] = useState(false);
+  const [pendingBookingData, setPendingBookingData] = useState<any>(null);
+  const [processingBooking, setProcessingBooking] = useState(false);
 
   // Use booking params hook for dynamic parameters
   const dynamicParametersData = useBookingParams(
@@ -167,32 +161,14 @@ export default function BookingForm() {
         dynamicParameters: [],
         date: formData.date,
         time: formData.selectedTime,
-        customer: null,
+        customer:
+          formData.customerName && formData.customerEmail
+            ? {
+                name: formData.customerName,
+                email: formData.customerEmail,
+              }
+            : null,
       };
-
-      // Set customer info
-      if (userRole === "admin" || userRole === "global-admin") {
-        // For admin users, use selected customer
-        const selectedCustomer = customers.find(
-          (c) => c.customerNo === formData.customerNo
-        );
-        if (selectedCustomer) {
-          summary.customer = {
-            customerNo: selectedCustomer.customerNo,
-            name: selectedCustomer.name,
-            email: selectedCustomer.email || "",
-          };
-        }
-      } else {
-        // For non-admin users, use their own info
-        if (formData.customerNo) {
-          summary.customer = {
-            customerNo: formData.customerNo,
-            name: formData.customerName || username || "Customer",
-            email: formData.customerEmail || "",
-          };
-        }
-      }
 
       // Set service info
       if (bookingSetup && formData.service) {
@@ -255,9 +231,6 @@ export default function BookingForm() {
     branches,
     bookingSetup,
     staffAssignments,
-    customers,
-    userRole,
-    username,
   ]);
 
   const handleStepSelection = (step: number) => {
@@ -277,7 +250,7 @@ export default function BookingForm() {
       2: ["service"],
       3: ["staff"],
       4: ["date", "selectedTime"],
-      5: ["customerNo", "customerName", "customerEmail", "bookingNote"],
+      5: ["customerName", "customerEmail", "bookingNote"],
     };
 
     // Find which step this field belongs to
@@ -494,6 +467,86 @@ export default function BookingForm() {
     ).sort((a, b) => a.BookingParameterSequence - b.BookingParameterSequence);
   };
 
+  // Function to create booking after OTP verification
+  const createBooking = async (bookingData: any) => {
+    setProcessingBooking(true);
+    
+    try {
+      console.log("📤 Creating booking with data:", bookingData);
+
+      const response = await fetch(
+        "/api/available-timeslot/book-available-timeslot",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(bookingData),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create booking");
+      }
+
+      const result = await response.json();
+      console.log("✅ Booking created successfully:", result);
+
+      showAlert(
+        "Booking Confirmed!",
+        "Your appointment has been successfully scheduled. A confirmation email has been sent to you."
+      );
+
+      // Reset form
+      const resetData: FormData = {
+        branch: "",
+        service: "",
+        staff: "",
+        date: "",
+        selectedTime: "",
+        customerName: "",
+        customerEmail: "",
+        bookingNote: "",
+      };
+
+      const dynamicParameters = getDynamicParameters();
+      dynamicParameters.forEach((param) => {
+        resetData[param.BookingParameterId.toString()] = "";
+      });
+
+      setFormData(resetData);
+      setCurrentStep(1);
+      setLatestCompletedStep(1);
+      setModifiedSteps(new Set());
+      setBookingSummary({
+        branch: null,
+        service: null,
+        staff: null,
+        dynamicParameters: [],
+        date: "",
+        time: "",
+        customer: null,
+      });
+      
+      // Close OTP dialog
+      setShowOTPDialog(false);
+      setIsOTPVerified(false);
+      setPendingBookingData(null);
+      
+    } catch (error: any) {
+      console.error("❌ Error creating booking:", error);
+      showAlert(
+        "Booking Failed",
+        error.message || "Failed to create booking. Please try again.",
+        "destructive"
+      );
+    } finally {
+      setProcessingBooking(false);
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (
     e: React.MouseEvent<HTMLButtonElement>
   ): Promise<void> => {
@@ -504,17 +557,15 @@ export default function BookingForm() {
       (param) => formData[param.BookingParameterId.toString()]
     );
 
-    // Email validation for non-admin users
-    if (userRole !== "admin" && userRole !== "global-admin") {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.customerEmail)) {
-        showAlert(
-          "Invalid Email",
-          "Please enter a valid email address.",
-          "destructive"
-        );
-        return;
-      }
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.customerEmail)) {
+      showAlert(
+        "Invalid Email",
+        "Please enter a valid email address.",
+        "destructive"
+      );
+      return;
     }
 
     if (
@@ -524,7 +575,8 @@ export default function BookingForm() {
       !allDynamicSelected ||
       !formData.date ||
       !formData.selectedTime ||
-      !formData.customerNo
+      !formData.customerName ||
+      !formData.customerEmail
     ) {
       showAlert(
         "Missing Information",
@@ -532,18 +584,6 @@ export default function BookingForm() {
         "destructive"
       );
       return;
-    }
-
-    // Additional validation for non-admin users
-    if (userRole !== "admin" && userRole !== "global-admin") {
-      if (!formData.customerName) {
-        showAlert(
-          "Missing Information",
-          "Please enter your name before submitting.",
-          "destructive"
-        );
-        return;
-      }
     }
 
     setSubmitting(true);
@@ -573,107 +613,55 @@ export default function BookingForm() {
         ),
       ].join("|");
 
-      // Build body
-      const bodyToSend: any = {
+      // Build body for public booking
+      const bodyToSend = {
         _BookingSetupCode: formData.branch,
         _BookingDate: formData.date,
         _BookingStartTime: formData.selectedTime,
         _BookingParameterCount: (2 + dynamicParameters.length).toString(),
         _BookingParameterIDs: parameterIds,
         _BookingParameterValueIDs: parameterValues,
-        _CustomerNoOrEmailAdd: formData.customerNo,
+        _CustomerNoOrEmailAdd: formData.customerEmail,
         _BookingNote: formData.bookingNote || "",
         _BookingEntryNo: "",
+        _CustomerName: formData.customerName,
       };
 
-      // Add customer name for public-like functionality
-      if (userRole !== "admin" && userRole !== "global-admin") {
-        bodyToSend._CustomerName = formData.customerName;
-      }
+      console.log("📤 Booking data prepared:", bodyToSend);
 
-      console.log("📤 Sent Body:", bodyToSend);
-
-      const response = await fetch(
-        "/api/available-timeslot/book-available-timeslot",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(bodyToSend),
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to create booking");
-      await response.json();
-
-      showAlert(
-        "Booking Confirmed!",
-        "Your appointment has been successfully scheduled."
-      );
-
-      // Reset form
-      const resetData: FormData = {
-        branch: "",
-        service: "",
-        staff: "",
-        date: "",
-        selectedTime: "",
-        customerNo: userRole === "admin" || userRole === "global-admin" ? "" : customerNo,
-        customerEmail: "",
-        customerName: "",
-        bookingNote: "",
-      };
-
-      dynamicParameters.forEach((param) => {
-        resetData[param.BookingParameterId.toString()] = "";
-      });
-
-      setFormData(resetData);
-      setCurrentStep(1);
-      setBookingSummary({
-        branch: null,
-        service: null,
-        staff: null,
-        dynamicParameters: [],
-        date: "",
-        time: "",
-        customer: null,
-      });
+      // Store booking data and show OTP dialog
+      setPendingBookingData(bodyToSend);
+      setShowOTPDialog(true);
+      
     } catch (error) {
-      console.error("❌ Error creating booking:", error);
+      console.error("❌ Error preparing booking:", error);
       showAlert(
         "Booking Failed",
-        "Failed to create booking. Please try again.",
+        "Failed to prepare booking. Please try again.",
         "destructive"
       );
-    } finally {
       setSubmitting(false);
     }
   };
 
-  // Set customer info for non-admin users
-  useEffect(() => {
-    if (customerNo && userRole !== "admin" && userRole !== "global-admin") {
-      setFormData((prev) => ({
-        ...prev,
-        customerNo: customerNo,
-        customerName: username || "",
-      }));
-    }
-  }, [customerNo, userRole, username]);
+  // Handle OTP verification success
+  const handleOTPVerified = () => {
+    setIsOTPVerified(true);
+  };
 
-  // Handle customer selection for admin users
-  const handleCustomerSelect = (customerNo: string) => {
-    const selectedCustomer = customers.find(c => c.customerNo === customerNo);
-    if (selectedCustomer) {
-      setFormData((prev) => ({
-        ...prev,
-        customerNo: selectedCustomer.customerNo,
-        customerName: selectedCustomer.name,
-        customerEmail: selectedCustomer.email || "",
-      }));
-    }
+  // Handle proceeding with booking after OTP verification
+const handleProceedWithBooking = (bookingData: any) => {
+  if (bookingData) {
+    console.log("✅ OTP verified, creating booking...");
+    createBooking(bookingData);
+  }
+};
+
+  // Handle OTP dialog close
+  const handleOTPDialogClose = () => {
+    setShowOTPDialog(false);
+    setPendingBookingData(null);
+    setSubmitting(false);
   };
 
   // Booking Summary Component
@@ -766,8 +754,7 @@ export default function BookingForm() {
                 {bookingSummary.customer.name}
                 <br />
                 <span className="text-sm text-blue-600">
-                  {bookingSummary.customer.customerNo}
-                  {bookingSummary.customer.email && ` • ${bookingSummary.customer.email}`}
+                  {bookingSummary.customer.email}
                 </span>
               </span>
             </div>
@@ -777,29 +764,9 @@ export default function BookingForm() {
     );
   };
 
-  const filteredCustomers = customers.filter(
-    (customer) =>
-      (customer.name &&
-        customer.name.toLowerCase().includes(customerSearch.toLowerCase())) ||
-      (customer.customerNo &&
-        customer.customerNo.toLowerCase().includes(customerSearch.toLowerCase()))
-  );
-
-  // Show loading while checking authentication
-  if (checkingAuth) {
-    return (
-      <div className="container mx-auto p-6 max-w-6xl flex items-center justify-center min-h-64">
-        <div className="flex items-center gap-2">
-          <Loader2 className="w-6 h-6 animate-spin" />
-          <span className="text-muted-foreground">
-            Checking authentication...
-          </span>
-        </div>
-      </div>
-    );
-  }
-
   return (
+    <>
+    <Header />
     <div className="container mx-auto p-6 max-w-6xl space-y-6">
       {/* Alert Component */}
       {alert.show && (
@@ -816,35 +783,13 @@ export default function BookingForm() {
         </Alert>
       )}
 
-      {/* User Info Banner */}
+      {/* Welcome Banner for Public Users */}
       <Card className=" border-blue-200">
         <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <User className="w-5 h-5 text-blue-600" />
-              <div>
-                <div className="font-semibold ">
-                  Welcome, {username || "User"}
-                </div>
-                <div className="flex items-center gap-2 text-sm text-blue-700">
-                  <Badge
-                    variant={
-                      userRole === "admin" || userRole === "global-admin"
-                        ? "default"
-                        : "secondary"
-                    }
-                    className="bg-blue-100 text-blue-800 hover:bg-blue-200"
-                  >
-                    {userRole === "admin" || userRole === "global-admin"
-                      ? "Administrator"
-                      : "Customer"}
-                  </Badge>
-                  {userRole !== "admin" && userRole !== "global-admin" && customerNo && (
-                    <span>ID: {customerNo}</span>
-                  )}
-                </div>
+          <div className="flex items-center gap-3">
+              <div className="font-semibold ">
+                Book an Appointment at Squadlethics
               </div>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -894,7 +839,7 @@ export default function BookingForm() {
             <span>Service</span>
             <span>Staff & Options</span>
             <span>Date & Time</span>
-            <span>Customer Info</span>
+            <span>Your Info</span>
           </div>
         </CardContent>
       </Card>
@@ -905,7 +850,7 @@ export default function BookingForm() {
           <Button
             variant="outline"
             onClick={() => setCurrentStep(currentStep - 1)}
-            disabled={submitting}
+            disabled={submitting || processingBooking}
             className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -1335,163 +1280,46 @@ export default function BookingForm() {
                   <div className="flex items-center gap-2">
                     <User className="w-5 h-5 text-blue-600" />
                     <CardTitle className="">
-                      Step 5: Customer Information
+                      Step 5: Your Information
                     </CardTitle>
                   </div>
                 </CardHeader>
 
                 <CardContent className="pt-6 space-y-4">
-                  {/* For admin users: Customer selection */}
-                  {(userRole === "global-admin" || userRole === "admin") ? (
-                    <>
-                      {customersLoading ? (
-                        <div className="flex items-center justify-center py-4">
-                          <Loader2 className="w-4 h-4 animate-spin mr-2 text-blue-600" />
-                          <span className="text-blue-700">
-                            Loading customers...
-                          </span>
-                        </div>
-                      ) : (
-                        <Popover
-                          open={isCustomerPopoverOpen}
-                          onOpenChange={setCustomerPopoverOpen}
-                        >
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              aria-expanded={isCustomerPopoverOpen}
-                              className="w-full justify-between border-blue-300 focus:border-blue-500 focus:ring-blue-500"
-                            >
-                              {formData.customerNo
-                                ? customers.find(
-                                  (customer) =>
-                                    customer.customerNo ===
-                                    formData.customerNo
-                                )?.name
-                                : "Select a customer"}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
+                  <div>
+                    <Label htmlFor="customer-name" className="text-base font-medium mb-2 block">
+                      Full Name *
+                    </Label>
+                    <Input
+                      id="customer-name"
+                      type="text"
+                      placeholder="Enter your full name"
+                      value={formData.customerName}
+                      onChange={(e) =>
+                        handleInputChange("customerName", e.target.value)
+                      }
+                      className="text-base border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
 
-                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                            <div className="p-2">
-                              <Input
-                                placeholder="Search customer..."
-                                value={customerSearch}
-                                onChange={(e) =>
-                                  setCustomerSearch(e.target.value)
-                                }
-                              />
-                            </div>
-
-                            <div className="max-h-[300px] overflow-y-auto">
-                              {filteredCustomers.length > 0 ? (
-                                filteredCustomers.map((customer) => (
-                                  <div
-                                    key={customer.id}
-                                    onClick={() => {
-                                      handleCustomerSelect(customer.customerNo);
-                                      setCustomerPopoverOpen(false);
-                                    }}
-                                    className="p-2 hover:bg-blue-100 cursor-pointer"
-                                  >
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">
-                                        {customer.name}
-                                      </span>
-                                      <span className="text-xs text-blue-600">
-                                        {customer.customerNo}
-                                        {customer.email &&
-                                          ` | ${customer.email}`}
-                                      </span>
-                                    </div>
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="p-4 text-center text-sm text-blue-600">
-                                  No customers found.
-                                </div>
-                              )}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      )}
-
-                      {customers.length === 0 && !customersLoading && (
-                        <p className="text-sm text-blue-600 mt-2">
-                          No customers available
-                        </p>
-                      )}
-
-                      {/* Display selected customer info */}
-                      {formData.customerNo && (
-                        <div className="space-y-3 mt-4 p-3 bg-blue-50 rounded-lg">
-                          <div className="flex justify-between">
-                            <span className="text-blue-700 font-medium">Customer Name:</span>
-                            <span>{formData.customerName}</span>
-                          </div>
-                          {formData.customerEmail && (
-                            <div className="flex justify-between">
-                              <span className="text-blue-700 font-medium">Email:</span>
-                              <span>{formData.customerEmail}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    // For non-admin users: Display and edit their info
-                    <>
-                      <div>
-                        <Label htmlFor="customer-no" className="text-base font-medium mb-2 block">
-                          Customer ID
-                        </Label>
-                        <Input
-                          id="customer-no"
-                          type="text"
-                          value={formData.customerNo}
-                          readOnly
-                          className="bg-blue-50 text-base font-semibold  border-blue-200"
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="customer-name" className="text-base font-medium mb-2 block">
-                          Full Name *
-                        </Label>
-                        <Input
-                          id="customer-name"
-                          type="text"
-                          placeholder="Enter your full name"
-                          value={formData.customerName}
-                          onChange={(e) =>
-                            handleInputChange("customerName", e.target.value)
-                          }
-                          className="text-base border-blue-300 focus:border-blue-500 focus:ring-blue-500"
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="customer-email" className="text-base font-medium mb-2 block">
-                          Email Address *
-                        </Label>
-                        <Input
-                          id="customer-email"
-                          type="email"
-                          placeholder="Enter your email address"
-                          value={formData.customerEmail}
-                          onChange={(e) =>
-                            handleInputChange("customerEmail", e.target.value)
-                          }
-                          className="text-base border-blue-300 focus:border-blue-500 focus:ring-blue-500"
-                        />
-                        <p className="text-sm text-blue-600 mt-1">
-                          A confirmation email will be sent to this address
-                        </p>
-                      </div>
-                    </>
-                  )}
+                  <div>
+                    <Label htmlFor="customer-email" className="text-base font-medium mb-2 block">
+                      Email Address *
+                    </Label>
+                    <Input
+                      id="customer-email"
+                      type="email"
+                      placeholder="Enter your email address"
+                      value={formData.customerEmail}
+                      onChange={(e) =>
+                        handleInputChange("customerEmail", e.target.value)
+                      }
+                      className="text-base border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                    />
+                    <p className="text-sm text-blue-600 mt-1">
+                      A confirmation email with OTP will be sent to this address
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -1524,14 +1352,20 @@ export default function BookingForm() {
                     onClick={handleSubmit}
                     disabled={
                       submitting ||
+                      processingBooking ||
                       !formData.selectedTime ||
-                      !formData.customerNo ||
-                      (userRole !== "admin" && userRole !== "global-admin" && (!formData.customerName || !formData.customerEmail))
+                      !formData.customerName ||
+                      !formData.customerEmail
                     }
                     className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700 text-white"
                     size="lg"
                   >
                     {submitting ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                        Preparing Booking...
+                      </>
+                    ) : processingBooking ? (
                       <>
                         <Loader2 className="w-5 h-5 animate-spin mr-2" />
                         Creating Your Booking...
@@ -1543,11 +1377,9 @@ export default function BookingForm() {
                       </>
                     )}
                   </Button>
-                  {(userRole !== "admin" && userRole !== "global-admin") && (
-                    <p className="text-sm text-blue-600 mt-3 text-center">
-                      By clicking "Confirm Booking", you agree to receive confirmation emails for your appointment.
-                    </p>
-                  )}
+                  <p className="text-sm text-blue-600 mt-3 text-center">
+                    By clicking "Confirm Booking", you agree to receive confirmation emails for your appointment.
+                  </p>
                 </CardContent>
               </Card>
             </>
@@ -1559,6 +1391,20 @@ export default function BookingForm() {
           <BookingSummaryCard />
         </div>
       </div>
+
+      {/* OTP Dialog */}
+      {showOTPDialog && (
+        <OTPDialog
+          isOpen={showOTPDialog}
+          onClose={handleOTPDialogClose}
+          onOTPVerified={handleOTPVerified}
+          onProceedWithBooking={handleProceedWithBooking}
+          customerEmail={formData.customerEmail}
+          bookingData={pendingBookingData}
+        />
+      )}
     </div>
+    <Footer />
+    </>
   );
 }

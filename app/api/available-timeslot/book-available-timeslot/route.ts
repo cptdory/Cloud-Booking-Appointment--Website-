@@ -67,14 +67,20 @@ async function bookTimeSlot(
   // Convert all values to strings to match Business Central expectations
   const requestBody = {
     _BookingSetupCode: String(body._BookingSetupCode || ''),
-    _BookingDate: formattedDate, // Use the formatted date
+    _BookingDate: formattedDate, 
     _BookingStartTime: String(body._BookingStartTime || ''),
     _BookingParameterCount: String(body._BookingParameterCount || ''),
     _BookingParameterIDs: String(body._BookingParameterIDs || ''),
     _BookingParameterValueIDs: String(body._BookingParameterValueIDs || ''),
-    _CustomerNo: String(body._CustomerNo || ''),
     _BookingNote: String(body._BookingNote || ''),
-    _BookingEntryNo: String(body._BookingEntryNo || '')
+    _BookingEntryNo: String(body._BookingEntryNo || ''),
+    _CustomerNoOrEmailAdd: String(body._CustomerNoOrEmailAdd || ''),
+    _CustomerName: String(body.customerName || ''),
+    _CustomerPhoneNo:'',
+    _CustomerBirthDate:'',
+    _CustomerAddress1:'',
+    _CustomerAddress2:''
+
   };
 
   console.log("Calling Business Central API to book time slot:", url);

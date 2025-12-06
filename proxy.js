@@ -6,6 +6,7 @@ export default function proxy(request) {
   const publicPaths = [
     '/signin',
     '/signup',
+    '/book-now',
     '/api/auth/login-bc',
     '/api/auth/login-user',
     '/api/auth/create-user',
