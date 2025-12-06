@@ -448,7 +448,7 @@ export default function BookingCalendar() {
   if (checkingAuth || initialLoading) {
     return (
       <div className="container mx-auto p-4 md:p-6 max-w-7xl">
-        <Card className="border-0 shadow-lg">
+        <Card className="border-0 dark:border-slate-800 dark:bg-slate-900 shadow-lg">
           <CardContent className="flex items-center justify-center py-16 md:py-20">
             <div className="text-center space-y-5">
               <div className="relative">
@@ -456,12 +456,12 @@ export default function BookingCalendar() {
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-primary/5 rounded-full blur-sm"></div>
               </div>
               <div className="space-y-2">
-                <p className="text-lg font-semibold text-foreground">
+                <p className="text-lg font-semibold text-foreground dark:text-slate-200">
                   {checkingAuth
                     ? "Checking Authentication..."
                     : "Loading Calendar"}
                 </p>
-                <p className="text-muted-foreground max-w-sm mx-auto">
+                <p className="text-muted-foreground dark:text-slate-400 max-w-sm mx-auto">
                   {checkingAuth
                     ? "Verifying your access..."
                     : "Preparing your schedule and staff..."}
@@ -500,16 +500,16 @@ export default function BookingCalendar() {
         </Alert>
       )}
 
-      <Card className="border-0 shadow-lg overflow-hidden">
-        <CardHeader className="pb- border-b">
+      <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden">
+        <CardHeader className="pb-4 border-b dark:border-slate-800">
           <div className="flex flex-col gap-4">
             {/* Top Row: Title and View Controls */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="space-y-1.5">
-                <CardTitle className="text-2xl font-bold bg-clip-text">
+                <CardTitle className="text-2xl font-bold text-slate-800 dark:text-slate-200">
                   Booking Calendar
                 </CardTitle>
-                <CardDescription className="text-base">
+                <CardDescription className="text-base text-slate-500 dark:text-slate-400">
                   View and manage appointments for {branchCode}
                 </CardDescription>
               </div>
@@ -518,14 +518,14 @@ export default function BookingCalendar() {
               <div className="flex items-center gap-3">
                 <StaffTimeOffDialog />
 
-                <div className="hidden sm:flex rounded-lg p-1">
+                <div className="hidden sm:flex rounded-lg p-1 bg-slate-100 dark:bg-slate-900 border dark:border-slate-800">
                   <Button
                     variant={
                       calendarView === "dayGridMonth" ? "default" : "ghost"
                     }
                     size="sm"
                     onClick={() => handleViewChange("dayGridMonth")}
-                    className="text-xs h-8 px-3"
+                    className={cn("text-xs h-8 px-3", calendarView !== 'dayGridMonth' && 'dark:text-slate-200 dark:hover:bg-slate-700', calendarView === 'dayGridMonth' && 'dark:bg-blue-600 dark:text-white dark:hover:bg-blue-700')}
                   >
                     Month
                   </Button>
@@ -535,7 +535,7 @@ export default function BookingCalendar() {
                     }
                     size="sm"
                     onClick={() => handleViewChange("timeGridWeek")}
-                    className="text-xs h-8 px-3"
+                    className={cn("text-xs h-8 px-3", calendarView !== 'timeGridWeek' && 'dark:text-slate-200 dark:hover:bg-slate-700', calendarView === 'timeGridWeek' && 'dark:bg-blue-600 dark:text-white dark:hover:bg-blue-700')}
                   >
                     Week
                   </Button>
@@ -545,7 +545,7 @@ export default function BookingCalendar() {
                     }
                     size="sm"
                     onClick={() => handleViewChange("timeGridDay")}
-                    className="text-xs h-8 px-3"
+                    className={cn("text-xs h-8 px-3", calendarView !== 'timeGridDay' && 'dark:text-slate-200 dark:hover:bg-slate-700', calendarView === 'timeGridDay' && 'dark:bg-blue-600 dark:text-white dark:hover:bg-blue-700')}
                   >
                     Day
                   </Button>
@@ -553,7 +553,7 @@ export default function BookingCalendar() {
                     variant={calendarView === "listWeek" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => handleViewChange("listWeek")}
-                    className="text-xs h-8 px-3"
+                    className={cn("text-xs h-8 px-3", calendarView !== 'listWeek' && 'dark:text-slate-200 dark:hover:bg-slate-700', calendarView === 'listWeek' && 'dark:bg-blue-600 dark:text-white dark:hover:bg-blue-700')}
                   >
                     List
                   </Button>
@@ -561,7 +561,7 @@ export default function BookingCalendar() {
 
                 {/* Mobile view indicator */}
                 {isMobile && (
-                  <div className="sm:hidden flex items-center gap-2 text-sm text-muted-foreground bg-blue-50 px-3 py-1.5 rounded-lg border">
+                  <div className="sm:hidden flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 bg-blue-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border dark:border-slate-700">
                     <Smartphone className="w-4 h-4" />
                     <span>List View</span>
                   </div>
@@ -605,7 +605,7 @@ export default function BookingCalendar() {
 
               {/* Current Period Title */}
               <div className="text-center sm:text-right">
-                <h3 className="text-lg font-semibold px-4 py-2 rounded-lg border">
+                <h3 className="text-lg font-semibold px-4 py-2 rounded-lg border dark:border-slate-700 dark:text-slate-200">
                   {currentTitle}
                 </h3>
               </div>
@@ -614,7 +614,7 @@ export default function BookingCalendar() {
         </CardHeader>
 
         <CardContent className="p-4 md:p-6 relative">
-          <div className="rounded-xl overflow-hidden border shadow-sm">
+          <div className="rounded-xl overflow-hidden border dark:border-slate-800 shadow-sm">
             <FullCalendar
               ref={calendarRef}
               plugins={[
@@ -653,9 +653,9 @@ export default function BookingCalendar() {
 
           {entriesLoading && events.length > 0 && (
             <div className="absolute inset-0 bg-background/70 backdrop-blur-[1px] flex items-center justify-center rounded-xl">
-              <div className="bg-white/90 border rounded-xl p-4 shadow-lg flex items-center gap-3">
+              <div className="bg-white/90 dark:bg-slate-900/90 border dark:border-slate-700 rounded-xl p-4 shadow-lg flex items-center gap-3">
                 <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                <span className="text-sm font-medium">
+                <span className="text-sm font-medium dark:text-slate-200">
                   Updating calendar...
                 </span>
               </div>
@@ -666,9 +666,9 @@ export default function BookingCalendar() {
 
       {/* Event Details Dialog */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-0 gap-0">
-          <DialogHeader className="px-6 py-5 border-b">
-            <DialogTitle className="flex flex-col sm:flex-row sm:items-center gap-2 text-xl">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-0 gap-0 dark:bg-slate-900">
+          <DialogHeader className="px-6 py-5 border-b dark:border-slate-800">
+            <DialogTitle className="flex flex-col sm:flex-row sm:items-center gap-2 text-xl dark:text-slate-200">
               <span className="truncate">{selectedEvent?.title}</span>
               {selectedEvent && (
                 <Badge
@@ -682,18 +682,18 @@ export default function BookingCalendar() {
                   className={cn(
                     "capitalize shrink-0 text-xs px-2 py-1",
                     selectedEvent.extendedProps.status === "Active" &&
-                      "bg-green-100 text-green-800 border-green-300",
+                      "bg-green-100 text-green-800 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-800",
                     selectedEvent.extendedProps.status === "Finalized" &&
-                      "bg-yellow-100 text-yellow-800 border-yellow-300",
+                      "bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800",
                     selectedEvent.extendedProps.status === "Cancelled" &&
-                      "bg-red-100 text-red-800 border-red-300"
+                      "bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-800"
                   )}
                 >
                   {selectedEvent.extendedProps.status}
                 </Badge>
               )}
             </DialogTitle>
-            <DialogDescription className="text-base">
+            <DialogDescription className="text-base dark:text-slate-400">
               Booking #{selectedEvent?.id} •{" "}
               {selectedEvent?.extendedProps.branch}
             </DialogDescription>
@@ -711,7 +711,7 @@ export default function BookingCalendar() {
 
                   {(selectedEvent.extendedProps.status === "Finalized" ||
                     selectedEvent.extendedProps.status === "Cancelled") && (
-                    <div className="p-3 bg-amber-50 border border-amber-200 rounded text-amber-700 text-sm">
+                    <div className="p-3 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/60 rounded text-amber-700 dark:text-amber-400 text-sm">
                       Status is locked and cannot be changed.
                     </div>
                   )}
@@ -787,7 +787,7 @@ export default function BookingCalendar() {
                 </div>
               )}
 
-              <Separator />
+              <Separator className="dark:bg-slate-800" />
 
               {/* Date & Time Section */}
               <div className="space-y-3">
@@ -796,11 +796,11 @@ export default function BookingCalendar() {
                   Schedule
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-3 rounded-lg border">
-                    <Calendar className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                  <div className="flex items-start gap-3 p-3 rounded-lg border dark:border-slate-800">
+                    <Calendar className="w-5 h-5 mt-0.5 flex-shrink-0 text-slate-500 dark:text-slate-400" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold">Date</p>
-                      <p className="text-sm truncate">
+                      <p className="text-sm font-semibold dark:text-slate-200">Date</p>
+                      <p className="text-sm truncate dark:text-slate-300">
                         {new Date(selectedEvent.start).toLocaleDateString(
                           "en-US",
                           {
@@ -814,11 +814,11 @@ export default function BookingCalendar() {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3 p-3 rounded-lg border">
-                    <Clock className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                  <div className="flex items-start gap-3 p-3 rounded-lg border dark:border-slate-800">
+                    <Clock className="w-5 h-5 mt-0.5 flex-shrink-0 text-slate-500 dark:text-slate-400" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold">Time</p>
-                      <p className="text-sm">
+                      <p className="text-sm font-semibold dark:text-slate-200">Time</p>
+                      <p className="text-sm dark:text-slate-300">
                         {new Date(selectedEvent.start).toLocaleTimeString(
                           "en-US",
                           {
@@ -848,11 +848,11 @@ export default function BookingCalendar() {
                 </h3>
                 <div className="space-y-3">
                   {!selectedEvent.extendedProps.rawData?.TimeOff && (
-                    <div className="flex items-start gap-3 p-3 rounded-lg border">
-                      <Briefcase className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                    <div className="flex items-start gap-3 p-3 rounded-lg border dark:border-slate-800">
+                      <Briefcase className="w-5 h-5 mt-0.5 flex-shrink-0 text-slate-500 dark:text-slate-400" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold">Service</p>
-                        <p className="text-sm truncate">
+                        <p className="text-sm font-semibold dark:text-slate-200">Service</p>
+                        <p className="text-sm truncate dark:text-slate-300">
                           {selectedEvent.extendedProps.service}
                           {selectedEvent.extendedProps.rawData?.ServiceCode &&
                             ` (${selectedEvent.extendedProps.rawData.ServiceCode})`}
@@ -861,11 +861,11 @@ export default function BookingCalendar() {
                     </div>
                   )}
 
-                  <div className="flex items-start gap-3 p-3 rounded-lg border">
-                    <User className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                  <div className="flex items-start gap-3 p-3 rounded-lg border dark:border-slate-800">
+                    <User className="w-5 h-5 mt-0.5 flex-shrink-0 text-slate-500 dark:text-slate-400" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold">Staff</p>
-                      <p className="text-sm truncate">
+                      <p className="text-sm font-semibold dark:text-slate-200">Staff</p>
+                      <p className="text-sm truncate dark:text-slate-300">
                         {selectedEvent.extendedProps.staff}
                         {selectedEvent.extendedProps.staffName &&
                           ` (${selectedEvent.extendedProps.staffCode})`}
@@ -875,7 +875,7 @@ export default function BookingCalendar() {
                 </div>
               </div>
 
-              <Separator />
+              <Separator className="dark:bg-slate-800"/>
 
               {/* Show Customer Section ONLY if NOT Time Off */}
               {!selectedEvent.extendedProps.rawData?.TimeOff && (
@@ -886,11 +886,11 @@ export default function BookingCalendar() {
                   </h3>
 
                   <div className="space-y-3">
-                    <div className="flex items-start gap-3 p-3 rounded-lg border">
-                      <User className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                    <div className="flex items-start gap-3 p-3 rounded-lg border dark:border-slate-800">
+                      <User className="w-5 h-5 mt-0.5 flex-shrink-0 text-slate-500 dark:text-slate-400" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold">Customer</p>
-                        <p className="text-sm truncate">
+                        <p className="text-sm font-semibold dark:text-slate-200">Customer</p>
+                        <p className="text-sm truncate dark:text-slate-300">
                           {selectedEvent.extendedProps.customer ||
                             "Not specified"}
                           {selectedEvent.extendedProps.rawData?.CustomerNo &&
@@ -900,11 +900,11 @@ export default function BookingCalendar() {
                     </div>
 
                     {selectedEvent.extendedProps.rawData?.PhoneNo && (
-                      <div className="flex items-start gap-3 p-3 rounded-lg border">
-                        <Phone className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                      <div className="flex items-start gap-3 p-3 rounded-lg border dark:border-slate-800">
+                        <Phone className="w-5 h-5 mt-0.5 flex-shrink-0 text-slate-500 dark:text-slate-400" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold">Phone</p>
-                          <p className="text-sm">
+                          <p className="text-sm font-semibold dark:text-slate-200">Phone</p>
+                          <p className="text-sm dark:text-slate-300">
                             {selectedEvent.extendedProps.rawData.PhoneNo}
                           </p>
                         </div>
@@ -912,11 +912,11 @@ export default function BookingCalendar() {
                     )}
 
                     {selectedEvent.extendedProps.rawData?.EMail && (
-                      <div className="flex items-start gap-3 p-3 rounded-lg border">
-                        <Mail className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                      <div className="flex items-start gap-3 p-3 rounded-lg border dark:border-slate-800">
+                        <Mail className="w-5 h-5 mt-0.5 flex-shrink-0 text-slate-500 dark:text-slate-400" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold">Email</p>
-                          <p className="text-sm truncate">
+                          <p className="text-sm font-semibold dark:text-slate-200">Email</p>
+                          <p className="text-sm truncate dark:text-slate-300">
                             {selectedEvent.extendedProps.rawData.EMail}
                           </p>
                         </div>
@@ -924,11 +924,11 @@ export default function BookingCalendar() {
                     )}
 
                     {(selectedEvent.extendedProps.rawData?.Age ?? 0) > 0 && (
-                      <div className="flex items-start gap-3 p-3 rounded-lg border">
-                        <Cake className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                      <div className="flex items-start gap-3 p-3 rounded-lg border dark:border-slate-800">
+                        <Cake className="w-5 h-5 mt-0.5 flex-shrink-0 text-slate-500 dark:text-slate-400" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold">Age</p>
-                          <p className="text-sm">
+                          <p className="text-sm font-semibold dark:text-slate-200">Age</p>
+                          <p className="text-sm dark:text-slate-300">
                             {selectedEvent.extendedProps.rawData?.Age} years old
                           </p>
                         </div>
@@ -936,11 +936,11 @@ export default function BookingCalendar() {
                     )}
 
                     {selectedEvent.extendedProps.rawData?.Address && (
-                      <div className="flex items-start gap-3 p-3 rounded-lg border">
-                        <MapPin className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                      <div className="flex items-start gap-3 p-3 rounded-lg border dark:border-slate-800">
+                        <MapPin className="w-5 h-5 mt-0.5 flex-shrink-0 text-slate-500 dark:text-slate-400" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold">Address</p>
-                          <p className="text-sm">
+                          <p className="text-sm font-semibold dark:text-slate-200">Address</p>
+                          <p className="text-sm dark:text-slate-300">
                             {selectedEvent.extendedProps.rawData.Address}
                             {selectedEvent.extendedProps.rawData.Address2 &&
                               `, ${selectedEvent.extendedProps.rawData.Address2}`}
@@ -955,14 +955,14 @@ export default function BookingCalendar() {
               {/* Notes Section */}
               {selectedEvent.extendedProps.description && (
                 <>
-                  <Separator />
+                  <Separator className="dark:bg-slate-800"/>
                   <div className="space-y-3">
                     <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
                       <div className="w-1.5 h-1.5 bg-gray-500 rounded-full"></div>
                       Notes
                     </h3>
-                    <div className="rounded-xl p-4">
-                      <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                    <div className="rounded-xl p-4 bg-slate-50 dark:bg-slate-800/50">
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed dark:text-slate-300">
                         {selectedEvent.extendedProps.description}
                       </p>
                     </div>
@@ -973,7 +973,7 @@ export default function BookingCalendar() {
               {/* Time Off Badge */}
               {selectedEvent.extendedProps.rawData?.TimeOff && (
                 <>
-                  <Separator />
+                  <Separator className="dark:bg-slate-800"/>
                   <div className="flex items-center justify-center">
                     <Badge variant="outline" className="py-2 px-4 text-sm">
                       ⏰ Time Off
@@ -984,7 +984,7 @@ export default function BookingCalendar() {
             </div>
           )}
 
-          <DialogFooter className="px-6 py-4 border-t flex justify-between">
+          <DialogFooter className="px-6 py-4 border-t dark:border-slate-800 flex justify-between">
             <div className="flex gap-2">
               {selectedEvent?.extendedProps.rawData?.TimeOff && (() => {
                 // Console logs for debugging

@@ -1,7 +1,7 @@
 // page.tsx (Public Booking)
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import {
   MapPin,
@@ -389,14 +389,9 @@ export default function PublicBooking() {
       return time;
     };
 
-    const formattedTime = formatTime(time);
-
-    setFormData((prev) => ({
-      ...prev,
-      selectedTime: formattedTime,
-    }));
-
-    setCurrentStep(5);
+    // This will trigger the logic in handleInputChange to advance the step
+    // and correctly update the latestCompletedStep state.
+    void handleInputChange("selectedTime", formatTime(time));
   };
 
   // Fetch time slots when all prerequisites are met
@@ -675,99 +670,80 @@ const handleProceedWithBooking = (bookingData: any) => {
     if (!hasSummary) return null;
 
     return (
-      <Card className=" border-blue-200 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className=" flex items-center gap-2 text-lg">
-            <CheckCircle2 className="w-5 h-5" />
-            Booking Summary
+      <Card className="bg-white dark:bg-slate-900 shadow-lg rounded-xl">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3 text-xl font-bold dark:text-white">
+            <FileText className="w-6 h-6 text-blue-600" />
+            <span>Booking Summary</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {bookingSummary.branch && (
-            <div className="flex justify-between items-start">
-              <span className="text-blue-700 font-medium">Branch:</span>
-              <span className=" text-right">
-                {bookingSummary.branch.Description}
-                <br />
-                <span className="text-sm text-blue-600">
-                  {bookingSummary.branch.Location}
-                </span>
-              </span>
-            </div>
-          )}
-
-          {bookingSummary.service && (
-            <div className="flex justify-between items-start">
-              <span className="text-blue-700 font-medium">Service:</span>
-              <span className=" text-right">
-                {bookingSummary.service.name}
-                <br />
-                <span className="text-sm text-blue-600">
-                  {bookingSummary.service.duration} mins
-                </span>
-              </span>
-            </div>
-          )}
-
-          {bookingSummary.staff && (
-            <div className="flex justify-between items-start">
-              <span className="text-blue-700 font-medium">Staff:</span>
-              <span className=" text-right">{bookingSummary.staff.name}</span>
-            </div>
-          )}
-
-          {bookingSummary.dynamicParameters.length > 0 && (
-            <div>
-              <div className="space-y-1">
-                {bookingSummary.dynamicParameters.map((param, index) => (
-                  <div key={index} className="flex justify-between">
-                    <span className="text-blue-700 font-medium">
-                      {param.parameterName}:
-                    </span>
-                    <span className=" text-sm">{param.valueName}</span>
-                  </div>
-                ))}
+        <CardContent className="p-0">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {bookingSummary.branch && (
+              <div className="p-4 flex justify-between items-start">
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Branch:</span>
+                <div className="text-right">
+                  <span className="font-semibold dark:text-slate-200">{bookingSummary.branch.Description}</span>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{bookingSummary.branch.Location}</p>
+                </div>
               </div>
-            </div>
-          )}
-
-          {bookingSummary.date && (
-            <div className="flex justify-between">
-              <span className="text-blue-700 font-medium">Date:</span>
-              <span className="">
-                {new Date(bookingSummary.date).toLocaleDateString()}
-              </span>
-            </div>
-          )}
-
-          {bookingSummary.time && (
-            <div className="flex justify-between">
-              <span className="text-blue-700 font-medium">Time:</span>
-              <span className="">{bookingSummary.time}</span>
-            </div>
-          )}
-
-          {bookingSummary.customer && (
-            <div className="flex justify-between items-start">
-              <span className="text-blue-700 font-medium">Customer:</span>
-              <span className=" text-right">
-                {bookingSummary.customer.name}
-                <br />
-                <span className="text-sm text-blue-600">
-                  {bookingSummary.customer.email}
-                </span>
-              </span>
-            </div>
-          )}
+            )}
+            {bookingSummary.service && (
+              <div className="p-4 flex justify-between items-start">
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Service:</span>
+                <div className="text-right">
+                  <span className="font-semibold dark:text-slate-200">{bookingSummary.service.name}</span>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{bookingSummary.service.duration} mins</p>
+                </div>
+              </div>
+            )}
+            {bookingSummary.staff && (
+              <div className="p-4 flex justify-between items-center">
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Staff:</span>
+                <span className="font-semibold text-right dark:text-slate-200">{bookingSummary.staff.name}</span>
+              </div>
+            )}
+            {bookingSummary.dynamicParameters.length > 0 && (
+                <div className="p-4 space-y-2">
+                    {bookingSummary.dynamicParameters.map((param, index) => (
+                    <div key={index} className="flex justify-between items-center">
+                        <span className="text-slate-500 dark:text-slate-400 font-medium">{param.parameterName}:</span>
+                        <span className="font-semibold text-sm dark:text-slate-200">{param.valueName}</span>
+                    </div>
+                    ))}
+                </div>
+            )}
+            {bookingSummary.date && (
+              <div className="p-4 flex justify-between items-center">
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Date:</span>
+                <span className="font-semibold dark:text-slate-200">{new Date(bookingSummary.date).toLocaleDateString()}</span>
+              </div>
+            )}
+            {bookingSummary.time && (
+              <div className="p-4 flex justify-between items-center">
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Time:</span>
+                <span className="font-semibold dark:text-slate-200">{bookingSummary.time}</span>
+              </div>
+            )}
+            {bookingSummary.customer && (
+              <div className="p-4 flex justify-between items-start">
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Customer:</span>
+                <div className="text-right">
+                  <span className="font-semibold dark:text-slate-200">{bookingSummary.customer.name}</span>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{bookingSummary.customer.email}</p>
+                </div>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     );
   };
 
   return (
-    <>
+    <div className="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200">
     <Header />
-    <div className="container mx-auto p-6 max-w-6xl space-y-6">
+    <main className="container mx-auto px-4 pt-24 pb-8 max-w-6xl space-y-8">
       {/* Alert Component */}
       {alert.show && (
         <Alert
@@ -784,131 +760,96 @@ const handleProceedWithBooking = (bookingData: any) => {
       )}
 
       {/* Welcome Banner for Public Users */}
-      <Card className=" border-blue-200">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-              <div className="font-semibold ">
-                Book an Appointment at Squadlethics
-              </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="bg-gradient-to-r from-blue-600 to-blue-500 dark:from-blue-700 dark:to-blue-600 rounded-xl p-8 text-white flex items-center">
+            <Calendar className="w-12 h-12 mr-6 opacity-50 flex-shrink-0" />
+            <div>
+                <h1 className="text-3xl font-bold">Book Your Appointment</h1>
+                <p className="mt-1 text-blue-100 dark:text-blue-200">
+                  Effortless booking at Squadlethics. Choose your service and time below.
+                </p>
+            </div>
+        </div>
 
       {/* Progress Steps */}
-      <Card className="border-blue-200">
-        <CardContent className="p-6">
-          {/* Numbers + Chevrons */}
-          <div className="grid grid-cols-5 gap-0">
-            {[1, 2, 3, 4, 5].map((step) => {
-              const isClickable =
-                step <= latestCompletedStep || !modifiedSteps.has(step);
-              const isCompleted = step <= latestCompletedStep;
-
-              return (
-                <div key={step} className="flex flex-col items-center">
-                  <button
-                    onClick={() => handleStepSelection(step)}
-                    disabled={!isClickable}
-                    className={`flex items-center justify-center w-8 h-8 rounded-full transition-all font-semibold
-                      ${isCompleted
-                        ? "bg-blue-600 text-white"
-                        : isClickable
-                          ? "bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer"
-                          : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      }`}
-                    title={!isClickable ? "This step has unsaved changes" : ""}
-                  >
-                    {step}
-                  </button>
-
-                  {/* Chevron Below Circle (except last) */}
-                  {step < 5 && (
-                    <ChevronRight
-                      className={`w-4 h-4 mt-1 ${isCompleted ? "text-blue-600" : "text-blue-200"
-                        }`}
-                    />
-                  )}
+      <Card className="bg-white dark:bg-slate-900 shadow-sm">
+            <CardContent className="p-6">
+                <div className="flex items-start">
+                    {["Branch", "Service", "Details", "Date & Time", "Your Info"].map((label, index) => {
+                        const step = index + 1;
+                        const isCompleted = latestCompletedStep > step;
+                        const isActive = step === currentStep;
+                        const isClickable = step <= latestCompletedStep || !modifiedSteps.has(step);
+                        return (
+                            <Fragment key={step}>
+                                <div className="flex flex-col items-center text-center w-24">
+                                    <button
+                                        onClick={() => handleStepSelection(step)}
+                                        disabled={!isClickable}
+                                        className={`flex items-center justify-center w-10 h-10 rounded-full font-bold text-lg transition-all duration-300
+                                            ${isActive ? "bg-blue-600 text-white scale-110 shadow-lg"
+                                            : isCompleted ? "bg-blue-500 text-white"
+                                            : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
+                                            }
+                                            ${isClickable && !isActive ? "hover:bg-blue-200 dark:hover:bg-slate-600" : ""}
+                                            ${!isClickable ? "cursor-not-allowed" : ""}`}
+                                        title={!isClickable ? "Complete previous steps first" : label}
+                                    >
+                                        {isCompleted ? <CheckCircle2 size={24} /> : step}
+                                    </button>
+                                    <p className={`mt-2 text-xs font-semibold ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                                        {label}
+                                    </p>
+                                </div>
+                                {step < 5 && (
+                                    <div className={`flex-1 h-1 mt-5 transition-colors duration-500 ${isCompleted ? "bg-blue-500" : "bg-slate-200 dark:bg-slate-700"}`} />
+                                )}
+                            </Fragment>
+                        );
+                    })}
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Step Labels */}
-          <div className="grid grid-cols-5 mt-3 text-xs text-blue-700 text-center">
-            <span>Branch</span>
-            <span>Service</span>
-            <span>Staff & Options</span>
-            <span>Date & Time</span>
-            <span>Your Info</span>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+        </Card>
 
       {/* Step Navigation Buttons */}
       {currentStep > 1 && (
-        <div className="flex justify-between">
+        <div className="flex justify-between items-center">
           <Button
             variant="outline"
             onClick={() => setCurrentStep(currentStep - 1)}
             disabled={submitting || processingBooking}
-            className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Previous Step
           </Button>
-          <div className="text-sm text-blue-600">Step {currentStep} of 5</div>
+          <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Step {currentStep} of 5</div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-8">
           {/* Step 1: Branch Selection */}
           {currentStep === 1 && (
-            <Card className="border-blue-200">
-              <CardHeader className=" border-b border-blue-200">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-blue-600" />
-                  <CardTitle className="">Step 1: Choose Your Branch</CardTitle>
+            <Card className="bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-shadow duration-300">
+              <CardHeader className="border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-3">
+                  <MapPin className="w-6 h-6 text-blue-600" />
+                  <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-200">Step 1: Choose Your Branch</CardTitle>
                 </div>
               </CardHeader>
-
               <CardContent className="pt-6">
                 {branchesLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" />
-                    <span className="text-blue-700">Loading branches...</span>
-                  </div>
+                  <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" /> <span className="text-slate-600 dark:text-slate-400">Loading branches...</span></div>
                 ) : branches.length === 0 ? (
-                  <p className="text-center text-blue-600 py-8">
-                    No branches available
-                  </p>
+                  <p className="text-center text-slate-500 dark:text-slate-400 py-8">No branches available</p>
                 ) : (
-                  <RadioGroup
-                    value={formData.branch}
-                    onValueChange={(value) =>
-                      handleInputChange("branch", value)
-                    }
-                  >
+                  <RadioGroup value={formData.branch} onValueChange={(v) => handleInputChange("branch", v)}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {branches.map((branch) => (
-                        <Label
-                          key={branch.Code}
-                          htmlFor={`branch-${branch.Code}`}
-                          className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors ${formData.branch === branch.Code
-                              ? "border-blue-600"
-                              : "border-blue-200 hover:border-blue-400"
-                            }`}
-                        >
-                          <RadioGroupItem
-                            value={branch.Code}
-                            id={`branch-${branch.Code}`}
-                            className="text-blue-600"
-                          />
+                        <Label key={branch.Code} htmlFor={`branch-${branch.Code}`} className={`flex items-start p-4 border rounded-xl cursor-pointer transition-all duration-300 ${formData.branch === branch.Code ? "border-blue-500 bg-blue-50 dark:bg-blue-950/50 dark:border-blue-800 shadow-inner" : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-400 dark:hover:border-blue-700 hover:bg-slate-50 dark:hover:bg-slate-800"}`}>
+                          <RadioGroupItem value={branch.Code} id={`branch-${branch.Code}`} className="text-blue-600 mt-1" />
                           <div className="ml-3 flex-1">
-                            <div className="font-semibold ">
-                              {branch.Description}
-                            </div>
+                            <div className="font-semibold text-slate-800 dark:text-slate-200">{branch.Description}</div>
                           </div>
                         </Label>
                       ))}
@@ -921,52 +862,24 @@ const handleProceedWithBooking = (bookingData: any) => {
 
           {/* Step 2: Service Selection */}
           {currentStep === 2 && (
-            <Card className="border-blue-200">
-              <CardHeader className=" border-b border-blue-200">
-                <div className="flex items-center gap-2">
-                  <Briefcase className="w-5 h-5 text-blue-600" />
-                  <CardTitle className="">Step 2: Select Service</CardTitle>
-                </div>
+            <Card className="bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-shadow duration-300">
+              <CardHeader className="border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-3"><Briefcase className="w-6 h-6 text-blue-600" /><CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-200">Step 2: Select Service</CardTitle></div>
               </CardHeader>
-
               <CardContent className="pt-6">
                 {setupLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" />
-                    <span className="text-blue-700">Loading services...</span>
-                  </div>
+                  <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" /> <span className="text-slate-600 dark:text-slate-400">Loading services...</span></div>
                 ) : getServices().length === 0 ? (
-                  <p className="text-blue-600">No services available</p>
+                  <p className="text-slate-500 dark:text-slate-400">No services available</p>
                 ) : (
-                  <RadioGroup
-                    value={formData.service}
-                    onValueChange={(value) =>
-                      handleInputChange("service", value)
-                    }
-                  >
+                  <RadioGroup value={formData.service} onValueChange={(v) => handleInputChange("service", v)}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {getServices().map((service) => (
-                        <Label
-                          key={service.BookingParameterValueId}
-                          htmlFor={`service-${service.BookingParameterValueId}`}
-                          className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${formData.service ===
-                              service.BookingParameterValueId.toString()
-                              ? "border-blue-600"
-                              : "border-blue-200 hover:border-blue-400"
-                            }`}
-                        >
-                          <RadioGroupItem
-                            value={service.BookingParameterValueId.toString()}
-                            id={`service-${service.BookingParameterValueId}`}
-                            className="text-blue-600"
-                          />
+                        <Label key={service.BookingParameterValueId} htmlFor={`service-${service.BookingParameterValueId}`} className={`flex items-center p-3 border rounded-xl cursor-pointer transition-all duration-300 ${formData.service === service.BookingParameterValueId.toString() ? "border-blue-500 bg-blue-50 dark:bg-blue-950/50 dark:border-blue-800 shadow-inner" : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-400 dark:hover:border-blue-700 hover:bg-slate-50 dark:hover:bg-slate-800"}`}>
+                          <RadioGroupItem value={service.BookingParameterValueId.toString()} id={`service-${service.BookingParameterValueId}`} className="text-blue-600" />
                           <div className="ml-3">
-                            <div className="font-medium ">
-                              {service.BookingParamterValueDescription}
-                            </div>
-                            <div className="text-sm text-blue-600">
-                              {service.BookingParameterValueDuration} mins
-                            </div>
+                            <div className="font-medium text-slate-800 dark:text-slate-200">{service.BookingParamterValueDescription}</div>
+                            <div className="text-sm text-slate-500 dark:text-slate-400">{service.BookingParameterValueDuration} mins</div>
                           </div>
                         </Label>
                       ))}
@@ -979,56 +892,24 @@ const handleProceedWithBooking = (bookingData: any) => {
 
           {/* Step 3: Staff & Dynamic Parameters Selection */}
           {currentStep === 3 && (
-            <Card className="border-blue-200">
-              <CardHeader className="border-b border-blue-200">
-                <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-blue-600" />
-                  <CardTitle className="">
-                    Step 3: Select Staff & Options
-                  </CardTitle>
-                </div>
+            <Card className="bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-shadow duration-300">
+              <CardHeader className="border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-3"><Users className="w-6 h-6 text-blue-600" /><CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-200">Step 3: Select Staff & Options</CardTitle></div>
               </CardHeader>
-
-              <CardContent className="pt-6 space-y-6">
-                {/* Staff Selection */}
+              <CardContent className="pt-6 space-y-8">
                 <div>
-                  <h3 className="text-lg font-medium mb-4 ">Select Staff</h3>
+                  <h3 className="text-lg font-semibold mb-4 text-slate-700 dark:text-slate-300">Select Staff</h3>
                   {staffLoading ? (
-                    <div className="flex items-center justify-center py-4">
-                      <Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" />
-                      <span className="text-blue-700">Loading staff...</span>
-                    </div>
+                    <div className="flex items-center justify-center py-4"><Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" /> <span className="text-slate-600 dark:text-slate-400">Loading staff...</span></div>
                   ) : staffAssignments.length === 0 ? (
-                    <p className="text-blue-600">
-                      No staff available for this service
-                    </p>
+                    <p className="text-slate-500 dark:text-slate-400">No staff available for this service</p>
                   ) : (
-                    <RadioGroup
-                      value={formData.staff}
-                      onValueChange={(value) =>
-                        handleInputChange("staff", value)
-                      }
-                    >
+                    <RadioGroup value={formData.staff} onValueChange={(v) => handleInputChange("staff", v)}>
                       <div className="space-y-2">
                         {staffAssignments.map((staff) => (
-                          <Label
-                            key={staff.StaffId}
-                            htmlFor={`staff-${staff.StaffId}`}
-                            className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${formData.staff === staff.StaffId.toString()
-                                ? "border-blue-600"
-                                : "border-blue-200 hover:border-blue-400"
-                              }`}
-                          >
-                            <RadioGroupItem
-                              value={staff.StaffId.toString()}
-                              id={`staff-${staff.StaffId}`}
-                              className="text-blue-600"
-                            />
-                            <div className="ml-3">
-                              <div className="font-medium ">
-                                {staff.StaffName}
-                              </div>
-                            </div>
+                          <Label key={staff.StaffId} htmlFor={`staff-${staff.StaffId}`} className={`flex items-center p-3 border rounded-xl cursor-pointer transition-all duration-300 ${formData.staff === staff.StaffId.toString() ? "border-blue-500 bg-blue-50 dark:bg-blue-950/50 dark:border-blue-800 shadow-inner" : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-400 dark:hover:border-blue-700 hover:bg-slate-50 dark:hover:bg-slate-800"}`}>
+                            <RadioGroupItem value={staff.StaffId.toString()} id={`staff-${staff.StaffId}`} className="text-blue-600" />
+                            <div className="ml-3"><div className="font-medium text-slate-800 dark:text-slate-200">{staff.StaffName}</div></div>
                           </Label>
                         ))}
                       </div>
@@ -1036,67 +917,25 @@ const handleProceedWithBooking = (bookingData: any) => {
                   )}
                 </div>
 
-                {/* Dynamic Parameters */}
                 {formData.staff && getDynamicParameters().length > 0 && (
                   <>
-                    <Separator className="bg-blue-200" />
-                    <div>
-                      <h3 className="text-lg font-medium mb-4 ">
-                        Additional Options
-                      </h3>
-                      <div className="space-y-6">
-                        {getDynamicParameters().map((parameter) => (
-                          <div key={parameter.BookingParameterId}>
-                            <h4 className="font-medium mb-3 text-blue-800">
-                              {parameter.BookingParameterCode}
-                            </h4>
-                            <RadioGroup
-                              value={
-                                formData[
-                                parameter.BookingParameterId.toString()
-                                ]
-                              }
-                              onValueChange={(value) =>
-                                handleDynamicParameterChange(
-                                  parameter.BookingParameterId.toString(),
-                                  value
-                                )
-                              }
-                            >
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                {parameter.BookingParameterValue.map(
-                                  (value) => (
-                                    <Label
-                                      key={value.BookingParameterValueId}
-                                      htmlFor={`param-${parameter.BookingParameterId}-${value.BookingParameterValueId}`}
-                                      className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${formData[
-                                          parameter.BookingParameterId.toString()
-                                        ] ===
-                                          value.BookingParameterValueId.toString()
-                                          ? "border-blue-600"
-                                          : "border-blue-200 hover:border-blue-400"
-                                        }`}
-                                    >
-                                      <RadioGroupItem
-                                        value={value.BookingParameterValueId.toString()}
-                                        id={`param-${parameter.BookingParameterId}-${value.BookingParameterValueId}`}
-                                        className="text-blue-600"
-                                      />
-                                      <div className="ml-3">
-                                        <div className="font-medium ">
-                                          {
-                                            value.BookingParamterValueDescription
-                                          }
-                                        </div>
-                                      </div>
-                                    </Label>
-                                  )
-                                )}
-                              </div>
-                            </RadioGroup>
-                          </div>
-                        ))}
-                      </div>
+                    <Separator className="dark:bg-slate-800"/>
+                    <div className="space-y-6">
+                      {getDynamicParameters().map((parameter) => (
+                        <div key={parameter.BookingParameterId}>
+                          <h4 className="text-lg font-semibold mb-3 text-slate-700 dark:text-slate-300">{parameter.BookingParameterCode}</h4>
+                          <RadioGroup value={formData[parameter.BookingParameterId.toString()]} onValueChange={(value) => handleDynamicParameterChange(parameter.BookingParameterId.toString(), value)}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {parameter.BookingParameterValue.map((value) => (
+                                <Label key={value.BookingParameterValueId} htmlFor={`param-${parameter.BookingParameterId}-${value.BookingParameterValueId}`} className={`flex items-center p-3 border rounded-xl cursor-pointer transition-all duration-300 ${formData[parameter.BookingParameterId.toString()] === value.BookingParameterValueId.toString() ? "border-blue-500 bg-blue-50 dark:bg-blue-950/50 dark:border-blue-800 shadow-inner" : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-400 dark:hover:border-blue-700 hover:bg-slate-50 dark:hover:bg-slate-800"}`}>
+                                  <RadioGroupItem value={value.BookingParameterValueId.toString()} id={`param-${parameter.BookingParameterId}-${value.BookingParameterValueId}`} className="text-blue-600" />
+                                  <div className="ml-3"><div className="font-medium text-slate-800 dark:text-slate-200">{value.BookingParamterValueDescription}</div></div>
+                                </Label>
+                              ))}
+                            </div>
+                          </RadioGroup>
+                        </div>
+                      ))}
                     </div>
                   </>
                 )}
@@ -1106,167 +945,55 @@ const handleProceedWithBooking = (bookingData: any) => {
 
           {/* Step 4: Date & Time Selection */}
           {currentStep === 4 && (
-            <Card className="border-blue-200">
-              <CardHeader className="border-b border-blue-200">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-blue-600" />
-                  <CardTitle className="">Step 4: Select Date & Time</CardTitle>
-                </div>
-              </CardHeader>
-
+            <Card className="bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-shadow duration-300">
+              <CardHeader className="border-b border-slate-200 dark:border-slate-800"><div className="flex items-center gap-3"><Calendar className="w-6 h-6 text-blue-600" /><CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-200">Step 4: Select Date & Time</CardTitle></div></CardHeader>
               <CardContent className="pt-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Date Selection - Left Side */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div className="space-y-4">
                     <div>
-                      <Label
-                        htmlFor="booking-date"
-                        className="text-base font-medium mb-2 block "
-                      >
-                        Select Date
-                      </Label>
-                      <Input
-                        id="booking-date"
-                        type="date"
-                        value={formData.date}
-                        onChange={(e) =>
-                          handleInputChange("date", e.target.value)
-                        }
-                        min={new Date().toISOString().split("T")[0]}
-                        className="text-base border-blue-300 focus:border-blue-500 focus:ring-blue-500"
-                      />
-                      {formData.date && (
-                        <p className="text-sm text-blue-600 mt-2">
-                          Selected date:{" "}
-                          {new Date(formData.date).toLocaleDateString()}
-                        </p>
-                      )}
+                      <Label htmlFor="booking-date" className="text-base font-semibold mb-2 block text-slate-700 dark:text-slate-300">Select Date</Label>
+                      <Input id="booking-date" type="date" value={formData.date} onChange={(e) => handleInputChange("date", e.target.value)} min={new Date().toISOString().split("T")[0]} className="text-base border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500" />
+                      {formData.date && (<p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Selected: {new Date(formData.date).toLocaleDateString()}</p>)}
                     </div>
-
-                    {/* Quick Stats */}
                     {formData.date && availableTimeSlots.length > 0 && (
-                      <Card className=" border-blue-200">
-                        <CardContent className="p-4">
-                          <div className="grid grid-cols-3 gap-2 text-center">
-                            <div>
-                              <div className="text-2xl font-bold ">
-                                {availableTimeSlots.length}
-                              </div>
-                              <div className="text-xs text-blue-600">Total</div>
-                            </div>
-                            <div>
-                              <div className="text-2xl font-bold text-green-600">
-                                {
-                                  availableTimeSlots.filter(
-                                    (slot) => slot.available
-                                  ).length
-                                }
-                              </div>
-                              <div className="text-xs text-blue-600">
-                                Available
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-2xl font-bold text-red-600">
-                                {
-                                  availableTimeSlots.filter(
-                                    (slot) => !slot.available
-                                  ).length
-                                }
-                              </div>
-                              <div className="text-xs text-blue-600">
-                                Booked
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                      <Card className="border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"><CardContent className="p-4"><div className="grid grid-cols-3 gap-2 text-center">
+                            <div><div className="text-2xl font-bold text-slate-800 dark:text-slate-200">{availableTimeSlots.length}</div><div className="text-xs text-slate-500 dark:text-slate-400">Total</div></div>
+                            <div><div className="text-2xl font-bold text-green-600">{availableTimeSlots.filter((s) => s.available).length}</div><div className="text-xs text-slate-500 dark:text-slate-400">Available</div></div>
+                            <div><div className="text-2xl font-bold text-red-600">{availableTimeSlots.filter((s) => !s.available).length}</div><div className="text-xs text-slate-500 dark:text-slate-400">Booked</div></div>
+                      </div></CardContent></Card>
                     )}
                   </div>
 
-                  {/* Time Slot Selection - Right Side */}
-                  {formData.date && (
-                    <div className="space-y-4">
-                      <Label className="text-base font-medium block ">
-                        Available Time Slots
-                      </Label>
-                      {timeSlotsLoading ? (
-                        <div className="flex items-center justify-center py-12">
-                          <Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" />
-                          <span className="text-blue-700">
-                            Loading available time slots...
-                          </span>
-                        </div>
-                      ) : availableTimeSlots.length > 0 ? (
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-96 overflow-y-auto p-1">
-                            {availableTimeSlots.map((slot, index) => (
-                              <Button
-                                key={`${slot.id}-${index}`}
-                                type="button"
-                                onClick={() => handleTimeSlotClick(slot.time)}
-                                disabled={!slot.available}
-                                variant={
-                                  formData.selectedTime === slot.time
-                                    ? "default"
-                                    : "outline"
-                                }
-                                className={`h-12 text-sm font-medium transition-all
-                                  ${slot.available
-                                    ? formData.selectedTime === slot.time
-                                      ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
-                                      : "bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300"
-                                    : "bg-red-50 text-red-400 border-red-200 cursor-not-allowed opacity-60"
-                                  }`}
-                              >
-                                <div className="flex flex-col items-center">
-                                  <span>{slot.time}</span>
-                                  {!slot.available && (
-                                    <span className="text-xs">Unavailable</span>
+                  <div className="space-y-4">
+                    {formData.date ? (
+                      <>
+                          <Label className="text-base font-semibold block text-slate-700 dark:text-slate-300">Available Time Slots</Label>
+                          {timeSlotsLoading ? (
+                              <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" /> <span className="text-slate-600 dark:text-slate-400">Finding available slots...</span></div>
+                          ) : availableTimeSlots.length > 0 ? (
+                              <div className="space-y-4">
+                                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-96 overflow-y-auto p-1">
+                                      {availableTimeSlots.map((slot, index) => (
+                                      <Button key={`${slot.id}-${index}`} type="button" onClick={() => handleTimeSlotClick(slot.time)} disabled={!slot.available} variant={formData.selectedTime === slot.time ? "default" : "outline"}
+                                          className={`h-12 text-sm font-semibold rounded-lg transition-all duration-300 ${!slot.available ? "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed" : formData.selectedTime === slot.time ? "bg-blue-600 text-white ring-2 ring-blue-600 ring-offset-white dark:ring-offset-slate-900" : "bg-white dark:bg-slate-900 hover:bg-blue-50 dark:hover:bg-slate-800 text-blue-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-700"}`}>
+                                          {slot.time}
+                                      </Button>
+                                      ))}
+                                  </div>
+                                  {formData.selectedTime && (
+                                      <div className="p-3 bg-blue-100 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg text-center"><div className="flex items-center justify-center gap-2 text-blue-700 dark:text-blue-300 font-medium"><CheckCircle2 className="w-4 h-4" />Selected: {formData.selectedTime}</div></div>
                                   )}
-                                </div>
-                              </Button>
-                            ))}
-                          </div>
-
-                          {!formData.selectedTime && (
-                            <p className="text-sm text-blue-600 text-center">
-                              Please select a time slot to continue
-                            </p>
-                          )}
-
-                          {formData.selectedTime && (
-                            <div className="p-3 bg-blue-100 border border-blue-200 rounded-lg">
-                              <div className="flex items-center justify-center gap-2 text-blue-700 font-medium">
-                                <CheckCircle2 className="w-4 h-4" />
-                                Selected: {formData.selectedTime}
                               </div>
-                            </div>
+                          ) : (
+                              <div className="text-center py-12 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg"><Calendar className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" /><p className="text-slate-600 dark:text-slate-400 font-medium">No available time slots</p><p className="text-sm text-slate-500 dark:text-slate-500 mt-1">Please try a different date</p></div>
                           )}
-                        </div>
-                      ) : (
-                        <div className="text-center py-12 border-2 border-dashed border-blue-200 rounded-lg">
-                          <Calendar className="w-12 h-12 text-blue-300 mx-auto mb-3" />
-                          <p className="text-blue-600 font-medium">
-                            No available time slots
-                          </p>
-                          <p className="text-sm text-blue-500 mt-1">
-                            Please try selecting a different date
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Empty State for Time Slots when no date selected */}
-                  {!formData.date && (
-                    <div className="flex items-center justify-center min-h-[200px] border-2 border-dashed border-blue-200 rounded-lg">
-                      <div className="text-center text-blue-500">
-                        <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <p>Please select a date to see available time slots</p>
+                      </>
+                    ) : (
+                      <div className="flex items-center justify-center min-h-[200px] border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
+                        <div className="text-center text-slate-500 dark:text-slate-400"><Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" /><p>Select a date to see time slots</p></div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1275,120 +1002,47 @@ const handleProceedWithBooking = (bookingData: any) => {
           {/* Step 5: Customer Information */}
           {currentStep === 5 && (
             <>
-              <Card className="border-blue-200">
-                <CardHeader className=" border-b border-blue-200">
-                  <div className="flex items-center gap-2">
-                    <User className="w-5 h-5 text-blue-600" />
-                    <CardTitle className="">
-                      Step 5: Your Information
-                    </CardTitle>
-                  </div>
-                </CardHeader>
+                <Card className="bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-shadow duration-300">
+                  <CardHeader className="border-b border-slate-200 dark:border-slate-800"><div className="flex items-center gap-3"><User className="w-6 h-6 text-blue-600" /><CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-200">Step 5: Your Information</CardTitle></div></CardHeader>
+                  <CardContent className="pt-6 space-y-4">
+                    <div>
+                      <Label htmlFor="customer-name" className="text-base font-semibold mb-2 block text-slate-700 dark:text-slate-300">Full Name *</Label>
+                      <Input id="customer-name" type="text" placeholder="Enter your full name" value={formData.customerName} onChange={(e) => handleInputChange("customerName", e.target.value)} className="text-base border-slate-300 dark:border-slate-700 dark:bg-slate-800 focus:border-blue-500 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <Label htmlFor="customer-email" className="text-base font-semibold mb-2 block text-slate-700 dark:text-slate-300">Email Address *</Label>
+                      <Input id="customer-email" type="email" placeholder="Enter your email address" value={formData.customerEmail} onChange={(e) => handleInputChange("customerEmail", e.target.value)} className="text-base border-slate-300 dark:border-slate-700 dark:bg-slate-800 focus:border-blue-500 focus:ring-blue-500" />
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">A confirmation with OTP will be sent to this email.</p>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                <CardContent className="pt-6 space-y-4">
-                  <div>
-                    <Label htmlFor="customer-name" className="text-base font-medium mb-2 block">
-                      Full Name *
-                    </Label>
-                    <Input
-                      id="customer-name"
-                      type="text"
-                      placeholder="Enter your full name"
-                      value={formData.customerName}
-                      onChange={(e) =>
-                        handleInputChange("customerName", e.target.value)
-                      }
-                      className="text-base border-blue-300 focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </div>
+                <Card className="bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-shadow duration-300">
+                    <CardHeader className="border-b border-slate-200 dark:border-slate-800"><div className="flex items-center gap-3"><FileText className="w-6 h-6 text-blue-600" /><CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-200">Special Notes (Optional)</CardTitle></div></CardHeader>
+                    <CardContent className="pt-6">
+                        <Textarea value={formData.bookingNote} onChange={(e) => handleInputChange("bookingNote", e.target.value)} rows={4} placeholder="Any special requirements..." className="resize-none border-slate-300 dark:border-slate-700 dark:bg-slate-800 focus:border-blue-500 focus:ring-blue-500"/>
+                    </CardContent>
+                </Card>
 
-                  <div>
-                    <Label htmlFor="customer-email" className="text-base font-medium mb-2 block">
-                      Email Address *
-                    </Label>
-                    <Input
-                      id="customer-email"
-                      type="email"
-                      placeholder="Enter your email address"
-                      value={formData.customerEmail}
-                      onChange={(e) =>
-                        handleInputChange("customerEmail", e.target.value)
-                      }
-                      className="text-base border-blue-300 focus:border-blue-500 focus:ring-blue-500"
-                    />
-                    <p className="text-sm text-blue-600 mt-1">
-                      A confirmation email with OTP will be sent to this address
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Booking Note and Submit */}
-              <Card className="border-blue-200">
-                <CardHeader className=" border-b border-blue-200">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-blue-600" />
-                    <CardTitle className="">Special Notes (Optional)</CardTitle>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="pt-6">
-                  <Textarea
-                    value={formData.bookingNote}
-                    onChange={(e) =>
-                      handleInputChange("bookingNote", e.target.value)
-                    }
-                    rows={4}
-                    placeholder="Any special requirements or notes about your appointment..."
-                    className="resize-none border-blue-300 focus:border-blue-500 focus:ring-blue-500"
-                  />
-                </CardContent>
-              </Card>
-
-              <Card className="border-blue-200">
-                <CardContent className="pt-6">
-                  <Button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={
-                      submitting ||
-                      processingBooking ||
-                      !formData.selectedTime ||
-                      !formData.customerName ||
-                      !formData.customerEmail
-                    }
-                    className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700 text-white"
-                    size="lg"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                        Preparing Booking...
-                      </>
-                    ) : processingBooking ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                        Creating Your Booking...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-5 h-5 mr-2" />
-                        Confirm Booking
-                      </>
-                    )}
-                  </Button>
-                  <p className="text-sm text-blue-600 mt-3 text-center">
-                    By clicking "Confirm Booking", you agree to receive confirmation emails for your appointment.
-                  </p>
-                </CardContent>
-              </Card>
-            </>
+                <Card className="bg-transparent shadow-none border-none">
+                  <CardContent className="p-0">
+                    <Button type="button" onClick={handleSubmit} disabled={submitting || processingBooking || !formData.selectedTime || !formData.customerName || !formData.customerEmail} size="lg" className="w-full h-14 text-lg font-bold bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300">
+                      {submitting ? (<><Loader2 className="w-5 h-5 animate-spin mr-2" /> Preparing...</>)
+                      : processingBooking ? (<><Loader2 className="w-5 h-5 animate-spin mr-2" /> Creating Booking...</>)
+                      : (<><CheckCircle2 className="w-5 h-5 mr-2" /> Confirm & Book Appointment</>)}
+                    </Button>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 text-center">By clicking, you agree to our terms and to receive booking-related emails.</p>
+                  </CardContent>
+                </Card>
+              </>
           )}
         </div>
 
         {/* Sidebar - Booking Summary */}
         <div className="lg:col-span-1">
-          <BookingSummaryCard />
+          <div className="sticky top-24">
+            <BookingSummaryCard />
+          </div>
         </div>
       </div>
 
@@ -1403,8 +1057,8 @@ const handleProceedWithBooking = (bookingData: any) => {
           bookingData={pendingBookingData}
         />
       )}
-    </div>
+    </main>
     <Footer />
-    </>
+    </div>
   );
 }
