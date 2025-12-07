@@ -842,8 +842,7 @@ export default function BookingForm() {
             <div className="flex items-start">
                 {["Branch", "Service", "Details", "Date & Time", "Customer"].map((label, index) => {
                     const step = index + 1;
-                    const isCompleted = latestCompletedStep > step;
-                    const isActive = step === currentStep;
+                                                const isCompleted = latestCompletedStep >= step;                    const isActive = step === currentStep;
                     const isClickable = step <= latestCompletedStep || !modifiedSteps.has(step);
                     return (
                         <Fragment key={step}>
