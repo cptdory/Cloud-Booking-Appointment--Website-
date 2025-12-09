@@ -849,7 +849,7 @@ export default function BookingForm() {
 
       // Reset or redirect
       if (isReschedule) {
-        router.push("/dashboard/calendar");
+        router.push("/calendar");
       } else {
         // Reset form
         const resetData: FormData = {
