@@ -1,5 +1,6 @@
 // route.ts (for /api/one-time-password/otp-validation)
 import { NextRequest, NextResponse } from "next/server";
+import { parseBCError, createErrorResponse } from "@/app/api/utils/bc-error-handler";
 
 let memoryCache: { access_token: string; expires_at: number } | null = null;
 
@@ -70,9 +71,8 @@ async function validateOTP(
       url,
       response: text,
     });
-    throw new Error(
-      `Failed request (${res.status}): ${res.statusText} - ${text}`
-    );
+    const bcError = parseBCError(text);
+    throw new Error(JSON.stringify(bcError));
   }
 
   const json = await res.json();
@@ -110,9 +110,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Error:', error);
-    return NextResponse.json(
-      { error: 'Failed', message: error.message },
-      { status: 500 }
-    );
+    const errorResponse = createErrorResponse(error, "Failed to validate OTP");
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }

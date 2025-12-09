@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
+import { createErrorResponse } from "@/app/api/utils/bc-error-handler";
 
 export async function POST(request: Request) {
   try {
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
 
     if (!res.ok) {
       return NextResponse.json(
-        { error: bcData.error || "Login failed" },
+        bcData.error ? { error: bcData.error } : { error: { code: "BC_Error", message: "Login failed" } },
         { status: res.status }
       );
     }
@@ -137,9 +138,7 @@ if (isAdmin) {
     return response;
   } catch (error: any) {
     console.error("Login error:", error);
-    return NextResponse.json(
-      { error: "Internal server error", message: error.message },
-      { status: 500 }
-    );
+    const errorResponse = createErrorResponse(error, "Login failed");
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }

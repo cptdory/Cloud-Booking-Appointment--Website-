@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useToast } from "@/hooks/useToast";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ export function OTPDialog({
   customerEmail,
   bookingData,
 }: OTPDialogProps) {
+  const { showError, showSuccess, showInfo } = useToast();
   const [otp, setOtp] = useState("");
   const [requestId, setRequestId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -65,7 +67,7 @@ export function OTPDialog({
       console.log("Sending OTP (first time)");
       sendOTP();
       hasSentOTP.current = true;
-      
+
       // Focus OTP input after a short delay
       setTimeout(() => {
         if (inputRef.current) {
@@ -73,13 +75,7 @@ export function OTPDialog({
         }
       }, 300);
     }
-
-    // If already verified, proceed with booking
-    if (isOpen && isVerified && bookingData) {
-      console.log("OTP already verified, proceeding with booking");
-      handleProceedWithBooking();
-    }
-  }, [isOpen, isVerified, bookingData]);
+  }, [isOpen]);
 
   // Reset states when dialog closes
   useEffect(() => {
@@ -122,18 +118,15 @@ export function OTPDialog({
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || "Failed to send OTP");
+        showError(result, "Failed to send OTP");
+        return;
       }
 
       if (result.success && result.value) {
         setRequestId(result.value);
         setOtpSent(true);
         setCountdown(60); // 60 seconds countdown
-        setSuccess(
-          isResend
-            ? "New OTP sent to your email!"
-            : "OTP sent to your email!"
-        );
+        showSuccess(isResend ? "New OTP sent to your email!" : "OTP sent to your email!");
         
         // Focus OTP input
         setTimeout(() => {
@@ -142,10 +135,10 @@ export function OTPDialog({
           }
         }, 100);
       } else {
-        throw new Error(result.message || "Failed to send OTP");
+        showError(result, "Failed to send OTP");
       }
     } catch (err: any) {
-      setError(err.message || "Failed to send OTP. Please try again.");
+      showError(err, "Failed to send OTP. Please try again.");
     } finally {
       if (isResend) {
         setResending(false);
@@ -157,17 +150,16 @@ export function OTPDialog({
 
   const validateOTP = async () => {
     if (!otp || !requestId) {
-      setError("Please enter the OTP");
+      showInfo("Please enter the OTP");
       return;
     }
 
     if (otp.length < 4) {
-      setError("Please enter a valid OTP (minimum 4 digits)");
+      showInfo("Please enter a valid OTP (minimum 4 digits)");
       return;
     }
 
     setVerifying(true);
-    setError(null);
 
     try {
       const response = await fetch("/api/one-time-password/otp-validation", {
@@ -184,11 +176,12 @@ export function OTPDialog({
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || "Failed to verify OTP");
+        showError(result, "Failed to verify OTP");
+        return;
       }
 
       if (result.success && result.isValid) {
-        setSuccess("OTP verified successfully! Creating your booking...");
+        showSuccess("OTP verified successfully! Creating your booking...");
         setIsVerified(true);
         onOTPVerified();
         
@@ -198,7 +191,7 @@ export function OTPDialog({
         }, 500);
         
       } else {
-        setError("Invalid OTP. Please try again.");
+        showInfo("Invalid OTP. Please try again.");
         // Clear OTP on error
         setOtp("");
         if (inputRef.current) {
@@ -206,7 +199,7 @@ export function OTPDialog({
         }
       }
     } catch (err: any) {
-      setError(err.message || "Failed to verify OTP. Please try again.");
+      showError(err, "Failed to verify OTP. Please try again.");
     } finally {
       setVerifying(false);
     }

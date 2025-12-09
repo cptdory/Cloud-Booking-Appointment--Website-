@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { showErrorAlert, showResponseToast } from "@/components/Common/SweetAlert";
 
 // Separate LoginForm component with its own state
 const LoginForm = ({ isAdmin = false }: { isAdmin?: boolean }) => {
@@ -18,12 +19,10 @@ const LoginForm = ({ isAdmin = false }: { isAdmin?: boolean }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setIsLoading(true);
 
     try {
@@ -41,28 +40,38 @@ const LoginForm = ({ isAdmin = false }: { isAdmin?: boolean }) => {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || data.message || "Login failed");
+        // Extract error message from nested error object or use fallback
+        let errorMessage = "Login failed";
+        
+        if (data.error?.message) {
+          errorMessage = data.error.message;
+        } else if (data.error) {
+          errorMessage = typeof data.error === "string" ? data.error : "Login failed";
+        } else if (data.message) {
+          errorMessage = data.message;
+        }
+
+        showErrorAlert(errorMessage, "Error");
         setIsLoading(false);
         return;
       }
 
+      // Show success toast and redirect
+      showResponseToast(data.message || "Login successful!", "success");
+
       // Clear any cached data and redirect
-      window.location.href = isAdmin ? "/calendar" : "/booking";
+      setTimeout(() => {
+        window.location.href = isAdmin ? "/calendar" : "/booking";
+      }, 1500);
     } catch (err) {
-      setError("Something went wrong");
+      const errorMessage = "Something went wrong";
+      showErrorAlert(errorMessage, "Error");
       setIsLoading(false);
     }
   };
 
   return (
     <form onSubmit={handleSubmit}>
-      {/* Error Message */}
-      {error && (
-        <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-          {error}
-        </div>
-      )}
-
       {/* Email / Customer Number / Admin Username */}
       <div className="mb-8">
         <Label className="mb-3 block text-sm font-medium text-blue-900 dark:text-white">

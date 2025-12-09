@@ -43,7 +43,8 @@ import { useBookingSetup } from "@/hooks/useBookingSetup";
 import { useStaffAssignments } from "@/hooks/useStaffAssignments";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useTimeSlots } from "@/hooks/useTimeSlots";
-import { useAlert } from "@/hooks/useAlert";
+import { useModalAlert } from "@/hooks/useAlert";
+import { useToast } from "@/hooks/useToast";
 import { useBookingParams } from "@/hooks/useBookingParams";
 
 interface FormData {
@@ -112,7 +113,9 @@ export default function BookingForm() {
     loading: timeSlotsLoading,
     fetchAvailableTimeSlots,
   } = useTimeSlots();
-  const { alert, showAlert } = useAlert();
+  const { showSuccess, showError, showInfo, showWarning } = useModalAlert();
+
+  const { showSuccess: showToastSuccess } = useToast();
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [latestCompletedStep, setLatestCompletedStep] = useState<number>(1);
@@ -328,17 +331,15 @@ export default function BookingForm() {
 
       setReadOnlyFields(readOnly);
 
-      showAlert(
+      showInfo(
         "Reschedule Loaded",
-        "Booking entry loaded. Only date and time are editable.",
-        "default"
+        "Booking entry loaded. Only date and time are editable."
       );
     } catch (error: any) {
       console.error("Error loading reschedule data:", error);
-      showAlert(
+      showError(
         "Error Loading Booking",
-        error.message || "Failed to load booking entry.",
-        "destructive"
+        error.message || "Failed to load booking entry."
       );
     } finally {
       setIsLoadingRescheduleData(false);
@@ -348,10 +349,9 @@ export default function BookingForm() {
   // Fetch branches on mount
   useEffect(() => {
     fetchBranches().catch((error) => {
-      showAlert(
+      showError(
         "Failed to Load Branches",
-        error.message || "Please try again later.",
-        "destructive"
+        error.message || "Please try again later."
       );
     });
   }, []);
@@ -553,11 +553,10 @@ export default function BookingForm() {
         newModifiedSteps.delete(2);
         setModifiedSteps(newModifiedSteps);
       } catch (error: any) {
-        showAlert(
+        showError(
           "Failed to Load Branch Details",
           error.message ||
-          "Please try selecting a different branch or try again later.",
-          "destructive"
+          "Please try selecting a different branch or try again later."
         );
       }
     } else if (field === "service" && value && currentStep === 2) {
@@ -589,10 +588,9 @@ export default function BookingForm() {
         newModifiedSteps.delete(3);
         setModifiedSteps(newModifiedSteps);
       } catch (error: any) {
-        showAlert(
+        showError(
           "Failed to Load Staff Assignments",
-          error.message || "Please try selecting a different service.",
-          "destructive"
+          error.message || "Please try selecting a different service."
         );
       }
     } else if (currentStep === 3) {
@@ -682,10 +680,9 @@ export default function BookingForm() {
           formData.staff,
           dynamicParamsData
         ).catch((error) => {
-          showAlert(
+          showError(
             "Failed to Load Time Slots",
-            error.message || "Please try selecting a different date or time.",
-            "destructive"
+            error.message || "Please try selecting a different date or time."
           );
         });
       }
@@ -737,10 +734,9 @@ export default function BookingForm() {
     if (userRole !== "admin" && userRole !== "global-admin") {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(formData.customerEmail)) {
-        showAlert(
+        showError(
           "Invalid Email",
-          "Please enter a valid email address.",
-          "destructive"
+          "Please enter a valid email address."
         );
         return;
       }
@@ -755,10 +751,9 @@ export default function BookingForm() {
       !formData.selectedTime ||
       !formData.customerNo
     ) {
-      showAlert(
+      showError(
         "Missing Information",
-        "Please fill in all required fields before submitting.",
-        "destructive"
+        "Please fill in all required fields before submitting."
       );
       return;
     }
@@ -766,10 +761,9 @@ export default function BookingForm() {
     // Additional validation for non-admin users
     if (userRole !== "admin" && userRole !== "global-admin") {
       if (!formData.customerName) {
-        showAlert(
+        showError(
           "Missing Information",
-          "Please enter your name before submitting.",
-          "destructive"
+          "Please enter your name before submitting."
         );
         return;
       }
@@ -840,7 +834,7 @@ export default function BookingForm() {
         ? "Your appointment has been successfully rescheduled."
         : "Your appointment has been successfully scheduled.";
 
-      showAlert("Booking Confirmed!", successMessage);
+      showToastSuccess(successMessage);
 
       // Reset or redirect
       if (isReschedule) {
@@ -866,6 +860,8 @@ export default function BookingForm() {
 
         setFormData(resetData);
         setCurrentStep(1);
+        setLatestCompletedStep(1);
+        setModifiedSteps(new Set());
         setBookingSummary({
           branch: null,
           service: null,
@@ -878,10 +874,9 @@ export default function BookingForm() {
       }
     } catch (error) {
       console.error("❌ Error creating booking:", error);
-      showAlert(
+      showError(
         "Booking Failed",
-        "Failed to create booking. Please try again.",
-        "destructive"
+        "Failed to create booking. Please try again."
       );
     } finally {
       setSubmitting(false);
@@ -1048,20 +1043,7 @@ export default function BookingForm() {
 
   return (
     <div className="container mx-auto p-6 max-w-6xl space-y-8">
-      {/* Alert Component */}
-      {alert.show && (
-        <Alert
-          variant={alert.variant}
-          className="mb-6 animate-in slide-in-from-top duration-300"
-        >
-          {alert.variant === "destructive" && <XCircle className="h-4 w-4" />}
-          {alert.variant === "default" && <Info className="h-4 w-4" />}
-          <AlertDescription className="flex flex-col">
-            <span className="font-semibold">{alert.title}</span>
-            <span>{alert.description}</span>
-          </AlertDescription>
-        </Alert>
-      )}
+
 
       {/* User Info Banner */}
       <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
@@ -1307,9 +1289,6 @@ export default function BookingForm() {
                   <>
                     <Separator className="dark:bg-slate-800"/>
                     <div>
-                      <h3 className="text-lg font-semibold mb-4 text-slate-700 dark:text-slate-300">
-                        Additional Options
-                      </h3>
                       <div className="space-y-6">
                         {getDynamicParameters().map((parameter) => (
                           <div key={parameter.BookingParameterId}>

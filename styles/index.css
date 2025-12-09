@@ -319,3 +319,8 @@ layer(base);
     @apply bg-background text-foreground;
   }
 }
+
+/* SweetAlert2 high z-index for confirmation dialogs */
+.sa-confirm-high-z {
+  z-index: 9999 !important;
+}

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
+import { showResponseToast, showErrorAlert } from "@/components/Common/SweetAlert";
 export default function SignupPage() {
   const router = useRouter();
 
@@ -22,7 +23,6 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
   const [address2, setAddress2] = useState("");
-  const [age, setAge] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [portalPassword, setPortalPassword] = useState("");
 
@@ -31,13 +31,11 @@ export default function SignupPage() {
   const [_StaffName, set_StaffName] = useState("");
   const [_PortalPassword, set_PortalPassword] = useState("");
 
-  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("customer");
 
   const handleCustomerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setIsLoading(true);
 
     try {
@@ -60,22 +58,35 @@ export default function SignupPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Registration failed");
+        // Extract error message from nested error object or use fallback
+        let errorMessage = "Registration failed";
+        
+        if (data.error?.message) {
+          errorMessage = data.error.message;
+        } else if (data.error) {
+          errorMessage = typeof data.error === "string" ? data.error : "Registration failed";
+        } else if (data.message) {
+          errorMessage = data.message;
+        }
+
+        showErrorAlert(errorMessage);
         setIsLoading(false);
         return;
       }
 
-      router.push("/signin");
+      showResponseToast(data.message || "Account created successfully!", "success");
+      setTimeout(() => {
+        router.push("/signin");
+      }, 1500);
     } catch (err) {
-      setError("Something went wrong");
+      const errorMessage = "Something went wrong";
+      showErrorAlert(errorMessage);
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   const handleAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setIsLoading(true);
 
     try {
@@ -91,17 +102,31 @@ export default function SignupPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || data.message || "Signup failed");
+        // Extract error message from nested error object or use fallback
+        let errorMessage = "Signup failed";
+        
+        if (data.error?.message) {
+          errorMessage = data.error.message;
+        } else if (data.error) {
+          errorMessage = typeof data.error === "string" ? data.error : "Signup failed";
+        } else if (data.message) {
+          errorMessage = data.message;
+        }
+
+        showErrorAlert(errorMessage);
         setIsLoading(false);
         return;
       }
 
-      router.push("/signin");
+      showResponseToast(data.message || "Admin account created successfully!", "success");
+      setTimeout(() => {
+        router.push("/signin");
+      }, 1500);
     } catch (err) {
-      setError("Something went wrong");
+      const errorMessage = "Something went wrong";
+      showResponseToast(errorMessage, "error");
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   return (
@@ -158,12 +183,6 @@ export default function SignupPage() {
                     <p className="text-blue-700 mb-6 text-center text-base font-medium dark:text-gray-300">
                       Sign up as a customer to browse and make appointments.
                     </p>
-
-                    {error && (
-                      <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-                        {error}
-                      </div>
-                    )}
 
                     <form onSubmit={handleCustomerSubmit}>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -331,12 +350,6 @@ export default function SignupPage() {
                     <p className="text-blue-700 mb-6 text-center text-base font-medium dark:text-gray-300">
                       Sign up as Global Admin to manage the platform.
                     </p>
-
-                    {error && (
-                      <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-                        {error}
-                      </div>
-                    )}
 
                     <form onSubmit={handleAdminSubmit}>
                       {/* Name */}

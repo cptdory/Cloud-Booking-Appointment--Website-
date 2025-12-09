@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { parseBCError, createErrorResponse } from "@/app/api/utils/bc-error-handler";
 
 let memoryCache: { access_token: string; expires_at: number } | null = null;
 
@@ -59,7 +60,9 @@ async function authLogin(accessToken: string, body: any, retry = true): Promise<
   if (!res.ok) {
     const text = await res.text();
     console.error('BC Login Error:', { status: res.status, statusText: res.statusText, text });
-    throw new Error(`Failed request (${res.status}): ${res.statusText}`);
+    
+    const bcError = parseBCError(text);
+    throw new Error(JSON.stringify(bcError));
   }
 
   const result = await res.json();
@@ -76,9 +79,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error: any) {
     console.error('Login API Error:', error);
-    return NextResponse.json(
-      { error: "Failed to login", message: error.message },
-      { status: 500 }
-    );
+    
+    const errorResponse = createErrorResponse(error, "Login failed");
+    return NextResponse.json(errorResponse, { status: 400 });
   }
 }

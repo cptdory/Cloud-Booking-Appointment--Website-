@@ -33,7 +33,8 @@ import { useBranches } from "@/hooks/useBranches";
 import { useBookingSetup } from "@/hooks/useBookingSetup";
 import { useStaffAssignments } from "@/hooks/useStaffAssignments";
 import { useTimeSlots } from "@/hooks/useTimeSlots";
-import { useAlert } from "@/hooks/useAlert";
+import { useToast } from "@/hooks/useToast";
+import { useModalAlert } from "@/hooks/useAlert";
 import { useBookingParams } from "@/hooks/useBookingParams";
 // Import OTP Dialog component
 import { OTPDialog } from "@/components/otp-dialog";
@@ -98,7 +99,8 @@ export default function PublicBooking() {
     loading: timeSlotsLoading,
     fetchAvailableTimeSlots,
   } = useTimeSlots();
-  const { alert, showAlert } = useAlert();
+  const { showError, showSuccess } = useToast();
+  const { showError: showErrorAlert, showSuccess: showSuccessAlert } = useModalAlert();
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [latestCompletedStep, setLatestCompletedStep] = useState<number>(1);
@@ -141,11 +143,7 @@ export default function PublicBooking() {
   // Fetch branches on mount
   useEffect(() => {
     fetchBranches().catch((error) => {
-      showAlert(
-        "Failed to Load Branches",
-        error.message || "Please try again later.",
-        "destructive"
-      );
+      showError(error, "Failed to load branches");
     });
   }, []);
 
@@ -290,12 +288,7 @@ export default function PublicBooking() {
         newModifiedSteps.delete(2);
         setModifiedSteps(newModifiedSteps);
       } catch (error: any) {
-        showAlert(
-          "Failed to Load Branch Details",
-          error.message ||
-          "Please try selecting a different branch or try again later.",
-          "destructive"
-        );
+        showError(error, "Failed to load branch details");
       }
     } else if (field === "service" && value && currentStep === 2) {
       // Reset staff and dynamic parameters when service changes
@@ -326,11 +319,7 @@ export default function PublicBooking() {
         newModifiedSteps.delete(3);
         setModifiedSteps(newModifiedSteps);
       } catch (error: any) {
-        showAlert(
-          "Failed to Load Staff Assignments",
-          error.message || "Please try selecting a different service.",
-          "destructive"
-        );
+        showError(error, "Failed to load staff assignments");
       }
     } else if (currentStep === 3) {
       // Check if this is a dynamic parameter field
@@ -419,11 +408,7 @@ export default function PublicBooking() {
           formData.staff,
           dynamicParamsData
         ).catch((error) => {
-          showAlert(
-            "Failed to Load Time Slots",
-            error.message || "Please try selecting a different date or time.",
-            "destructive"
-          );
+          showError(error, "Failed to load time slots");
         });
       }
     }
@@ -486,10 +471,7 @@ export default function PublicBooking() {
       const result = await response.json();
       console.log("✅ Booking created successfully:", result);
 
-      showAlert(
-        "Booking Confirmed!",
-        "Your appointment has been successfully scheduled. A confirmation email has been sent to you."
-      );
+      showSuccessAlert("Your appointment has been successfully scheduled!", "Booking Confirmed!");
 
       // Reset form
       const resetData: FormData = {
@@ -529,11 +511,8 @@ export default function PublicBooking() {
       
     } catch (error: any) {
       console.error("❌ Error creating booking:", error);
-      showAlert(
-        "Booking Failed",
-        error.message || "Failed to create booking. Please try again.",
-        "destructive"
-      );
+      const errorMessage = error.message || "Failed to create booking. Please try again.";
+      showErrorAlert(errorMessage, "Booking Failed");
     } finally {
       setProcessingBooking(false);
       setSubmitting(false);
@@ -553,11 +532,7 @@ export default function PublicBooking() {
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.customerEmail)) {
-      showAlert(
-        "Invalid Email",
-        "Please enter a valid email address.",
-        "destructive"
-      );
+      showErrorAlert("Please enter a valid email address.", "Invalid Email");
       return;
     }
 
@@ -571,11 +546,7 @@ export default function PublicBooking() {
       !formData.customerName ||
       !formData.customerEmail
     ) {
-      showAlert(
-        "Missing Information",
-        "Please fill in all required fields before submitting.",
-        "destructive"
-      );
+      showErrorAlert("Please fill in all required fields before submitting.", "Missing Information");
       return;
     }
 
@@ -626,13 +597,10 @@ export default function PublicBooking() {
       setPendingBookingData(bodyToSend);
       setShowOTPDialog(true);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Error preparing booking:", error);
-      showAlert(
-        "Booking Failed",
-        "Failed to prepare booking. Please try again.",
-        "destructive"
-      );
+      const errorMessage = error.message || "Failed to prepare booking. Please try again.";
+      showErrorAlert(errorMessage, "Booking Error");
       setSubmitting(false);
     }
   };
@@ -741,20 +709,6 @@ const handleProceedWithBooking = (bookingData: any) => {
   return (
     <div className="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200">
     <main className="container mx-auto px-4 pt-24 pb-8 max-w-6xl space-y-8">
-      {/* Alert Component */}
-      {alert.show && (
-        <Alert
-          variant={alert.variant}
-          className="mb-6 animate-in slide-in-from-top duration-300"
-        >
-          {alert.variant === "destructive" && <XCircle className="h-4 w-4" />}
-          {alert.variant === "default" && <Info className="h-4 w-4" />}
-          <AlertDescription className="flex flex-col">
-            <span className="font-semibold">{alert.title}</span>
-            <span>{alert.description}</span>
-          </AlertDescription>
-        </Alert>
-      )}
 
       {/* Welcome Banner for Public Users */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-500 dark:from-blue-700 dark:to-blue-600 rounded-xl p-8 text-white flex items-center">

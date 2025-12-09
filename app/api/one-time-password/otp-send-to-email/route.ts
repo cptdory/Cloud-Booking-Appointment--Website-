@@ -1,5 +1,6 @@
 // path: /api/one-time-password/otp-send-to-email
 import { NextRequest, NextResponse } from "next/server";
+import { parseBCError, createErrorResponse } from "@/app/api/utils/bc-error-handler";
 
 let memoryCache: { access_token: string; expires_at: number } | null = null;
 
@@ -69,9 +70,8 @@ async function sendToEmail(
       url,
       response: text,
     });
-    throw new Error(
-      `Failed request (${res.status}): ${res.statusText} - ${text}`
-    );
+    const bcError = parseBCError(text);
+    throw new Error(JSON.stringify(bcError));
   }
 
   const json = await res.json();
@@ -107,12 +107,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Error sending OTP:', error);
-    return NextResponse.json(
-      { 
-        error: 'Failed', 
-        message: error.message || 'Failed to send OTP. Please try again.' 
-      },
-      { status: 500 }
-    );
+    const errorResponse = createErrorResponse(error, "Failed to send OTP");
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }

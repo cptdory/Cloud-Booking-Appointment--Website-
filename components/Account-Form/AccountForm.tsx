@@ -12,13 +12,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/hooks/useToast";
+import { useModalAlert } from "@/hooks/useAlert";
 
 import {
   User,
   Loader2,
-  CheckCircle2,
-  AlertCircle,
   Lock,
   Palette,
   Mail,
@@ -55,11 +54,9 @@ interface CustomerDetails {
 
 export default function AccountForm() {
   const router = useRouter();
+  const toast = useToast();
+  const alert = useModalAlert();
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
 
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -85,6 +82,9 @@ export default function AccountForm() {
     birthDate: "",
   });
   const [updatingCustomerDetails, setUpdatingCustomerDetails] = useState(false);
+
+  // Message state (no longer used, replaced with toast/alert hooks)
+  // const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Fetch user data and initial staff color
   useEffect(() => {
@@ -120,7 +120,7 @@ export default function AccountForm() {
         }
       } catch (error) {
         console.error("Error loading data:", error);
-        setMessage({ type: "error", text: "Failed to load data" });
+        alert.showError("Failed to load data");
       } finally {
         setLoading(false);
       }
@@ -205,20 +205,16 @@ export default function AccountForm() {
 
   const handlePasswordChange = async () => {
     if (!newPassword || !confirmPassword) {
-      setMessage({
-        type: "error",
-        text: "New password and confirmation required",
-      });
+      alert.showError("New password and confirmation required");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setMessage({ type: "error", text: "New passwords do not match" });
+      alert.showError("New passwords do not match");
       return;
     }
 
     setChangingPassword(true);
-    setMessage(null);
 
     try {
       if (isAdmin && userData?.currentBookingSetup) {
@@ -241,7 +237,7 @@ export default function AccountForm() {
 
         if (!res.ok) throw new Error("Password change failed");
 
-        setMessage({ type: "success", text: "Password updated successfully!" });
+        toast.showSuccess("Password updated successfully!");
         setNewPassword("");
         setConfirmPassword("");
       } else if (isCustomer && userData?.customerNo) {
@@ -257,17 +253,14 @@ export default function AccountForm() {
 
         if (!res.ok) throw new Error("Password change failed");
 
-        setMessage({ type: "success", text: "Password updated successfully!" });
+        toast.showSuccess("Password updated successfully!");
         setNewPassword("");
         setConfirmPassword("");
       } else {
-        setMessage({ type: "error", text: "Password change not available" });
+        alert.showError("Password change not available");
       }
     } catch (error) {
-      setMessage({
-        type: "error",
-        text: "Failed to change password. Try again.",
-      });
+      alert.showError("Failed to change password. Try again.");
     } finally {
       setChangingPassword(false);
     }
@@ -275,12 +268,11 @@ export default function AccountForm() {
 
   const handleColorChange = async () => {
     if (!staffColor || !userData?.currentBookingSetup) {
-      setMessage({ type: "error", text: "Color is required" });
+      alert.showError("Color is required");
       return;
     }
 
     setChangingColor(true);
-    setMessage(null);
 
     try {
       const requestBody = {
@@ -305,18 +297,10 @@ export default function AccountForm() {
 
       await fetchStaffColor(userData.currentBookingSetup);
 
-      setMessage({
-        type: "success",
-        text: "Staff color updated successfully!",
-      });
-
-      setTimeout(() => setMessage(null), 3000);
+      toast.showSuccess("Staff color updated successfully!");
     } catch (error) {
       console.error("❌ Staff color update error:", error);
-      setMessage({
-        type: "error",
-        text: "Failed to update staff color. Try again.",
-      });
+      alert.showError("Failed to update staff color. Try again.");
     } finally {
       setChangingColor(false);
     }
@@ -324,12 +308,11 @@ export default function AccountForm() {
 
   const handleCustomerDetailsChange = async () => {
     if (!userData?.customerNo) {
-      setMessage({ type: "error", text: "Customer number is missing" });
+      alert.showError("Customer number is missing");
       return;
     }
 
     setUpdatingCustomerDetails(true);
-    setMessage(null);
 
     try {
       const res = await fetch("/api/customer/update-customer-details", {
@@ -343,14 +326,10 @@ export default function AccountForm() {
 
       if (!res.ok) throw new Error("Failed to update details");
 
-      setMessage({ type: "success", text: "Profile updated successfully!" });
-      setTimeout(() => setMessage(null), 3000);
+      toast.showSuccess("Profile updated successfully!");
     } catch (error) {
       console.error("Error updating details:", error);
-      setMessage({
-        type: "error",
-        text: "Failed to update profile. Try again.",
-      });
+      alert.showError("Failed to update profile. Try again.");
     } finally {
       setUpdatingCustomerDetails(false);
     }
@@ -384,17 +363,7 @@ export default function AccountForm() {
         </CardHeader>
       </Card>
 
-      {/* Alert */}
-      {message && (
-        <Alert variant={message.type === "error" ? "destructive" : "default"}>
-          {message.type === "success" ? (
-            <CheckCircle2 className="h-4 w-4" />
-          ) : (
-            <AlertCircle className="h-4 w-4" />
-          )}
-          <AlertDescription>{message.text}</AlertDescription>
-        </Alert>
-      )}
+
 
       {/* Admin View - Staff Color and Password */}
       {isAdmin ? (

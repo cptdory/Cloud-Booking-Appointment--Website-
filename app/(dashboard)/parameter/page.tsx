@@ -13,8 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Plus, Edit, Trash2, CheckCircle } from "lucide-react";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import { useBookingParams } from "@/hooks/useBookingParams";
 import { useParameterCRUD } from "@/hooks/useParameterCRUD";
 import { useAuth } from "@/hooks/useAuth";
@@ -58,14 +57,6 @@ export default function ParameterPage() {
 
   return (
     <div className="flex flex-1 flex-col p-6 md:p-8">
-      {/* SUCCESS */}
-      {crud.success && (
-        <Alert className="mb-4">
-          <CheckCircle className="h-4 w-4" />
-          <AlertDescription>{crud.success}</AlertDescription>
-        </Alert>
-      )}
-
       {/* MAIN CARD */}
       <Card className="w-full">
         <CardHeader className="flex justify-between items-center">
@@ -80,12 +71,6 @@ export default function ParameterPage() {
         </CardHeader>
 
         <CardContent>
-          {error && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
           {loading ? (
             <p>Loading...</p>
           ) : (
@@ -132,7 +117,160 @@ export default function ParameterPage() {
         </CardContent>
       </Card>
 
-      {/* EDIT, CREATE, DELETE dialogs remain same — now extremely clean */}
+      {/* CREATE DIALOG */}
+      <Dialog open={crud.creating} onOpenChange={crud.setCreating}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New {getItemType()}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="create-code">Code</Label>
+              <Input
+                id="create-code"
+                placeholder="Code"
+                value={crud.newItem.BookingParameterValueCode}
+                onChange={(e) =>
+                  crud.setNewItem({
+                    ...crud.newItem,
+                    BookingParameterValueCode: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="create-name">Name</Label>
+              <Input
+                id="create-name"
+                placeholder="Name"
+                value={crud.newItem.BookingParamterValueDescription}
+                onChange={(e) =>
+                  crud.setNewItem({
+                    ...crud.newItem,
+                    BookingParamterValueDescription: e.target.value,
+                  })
+                }
+              />
+            </div>
+            {checkDuration === "true" && (
+              <div>
+                <Label htmlFor="create-duration">Duration (minutes)</Label>
+                <Input
+                  id="create-duration"
+                  type="number"
+                  placeholder="Duration"
+                  value={crud.newItem.BookingParameterValueDuration}
+                  onChange={(e) =>
+                    crud.setNewItem({
+                      ...crud.newItem,
+                      BookingParameterValueDuration: parseInt(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => crud.setCreating(false)}>
+                Cancel
+              </Button>
+              <Button onClick={crud.handleCreate} disabled={crud.creatingSaving}>
+                {crud.creatingSaving ? "Creating..." : "Create"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* EDIT DIALOG */}
+      <Dialog open={crud.editing} onOpenChange={crud.setEditing}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit {getItemType()}</DialogTitle>
+          </DialogHeader>
+          {crud.editItem && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-code">Code</Label>
+                <Input
+                  id="edit-code"
+                  placeholder="Code"
+                  value={crud.editItem.BookingParameterValueCode}
+                  onChange={(e) =>
+                    crud.setEditItem({
+                      ...crud.editItem,
+                      BookingParameterValueCode: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-name">Name</Label>
+                <Input
+                  id="edit-name"
+                  placeholder="Name"
+                  value={crud.editItem.BookingParamterValueDescription}
+                  onChange={(e) =>
+                    crud.setEditItem({
+                      ...crud.editItem,
+                      BookingParamterValueDescription: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              {checkDuration === "true" && (
+                <div>
+                  <Label htmlFor="edit-duration">Duration (minutes)</Label>
+                  <Input
+                    id="edit-duration"
+                    type="number"
+                    placeholder="Duration"
+                    value={crud.editItem.BookingParameterValueDuration}
+                    onChange={(e) =>
+                      crud.setEditItem({
+                        ...crud.editItem,
+                        BookingParameterValueDuration: parseInt(e.target.value) || 0,
+                      })
+                    }
+                  />
+                </div>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => crud.setEditing(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={crud.handleUpdate} disabled={crud.saving}>
+                  {crud.saving ? "Saving..." : "Save"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* DELETE CONFIRMATION DIALOG */}
+      <Dialog open={!!crud.deleteItem} onOpenChange={(open) => !open && crud.setDeleteItem(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {getItemType()}</DialogTitle>
+          </DialogHeader>
+          {crud.deleteItem && (
+            <div className="space-y-4">
+              <p>
+                Are you sure you want to delete <strong>{crud.deleteItem.BookingParamterValueDescription}</strong>?
+              </p>
+              <p className="text-sm text-slate-500">This action cannot be undone.</p>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => crud.setDeleteItem(null)}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={crud.handleDelete} disabled={crud.deleting}>
+                  {crud.deleting ? "Deleting..." : "Delete"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

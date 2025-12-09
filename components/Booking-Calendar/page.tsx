@@ -49,7 +49,8 @@ import StaffTimeOffDialog from "@/components/Staff-Timeoff/StaffTimeOffDialog";
 
 // Import hooks
 import { useAuth } from "@/hooks/useAuth";
-import { useAlert } from "@/hooks/useAlert";
+import { useAlert, useModalAlert } from "@/hooks/useAlert";
+import { useToast } from "@/hooks/useToast";
 import { useStaffColors } from "@/hooks/useStaffColors";
 import { useStaffMappings } from "@/hooks/useStaffMappings";
 import { useBookingEntries } from "@/hooks/useBookingEntries";
@@ -67,6 +68,8 @@ export default function BookingCalendar() {
   // Use hooks
   const { userRole, username, staffCode, customerNo, checkingAuth } = useAuth();
   const { alert, showAlert } = useAlert();
+  const { showError: showErrorAlert, showConfirm } = useModalAlert();
+  const { showSuccess: showToastSuccess } = useToast();
   const { staffColors, loadStaffColors, getStaffColor } = useStaffColors();
   const { staffMappings, bookingParameterId, loadStaffMappings } =
     useStaffMappings();
@@ -214,18 +217,16 @@ export default function BookingCalendar() {
             );
           }
         } else {
-          showAlert(
+          showErrorAlert(
             "Configuration Error",
-            "Could not load staff configuration for this branch.",
-            "destructive"
+            "Could not load staff configuration for this branch."
           );
         }
       } catch (error: any) {
         console.error("Calendar initialization failed:", error);
-        showAlert(
+        showErrorAlert(
           "Initialization Failed",
-          error.message || "Failed to load calendar data",
-          "destructive"
+          error.message || "Failed to load calendar data"
         );
       } finally {
         setInitialLoading(false);
@@ -266,10 +267,9 @@ export default function BookingCalendar() {
             );
           }
         } catch (error: any) {
-          showAlert(
+          showErrorAlert(
             "Load Error",
-            error.message || "Failed to load calendar data for selected period",
-            "destructive"
+            error.message || "Failed to load calendar data for selected period"
           );
         }
       }
@@ -300,11 +300,7 @@ export default function BookingCalendar() {
       try {
         const success = await updateBookingStatus(selectedEvent.id, newStatus);
         if (success) {
-          showAlert(
-            "Status Updated",
-            `Booking status changed to ${newStatus}`,
-            "default"
-          );
+          showToastSuccess(`Booking status changed to ${newStatus}`);
 
           // Update selected event locally
           setSelectedEvent((prev) =>
@@ -326,10 +322,9 @@ export default function BookingCalendar() {
           );
         }
       } catch (error: any) {
-        showAlert(
+        showErrorAlert(
           "Update Failed",
-          error.message || "Failed to update status",
-          "destructive"
+          error.message || "Failed to update status"
         );
       } finally {
         setIsUpdatingStatus(false);
@@ -342,13 +337,21 @@ export default function BookingCalendar() {
   const handleDeleteTimeOff = useCallback(async () => {
     if (!selectedEvent?.extendedProps.rawData?.TimeOff) return;
 
-    if (!confirm("Are you sure you want to delete this time off?")) return;
+    setIsModalOpen(false);
+
+    const confirmed = await showConfirm(
+      "Are you sure you want to delete this time off?",
+      "This action cannot be undone.",
+      "Delete",
+      "Cancel"
+    );
+    if (!confirmed) return;
 
     setIsDeletingTimeOff(true);
 
     try {
       const body = {
-        _BookingEntryNo: selectedEvent.extendedProps.rawData.EntryNo.toString(),
+        _BookingEntryNo: selectedEvent.extendedProps.rawData?.EntryNo.toString(),
       };
 
       // 🔥 Log the body being sent
@@ -369,7 +372,7 @@ export default function BookingCalendar() {
         throw new Error(json.error || "Failed to delete time off");
       }
 
-      showAlert("Success", "Time off deleted successfully", "default");
+      showToastSuccess("Time off deleted successfully!");
 
       if (currentDateRange) {
         await fetchBookingEntries(
@@ -379,13 +382,11 @@ export default function BookingCalendar() {
         );
       }
 
-      setIsModalOpen(false);
       setSelectedEvent(null);
     } catch (error: any) {
-      showAlert(
+      showErrorAlert(
         "Delete Failed",
-        error.message || "Failed to delete time off",
-        "destructive"
+        error.message || "Failed to delete time off"
       );
     } finally {
       setIsDeletingTimeOff(false);
@@ -396,6 +397,7 @@ export default function BookingCalendar() {
     currentDateRange,
     fetchBookingEntries,
     showAlert,
+    showConfirm,
   ]);
 
   // Handle view change - prevent non-list views on mobile
@@ -1095,6 +1097,7 @@ export default function BookingCalendar() {
           onSuccess={() => {
             setShowTimeOffDialog(false);
             setIsModalOpen(false);
+            // Refresh calendar data to show the new time off entry
             if (currentDateRange) {
               fetchBookingEntries(
                 branchCode,

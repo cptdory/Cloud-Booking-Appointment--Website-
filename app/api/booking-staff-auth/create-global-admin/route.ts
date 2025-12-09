@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { parseBCError, createErrorResponse } from "@/app/api/utils/bc-error-handler";
 
 let memoryCache: { access_token: string; expires_at: number } | null = null;
 
@@ -89,9 +90,8 @@ async function createGlobalAdmin(
       url,
       response: text,
     });
-    throw new Error(
-      `Failed request (${res.status}): ${res.statusText} - ${text}`
-    );
+    const bcError = parseBCError(text);
+    throw new Error(JSON.stringify(bcError));
   }
 
   // FIXED: No more "Unexpected end of JSON input"
@@ -115,9 +115,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("Error global admin:", error);
-    return NextResponse.json(
-      { error: "Sign up failed", message: error.message },
-      { status: 500 }
-    );
+    const errorResponse = createErrorResponse(error, "Sign up failed");
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }

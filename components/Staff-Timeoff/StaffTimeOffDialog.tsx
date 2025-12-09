@@ -32,6 +32,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon, Clock, Clock3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/useToast";
+import { useAlert, useModalAlert } from "@/hooks/useAlert";
 
 const timeOptions = [
   "07:00",
@@ -73,6 +75,8 @@ export default function StaffTimeOffDialog({
   onSuccess,
 }: StaffTimeOffDialogProps) {
   const { userRole, username } = useAuth();
+  const { showSuccess: showToastSuccess } = useToast();
+  const { showError: showErrorAlert } = useModalAlert();
   const searchParams = useSearchParams();
   const bookingSetupCode = searchParams.get("code") || "MAIN";
 
@@ -101,8 +105,6 @@ export default function StaffTimeOffDialog({
   const [loadingStaff, setLoadingStaff] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   // Fetch staff when dialog opens
   useEffect(() => {
@@ -156,7 +158,7 @@ export default function StaffTimeOffDialog({
         }
       } catch (err: any) {
         console.error("Failed to fetch staff:", err.message);
-        setSubmitError(`Failed to load staff: ${err.message}`);
+        showErrorAlert("Error Loading Staff", `Failed to load staff: ${err.message}`);
       } finally {
         setLoadingStaff(false);
       }
@@ -174,11 +176,8 @@ export default function StaffTimeOffDialog({
 
   // Submit handler (create or update)
   const handleSubmit = async () => {
-    setSubmitError(null);
-    setSubmitSuccess(false);
-
     if (!selectedStaffCode || !selectedStaffName || !date || (!wholeDay && (!startTime || !endTime))) {
-      setSubmitError("Please fill in all required fields");
+      showErrorAlert("Validation Error", "Please fill in all required fields");
       return;
     }
 
@@ -207,7 +206,7 @@ export default function StaffTimeOffDialog({
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || "Failed to update time off");
 
-        setSubmitSuccess(true);
+        showToastSuccess("Time off updated successfully!");
       } else {
         // CREATE
         const body = {
@@ -230,7 +229,7 @@ export default function StaffTimeOffDialog({
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || "Failed to create time off");
 
-        setSubmitSuccess(true);
+        showToastSuccess("Time off created successfully!");
       }
 
       // Reset form
@@ -248,7 +247,7 @@ export default function StaffTimeOffDialog({
         if (onSuccess) onSuccess();
       }, 2000);
     } catch (err: any) {
-      setSubmitError(err.message || "An error occurred");
+      showErrorAlert("Error", err.message || "An error occurred");
     } finally {
       setSubmitting(false);
     }
@@ -428,19 +427,7 @@ export default function StaffTimeOffDialog({
             </div>
           </section>
 
-          {/* Error Message */}
-          {submitError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-              {submitError}
-            </div>
-          )}
 
-          {/* Success Message */}
-          {submitSuccess && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded text-green-700 text-sm">
-              {isEditMode ? "Time off updated successfully!" : "Time off created successfully!"}
-            </div>
-          )}
 
         </div>
 
