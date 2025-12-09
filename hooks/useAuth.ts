@@ -8,6 +8,7 @@ export function useAuth() {
   const [username, setUsername] = useState<string | null>(null);
   const [staffCode, setStaffCode] = useState<string | null>(null);
   const [customerNo, setCustomerNo] = useState<string>("");
+  const [customerEmail, setCustomerEmail] = useState<string>(""); // New state for customer email
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
@@ -21,6 +22,7 @@ export function useAuth() {
           setStaffCode(data.user.staffCode);
           setUserRole(data.user.role);
           setCustomerNo(data.user.customerNo || "");
+          setCustomerEmail(data.user.email || ""); // Set customer email
         }
       })
       .catch(() => {
@@ -31,5 +33,5 @@ export function useAuth() {
       });
   }, [router]);
 
-  return { userRole, username,staffCode, customerNo, checkingAuth };
+  return { userRole, username, staffCode, customerNo, customerEmail, checkingAuth }; // Return customerEmail
 }

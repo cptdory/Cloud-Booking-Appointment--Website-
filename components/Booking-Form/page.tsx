@@ -94,7 +94,7 @@ export default function BookingForm() {
   const searchParams = useSearchParams();
 
   // Use hooks
-  const { userRole, username, customerNo, checkingAuth } = useAuth();
+  const { userRole, username, customerNo, customerEmail, checkingAuth } = useAuth();
   const { branches, loading: branchesLoading, fetchBranches } = useBranches();
   const {
     bookingSetup,
@@ -156,11 +156,11 @@ export default function BookingForm() {
   // Load reschedule data from URL if present
   useEffect(() => {
     const entryNo = searchParams.get("reschedule");
-    if (entryNo) {
-      setIsReschedule(true);
-      loadRescheduleData(entryNo);
-    }
-  }, [searchParams]);
+          if (entryNo) {
+            setIsReschedule(true);
+            setLatestCompletedStep(5); // Mark all steps as completed for reschedule
+            loadRescheduleData(entryNo);
+          }  }, [searchParams]);
 
   // Load reschedule data from API
   const loadRescheduleData = async (entryNo: string) => {
@@ -490,8 +490,8 @@ export default function BookingForm() {
   ]);
 
   const handleStepSelection = (step: number) => {
-    // Can click on any step up to latestCompletedStep, or any unmodified step
-    if (step <= latestCompletedStep || !modifiedSteps.has(step)) {
+    // Can only click on steps up to latestCompletedStep (previous steps must be complete)
+    if (step <= latestCompletedStep) {
       setCurrentStep(step);
     }
   };
@@ -650,14 +650,9 @@ export default function BookingForm() {
       return time;
     };
 
-    const formattedTime = formatTime(time);
-
-    setFormData((prev) => ({
-      ...prev,
-      selectedTime: formattedTime,
-    }));
-
-    setCurrentStep(5);
+    // This will trigger the logic in handleInputChange to advance the step
+    // and correctly update the latestCompletedStep state.
+    void handleInputChange("selectedTime", formatTime(time));
   };
 
   // Fetch time slots when all prerequisites are met
@@ -900,9 +895,10 @@ export default function BookingForm() {
         ...prev,
         customerNo: customerNo,
         customerName: username || "",
+        customerEmail: customerEmail || "", // Include customerEmail
       }));
     }
-  }, [customerNo, userRole, username]);
+  }, [customerNo, userRole, username, customerEmail]);
 
   // Handle customer selection for admin users
   const handleCustomerSelect = (customerNo: string) => {
@@ -1106,8 +1102,9 @@ export default function BookingForm() {
             <div className="flex items-start">
                 {["Branch", "Service", "Details", "Date & Time", "Customer"].map((label, index) => {
                     const step = index + 1;
-                                                const isCompleted = latestCompletedStep >= step;                    const isActive = step === currentStep;
-                    const isClickable = step <= latestCompletedStep || !modifiedSteps.has(step);
+                    const isCompleted = latestCompletedStep > step;
+                    const isActive = step === currentStep;
+                    const isClickable = isReschedule || step <= latestCompletedStep;
                     return (
                         <Fragment key={step}>
                             <div className="flex flex-col items-center text-center w-24">
@@ -1612,53 +1609,79 @@ export default function BookingForm() {
                   ) : (
                     // For non-admin users: Display and edit their info
                     <>
-                      <div>
-                        <Label htmlFor="customer-no" className="text-base font-semibold mb-2 block dark:text-slate-300">
-                          Customer ID
-                        </Label>
-                        <Input
-                          id="customer-no"
-                          type="text"
-                          value={formData.customerNo}
-                          readOnly
-                          className="bg-slate-100 dark:bg-slate-800 text-base font-semibold border-slate-200 dark:border-slate-700"
-                        />
-                      </div>
+                      {/* Check if the customer is logged in (not admin/global-admin and has a customerNo) and not rescheduling */}
+                      {!isReschedule && customerNo && (userRole !== "admin" && userRole !== "global-admin") ? (
+                        <div className="space-y-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-medium text-sm">
+                            <Lock className="w-4 h-4" />
+                            Customer information pre-filled from your account.
+                          </div>
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-600 dark:text-slate-400 font-medium">Customer ID:</span>
+                              <span className="dark:text-slate-200 font-semibold text-right">{formData.customerNo}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-600 dark:text-slate-400 font-medium">Full Name:</span>
+                              <span className="dark:text-slate-200 font-semibold text-right">{formData.customerName}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-600 dark:text-slate-400 font-medium">Email:</span>
+                              <span className="dark:text-slate-200 font-semibold text-right text-sm">{formData.customerEmail}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div>
+                            <Label htmlFor="customer-no" className="text-base font-semibold mb-2 block dark:text-slate-300">
+                              Customer ID
+                            </Label>
+                            <Input
+                              id="customer-no"
+                              type="text"
+                              value={formData.customerNo}
+                              readOnly
+                              className="bg-slate-100 dark:bg-slate-800 text-base font-semibold border-slate-200 dark:border-slate-700"
+                            />
+                          </div>
 
-                      <div>
-                        <Label htmlFor="customer-name" className="text-base font-semibold mb-2 block dark:text-slate-300">
-                          Full Name *
-                        </Label>
-                        <Input
-                          id="customer-name"
-                          type="text"
-                          placeholder="Enter your full name"
-                          value={formData.customerName}
-                          onChange={(e) =>
-                            handleInputChange("customerName", e.target.value)
-                          }
-                          className="text-base border-slate-300 dark:border-slate-700 dark:bg-slate-800 focus:border-blue-500 focus:ring-blue-500"
-                        />
-                      </div>
+                          <div>
+                            <Label htmlFor="customer-name" className="text-base font-semibold mb-2 block dark:text-slate-300">
+                              Full Name *
+                            </Label>
+                            <Input
+                              id="customer-name"
+                              type="text"
+                              placeholder="Enter your full name"
+                              value={formData.customerName}
+                              onChange={(e) =>
+                                handleInputChange("customerName", e.target.value)
+                              }
+                              className="text-base border-slate-300 dark:border-slate-700 dark:bg-slate-800 focus:border-blue-500 focus:ring-blue-500"
+                            />
+                          </div>
 
-                      <div>
-                        <Label htmlFor="customer-email" className="text-base font-semibold mb-2 block dark:text-slate-300">
-                          Email Address *
-                        </Label>
-                        <Input
-                          id="customer-email"
-                          type="email"
-                          placeholder="Enter your email address"
-                          value={formData.customerEmail}
-                          onChange={(e) =>
-                            handleInputChange("customerEmail", e.target.value)
-                          }
-                          className="text-base border-slate-300 dark:border-slate-700 dark:bg-slate-800 focus:border-blue-500 focus:ring-blue-500"
-                        />
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                          A confirmation email will be sent to this address
-                        </p>
-                      </div>
+                          <div>
+                            <Label htmlFor="customer-email" className="text-base font-semibold mb-2 block dark:text-slate-300">
+                              Email Address *
+                            </Label>
+                            <Input
+                              id="customer-email"
+                              type="email"
+                              placeholder="Enter your email address"
+                              value={formData.customerEmail}
+                              onChange={(e) =>
+                                handleInputChange("customerEmail", e.target.value)
+                              }
+                              className="text-base border-slate-300 dark:border-slate-700 dark:bg-slate-800 focus:border-blue-500 focus:ring-blue-500"
+                            />
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                              A confirmation email will be sent to this address
+                            </p>
+                          </div>
+                        </>
+                      )}
                     </>
                   )}
                 </CardContent>

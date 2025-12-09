@@ -35,8 +35,6 @@ import { useStaffAssignments } from "@/hooks/useStaffAssignments";
 import { useTimeSlots } from "@/hooks/useTimeSlots";
 import { useAlert } from "@/hooks/useAlert";
 import { useBookingParams } from "@/hooks/useBookingParams";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 // Import OTP Dialog component
 import { OTPDialog } from "@/components/otp-dialog";
 
@@ -742,7 +740,6 @@ const handleProceedWithBooking = (bookingData: any) => {
 
   return (
     <div className="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200">
-    <Header />
     <main className="container mx-auto px-4 pt-24 pb-8 max-w-6xl space-y-8">
       {/* Alert Component */}
       {alert.show && (
@@ -778,7 +775,7 @@ const handleProceedWithBooking = (bookingData: any) => {
                         const step = index + 1;
                         const isCompleted = latestCompletedStep > step;
                         const isActive = step === currentStep;
-                        const isClickable = step <= latestCompletedStep || !modifiedSteps.has(step);
+                        const isClickable = step <= latestCompletedStep;
                         return (
                             <Fragment key={step}>
                                 <div className="flex flex-col items-center text-center w-24">
@@ -1058,7 +1055,6 @@ const handleProceedWithBooking = (bookingData: any) => {
         />
       )}
     </main>
-    <Footer />
     </div>
   );
 }
