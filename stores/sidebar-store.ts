@@ -95,7 +95,7 @@ export const useSidebarStore = create<SidebarState>()(
           if (user.role === "customer") {
             set({
               userData,
-              staticNav: [{ title: "Booking Page", url: "/booking", icon: ListCheck }],
+              staticNav: [{ title: "Appointment", url: "/booking", icon: ListCheck }],
               loading: false,
               initialized: true,
             });
@@ -117,7 +117,7 @@ export const useSidebarStore = create<SidebarState>()(
 
           const staticNav: NavItem[] = [
             { title: "Calendar", url: "/calendar", icon: Calendar },
-            { title: "Booking Page", url: "/booking", icon: ListCheck },
+            { title: "Appointment", url: "/booking", icon: ListCheck },
             { title: "Customer", url: "/customers", icon: Users },
             { title: "Business Information", url: "/business-information", icon: Info },
           ];

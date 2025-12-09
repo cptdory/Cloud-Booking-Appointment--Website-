@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, Fragment } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   MapPin,
   Loader2,
@@ -16,6 +16,7 @@ import {
   ArrowLeft,
   ChevronsUpDown,
   Mail,
+  Lock,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ interface FormData {
   customerEmail: string;
   customerName: string;
   bookingNote: string;
+  _BookingEntryNo: string;
 }
 
 interface BookingSummary {
@@ -89,6 +91,7 @@ interface BookingSummary {
 
 export default function BookingForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Use hooks
   const { userRole, username, customerNo, checkingAuth } = useAuth();
@@ -124,6 +127,7 @@ export default function BookingForm() {
     customerEmail: "",
     customerName: "",
     bookingNote: "",
+    _BookingEntryNo: "",
   });
 
   const [bookingSummary, setBookingSummary] = useState<BookingSummary>({
@@ -139,12 +143,207 @@ export default function BookingForm() {
   const [submitting, setSubmitting] = useState(false);
   const [isCustomerPopoverOpen, setCustomerPopoverOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
+  const [isReschedule, setIsReschedule] = useState(false);
+  const [isLoadingRescheduleData, setIsLoadingRescheduleData] = useState(false);
+  const [readOnlyFields, setReadOnlyFields] = useState<Set<string>>(new Set());
 
   // Use booking params hook for dynamic parameters
   const dynamicParametersData = useBookingParams(
     formData.branch,
     "dynamic-param-id"
   );
+
+  // Load reschedule data from URL if present
+  useEffect(() => {
+    const entryNo = searchParams.get("reschedule");
+    if (entryNo) {
+      setIsReschedule(true);
+      loadRescheduleData(entryNo);
+    }
+  }, [searchParams]);
+
+  // Load reschedule data from API
+  const loadRescheduleData = async (entryNo: string) => {
+    setIsLoadingRescheduleData(true);
+    try {
+      const response = await fetch("/api/booking-entry/get-booking-entry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ _BookingEntryNo: entryNo }),
+      });
+
+      if (!response.ok) throw new Error("Failed to load booking entry");
+
+      const responseData = await response.json();
+      console.log("📥 Full Response Data:", responseData);
+      
+      // The API returns { success: true, data: { value: "..." } }
+      let data;
+      
+      // First, extract the data from the wrapper if it exists
+      let bcResponse = responseData.data || responseData;
+      console.log("BC Response:", bcResponse);
+      
+      // Now handle the BC response which may have a "value" field
+      if (bcResponse.value) {
+        // API returns value as a JSON string
+        console.log("Parsing value field:", bcResponse.value);
+        try {
+          data = typeof bcResponse.value === "string" 
+            ? JSON.parse(bcResponse.value) 
+            : bcResponse.value;
+        } catch (e) {
+          console.error("Failed to parse value:", e);
+          throw new Error("Failed to parse booking entry data");
+        }
+      } else if (Array.isArray(bcResponse)) {
+        // Response is already an array
+        data = bcResponse;
+      } else {
+        console.error("Unexpected response format:", {
+          hasValue: !!bcResponse.value,
+          isArray: Array.isArray(bcResponse),
+          keys: Object.keys(bcResponse),
+        });
+        throw new Error("Invalid booking entry response format");
+      }
+
+      console.log("📦 Parsed Data:", data);
+
+      if (!data || !Array.isArray(data) || data.length === 0) {
+        throw new Error("No booking entry found");
+      }
+
+      const entry = data[0];
+      console.log("📋 Entry Details:", entry);
+      console.log("📋 Entry Keys:", Object.keys(entry));
+      console.log("📋 Customer Name Field:", entry.Name);
+      console.log("📋 Customer Email Field:", entry.EMail || entry.Email);
+      console.log("📋 Customer No Field:", entry.CustomerNo);
+
+      // Build the form data from the fetched entry
+      const newFormData: FormData = {
+        branch: entry.BookingSetupCode || "",
+        service: "",
+        staff: "",
+        date: entry.BookingStartDate || "",
+        selectedTime: entry.BookingStartTime || "",
+        customerNo: entry.CustomerNo || "",
+        customerEmail: entry.EMail || entry.Email || "",
+        customerName: entry.Name || entry.CustomerName || "",
+        bookingNote: entry.BookingNote || "",
+        _BookingEntryNo: entryNo,
+      };
+
+      console.log("📋 Form Data After Mapping:", newFormData);
+
+      // Map booking parameters to form data
+      // Store parameter value IDs (numeric) for form fields
+      if (entry.BookingParameters && Array.isArray(entry.BookingParameters)) {
+        entry.BookingParameters.forEach((param: any) => {
+          // Store the parameter value ID (numeric), not the code
+          const valueId = param.BookingParameterValueId.toString();
+          newFormData[param.BookingParameterId.toString()] = valueId;
+
+          // Determine if it's service or staff - store the ID for API calls
+          if (param.BookingParameterCode === "SERVICES") {
+            newFormData.service = valueId;
+          } else if (param.BookingParameterCode === "STAFF") {
+            newFormData.staff = valueId;
+          }
+        });
+      }
+
+      setFormData(newFormData);
+
+      // If customer name is not in the entry, fetch customer details separately
+      if (!newFormData.customerName && newFormData.customerNo) {
+        try {
+          console.log("Fetching customer details for:", newFormData.customerNo);
+          const customerRes = await fetch("/api/customer/get-customer", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ _CustomerNo: newFormData.customerNo }),
+          });
+
+          if (customerRes.ok) {
+            const customerData = await customerRes.json();
+            console.log("📧 Customer Data:", customerData);
+            
+            if (customerData && customerData.data) {
+              let customerInfo = customerData.data;
+              
+              // Parse if it's a string
+              if (typeof customerInfo === "string") {
+                try {
+                  customerInfo = JSON.parse(customerInfo);
+                } catch (e) {
+                  console.warn("Could not parse customer data as JSON");
+                }
+              }
+              
+              // If it's wrapped in an array, get first item
+              if (Array.isArray(customerInfo) && customerInfo.length > 0) {
+                customerInfo = customerInfo[0];
+              }
+              
+              // Update form data with customer details
+              newFormData.customerName = customerInfo.Name || customerInfo.DisplayName || newFormData.customerName;
+              newFormData.customerEmail = customerInfo.EMail || customerInfo.Email || newFormData.customerEmail;
+              
+              console.log("📧 Updated Form Data with Customer Details:", newFormData);
+              setFormData(newFormData);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching customer details:", error);
+        }
+      }
+
+      // Fetch booking setup for the loaded branch
+      try {
+        console.log("Fetching booking setup for branch:", entry.BookingSetupCode);
+        await fetchBookingSetup(entry.BookingSetupCode);
+      } catch (error: any) {
+        console.error("Error fetching booking setup:", error);
+      }
+
+      // Mark all fields except date and time as read-only (including customer info)
+      const readOnly = new Set([
+        "branch",
+        "service",
+        "staff",
+        "customerNo",
+        "customerEmail",
+        "customerName",
+        "bookingNote",
+      ]);
+
+      // Add dynamic parameters to read-only
+      if (entry.BookingParameters && Array.isArray(entry.BookingParameters)) {
+        entry.BookingParameters.forEach((param: any) => {
+          readOnly.add(param.BookingParameterId.toString());
+        });
+      }
+
+      setReadOnlyFields(readOnly);
+
+      showAlert(
+        "Reschedule Loaded",
+        "Booking entry loaded. Only date and time are editable.",
+        "default"
+      );
+    } catch (error: any) {
+      console.error("Error loading reschedule data:", error);
+      showAlert(
+        "Error Loading Booking",
+        error.message || "Failed to load booking entry.",
+        "destructive"
+      );
+    } finally {
+      setIsLoadingRescheduleData(false);
+    }
+  };
 
   // Fetch branches on mount
   useEffect(() => {
@@ -156,6 +355,36 @@ export default function BookingForm() {
       );
     });
   }, []);
+
+  // Load staff assignments when reschedule data is loaded and booking setup is ready
+  useEffect(() => {
+    if (
+      isReschedule &&
+      !isLoadingRescheduleData &&
+      formData.branch &&
+      formData.service &&
+      bookingSetup
+    ) {
+      console.log(
+        "Fetching staff assignments for reschedule - Branch:",
+        formData.branch,
+        "Service:",
+        formData.service
+      );
+      fetchStaffAssignments(formData.branch, formData.service).catch(
+        (error) => {
+          console.error("Error fetching staff assignments:", error);
+        }
+      );
+    }
+  }, [
+    isReschedule,
+    isLoadingRescheduleData,
+    formData.branch,
+    formData.service,
+    bookingSetup,
+    fetchStaffAssignments,
+  ]);
 
   // Update booking summary when form data changes
   useEffect(() => {
@@ -271,6 +500,11 @@ export default function BookingForm() {
     field: keyof FormData,
     value: string
   ): Promise<void> => {
+    // Don't allow changes to read-only fields in reschedule mode
+    if (isReschedule && readOnlyFields.has(field.toString())) {
+      return;
+    }
+
     // Check if we're changing a value in a previous step
     const previousStepFields: { [key: number]: (keyof FormData)[] } = {
       1: ["branch"],
@@ -583,7 +817,7 @@ export default function BookingForm() {
         _BookingParameterValueIDs: parameterValues,
         _CustomerNoOrEmailAdd: formData.customerNo,
         _BookingNote: formData.bookingNote || "",
-        _BookingEntryNo: "",
+        _BookingEntryNo: isReschedule ? formData._BookingEntryNo : "",
       };
 
       // Add customer name for public-like functionality
@@ -607,39 +841,46 @@ export default function BookingForm() {
       if (!response.ok) throw new Error("Failed to create booking");
       await response.json();
 
-      showAlert(
-        "Booking Confirmed!",
-        "Your appointment has been successfully scheduled."
-      );
+      const successMessage = isReschedule
+        ? "Your appointment has been successfully rescheduled."
+        : "Your appointment has been successfully scheduled.";
 
-      // Reset form
-      const resetData: FormData = {
-        branch: "",
-        service: "",
-        staff: "",
-        date: "",
-        selectedTime: "",
-        customerNo: userRole === "admin" || userRole === "global-admin" ? "" : customerNo,
-        customerEmail: "",
-        customerName: "",
-        bookingNote: "",
-      };
+      showAlert("Booking Confirmed!", successMessage);
 
-      dynamicParameters.forEach((param) => {
-        resetData[param.BookingParameterId.toString()] = "";
-      });
+      // Reset or redirect
+      if (isReschedule) {
+        router.push("/dashboard/calendar");
+      } else {
+        // Reset form
+        const resetData: FormData = {
+          branch: "",
+          service: "",
+          staff: "",
+          date: "",
+          selectedTime: "",
+          customerNo: userRole === "admin" || userRole === "global-admin" ? "" : customerNo,
+          customerEmail: "",
+          customerName: "",
+          bookingNote: "",
+          _BookingEntryNo: "",
+        };
 
-      setFormData(resetData);
-      setCurrentStep(1);
-      setBookingSummary({
-        branch: null,
-        service: null,
-        staff: null,
-        dynamicParameters: [],
-        date: "",
-        time: "",
-        customer: null,
-      });
+        dynamicParameters.forEach((param) => {
+          resetData[param.BookingParameterId.toString()] = "";
+        });
+
+        setFormData(resetData);
+        setCurrentStep(1);
+        setBookingSummary({
+          branch: null,
+          service: null,
+          staff: null,
+          dynamicParameters: [],
+          date: "",
+          time: "",
+          customer: null,
+        });
+      }
     } catch (error) {
       console.error("❌ Error creating booking:", error);
       showAlert(
@@ -675,6 +916,27 @@ export default function BookingForm() {
       }));
     }
   };
+
+  // Auto-select customer when reschedule data is loaded and customers are available
+  useEffect(() => {
+    if (
+      isReschedule &&
+      !isLoadingRescheduleData &&
+      formData.customerNo &&
+      customers.length > 0 &&
+      !customersLoading &&
+      (userRole === "admin" || userRole === "global-admin")
+    ) {
+      handleCustomerSelect(formData.customerNo);
+    }
+  }, [
+    isReschedule,
+    isLoadingRescheduleData,
+    formData.customerNo,
+    customers,
+    customersLoading,
+    userRole,
+  ]);
 
   // Booking Summary Component
   const BookingSummaryCard = () => {
@@ -772,14 +1034,16 @@ export default function BookingForm() {
         customer.email.toLowerCase().includes(customerSearch.toLowerCase()))
   );
 
-  // Show loading while checking authentication
-  if (checkingAuth) {
+  // Show loading while checking authentication or loading reschedule data
+  if (checkingAuth || isLoadingRescheduleData) {
     return (
       <div className="container mx-auto p-6 max-w-6xl flex items-center justify-center min-h-64">
         <div className="flex items-center gap-2">
           <Loader2 className="w-6 h-6 animate-spin" />
           <span className="text-slate-500 dark:text-slate-400">
-            Checking authentication...
+            {isLoadingRescheduleData
+              ? "Loading booking details..."
+              : "Checking authentication..."}
           </span>
         </div>
       </div>
@@ -1182,12 +1446,45 @@ export default function BookingForm() {
                   {/* For admin users: Customer selection */}
                   {(userRole === "global-admin" || userRole === "admin") ? (
                     <>
-                      {customersLoading ? (
+                      {customersLoading || isLoadingRescheduleData ? (
                         <div className="flex items-center justify-center py-4">
                           <Loader2 className="w-4 h-4 animate-spin mr-2 text-blue-600" />
                           <span className="text-slate-500 dark:text-slate-400">
-                            Loading customers...
+                            {isLoadingRescheduleData ? "Loading booking details..." : "Loading customers..."}
                           </span>
+                        </div>
+                      ) : isReschedule ? (
+                        // Display customer info as read-only during reschedule
+                        <div className="space-y-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-medium text-sm">
+                            <Lock className="w-4 h-4" />
+                            Customer locked for reschedule
+                          </div>
+                          <div className="space-y-3">
+                            {formData.customerName ? (
+                              <div className="flex justify-between items-center">
+                                <span className="text-slate-600 dark:text-slate-400 font-medium">Customer Name:</span>
+                                <span className="dark:text-slate-200 font-semibold text-right">{formData.customerName}</span>
+                              </div>
+                            ) : null}
+                            {formData.customerEmail ? (
+                              <div className="flex justify-between items-center">
+                                <span className="text-slate-600 dark:text-slate-400 font-medium">Email:</span>
+                                <span className="dark:text-slate-200 font-semibold text-right text-sm">{formData.customerEmail}</span>
+                              </div>
+                            ) : null}
+                            {formData.customerNo ? (
+                              <div className="flex justify-between items-center">
+                                <span className="text-slate-600 dark:text-slate-400 font-medium">Customer ID:</span>
+                                <span className="dark:text-slate-200 font-semibold text-right">{formData.customerNo}</span>
+                              </div>
+                            ) : null}
+                            {!formData.customerName && !formData.customerEmail && !formData.customerNo && (
+                              <div className="text-slate-500 dark:text-slate-400 text-sm italic">
+                                Loading customer information...
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ) : (
                         <Popover
@@ -1296,8 +1593,8 @@ export default function BookingForm() {
                         </p>
                       )}
 
-                      {/* Display selected customer info */}
-                      {formData.customerNo && (
+                      {/* Display selected customer info for new bookings */}
+                      {!isReschedule && formData.customerNo && (
                         <div className="space-y-3 mt-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                           <div className="flex justify-between">
                             <span className="text-slate-600 dark:text-slate-400 font-medium">Customer Name:</span>

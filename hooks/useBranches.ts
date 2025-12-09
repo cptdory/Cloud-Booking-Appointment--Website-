@@ -1,12 +1,12 @@
 // hooks/useBranches.ts
-import { useState } from "react";
+import { useState, useCallback } from "react"; // Import useCallback
 import { Branch } from "@/types/branch";
 
 export function useBranches() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchBranches = async () => {
+  const fetchBranches = useCallback(async () => { // Wrap with useCallback
     setLoading(true);
     try {
       const res = await fetch("/api/booking-setup/get-booking-setup-list", {
@@ -30,7 +30,8 @@ export function useBranches() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // Empty dependency array as it doesn't depend on any props or state within the hook
+  // The setter functions (setLoading, setBranches) are guaranteed to be stable.
 
   return { branches, loading, fetchBranches };
 }

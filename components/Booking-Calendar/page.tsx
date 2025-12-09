@@ -644,7 +644,7 @@ export default function BookingCalendar() {
               dayHeaderFormat={
                 calendarView === "dayGridMonth"
                   ? { weekday: "long" }
-                  : { weekday: "long", month: "short", day: "numeric" }
+                  : { weekday: "short", month: "numeric", day: "numeric" }
               }
               slotMinTime="06:00:00"
               slotMaxTime="22:00:00"
@@ -986,6 +986,24 @@ export default function BookingCalendar() {
 
           <DialogFooter className="px-6 py-4 border-t dark:border-slate-800 flex justify-between">
             <div className="flex gap-2">
+              {/* Reschedule Button - Show if not TimeOff and status is not Finalized/Cancelled */}
+              {selectedEvent && !selectedEvent.extendedProps.rawData?.TimeOff &&
+                selectedEvent.extendedProps.status !== "Finalized" &&
+                selectedEvent.extendedProps.status !== "Cancelled" && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => {
+                      router.push(
+                        `/booking?reschedule=${selectedEvent.id}`
+                      );
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700"
+                  >
+                    Reschedule
+                  </Button>
+                )}
+
               {selectedEvent?.extendedProps.rawData?.TimeOff && (() => {
                 // Console logs for debugging
                 console.log("Auth staffCode:", staffCode);

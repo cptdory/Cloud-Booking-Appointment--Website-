@@ -1,5 +1,5 @@
 // hooks/useAlert.ts
-import { useState } from "react";
+import { useState, useCallback } from "react"; // Import useCallback
 
 interface AlertState {
   show: boolean;
@@ -16,26 +16,29 @@ export function useAlert() {
     variant: "default",
   });
 
-  const showAlert = (
-    title: string,
-    description: string,
-    variant: "default" | "destructive" = "default"
-  ) => {
-    setAlert({
-      show: true,
-      title,
-      description,
-      variant,
-    });
+  const showAlert = useCallback(
+    (
+      title: string,
+      description: string,
+      variant: "default" | "destructive" = "default"
+    ) => {
+      setAlert({
+        show: true,
+        title,
+        description,
+        variant,
+      });
 
-    setTimeout(() => {
-      setAlert((prev) => ({ ...prev, show: false }));
-    }, 6000);
-  };
+      setTimeout(() => {
+        setAlert((prev) => ({ ...prev, show: false }));
+      }, 6000);
+    },
+    []
+  ); // Empty dependency array as setAlert is stable
 
-  const hideAlert = () => {
+  const hideAlert = useCallback(() => { // Also wrap hideAlert for consistency
     setAlert((prev) => ({ ...prev, show: false }));
-  };
+  }, []); // Empty dependency array as setAlert is stable
 
   return { alert, showAlert, hideAlert };
 }
