@@ -55,11 +55,6 @@ import { useStaffColors } from "@/hooks/useStaffColors";
 import { useStaffMappings } from "@/hooks/useStaffMappings";
 import { useBookingEntries } from "@/hooks/useBookingEntries";
 
-interface StaffColor {
-  background: string;
-  text: string;
-}
-
 export default function BookingCalendar() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -572,7 +567,7 @@ export default function BookingCalendar() {
             </div>
 
             {/* Bottom Row: Navigation and Current Period */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center  justify-between gap-3">
               {/* Navigation Controls */}
               <div className="flex items-center gap-2">
                 <Button
