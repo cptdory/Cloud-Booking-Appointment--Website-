@@ -74,7 +74,7 @@ const CustomerSignupForm = () => {
         "success"
       );
       setTimeout(() => {
-        router.push("/customer-login");
+        router.push("/login-customer");
       }, 1500);
     } catch (err) {
       const errorMessage = "Something went wrong";
@@ -197,7 +197,7 @@ const CustomerSignupForm = () => {
         <p className="text-sm text-center">
           Already have an account?{" "}
           <Link
-            href="/customer-login"
+            href="/login-customer"
             className="text-blue-600 hover:underline"
           >
             Login

@@ -7,7 +7,7 @@ import { Facebook, Mail, Instagram, Phone } from "lucide-react";
 export default function Footer() {
   return (
     <footer className="relative z-10 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-      <div className="container py-8 md:py-12">
+      <div className="container py-2">
         <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
           
           {/* Logo */}
