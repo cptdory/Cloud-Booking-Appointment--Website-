@@ -212,7 +212,8 @@ export default function SignupPage() {
   return (
     <>
     <Header />
-      <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
+      <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-900 p-4 pt-24">
+
         <div className={cn("flex flex-col gap-6 w-full max-w-xl")}>
           <Card className="overflow-hidden p-0">
             <CardContent className="p-0">
