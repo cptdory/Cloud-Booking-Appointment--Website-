@@ -45,11 +45,11 @@ export function NavUser({
     const authData = await authRes.json();
 
     if (!authData.authenticated) {
-      router.replace("/signin");
+      router.replace("/login");
       return;
     }
     // Hard refresh to clear all cached React pages
-    window.location.href = "/signin";
+    window.location.href = "/login";
   };
 
   // Display different info based on role

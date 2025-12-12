@@ -96,7 +96,7 @@ export default function AccountForm() {
         const authData = await authRes.json();
 
         if (!authData.authenticated) {
-          router.replace("/signin");
+          router.replace("/login");
           return;
         }
 

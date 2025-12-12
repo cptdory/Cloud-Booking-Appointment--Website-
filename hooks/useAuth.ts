@@ -16,7 +16,7 @@ export function useAuth() {
       .then((res) => res.json())
       .then((data) => {
         if (!data.authenticated) {
-          router.replace("/signin");
+          router.replace("/login");
         } else {
           setUsername(data.user.name);
           setStaffCode(data.user.staffCode);
@@ -26,7 +26,7 @@ export function useAuth() {
         }
       })
       .catch(() => {
-        router.replace("/signin");
+        router.replace("/login");
       })
       .finally(() => {
         setCheckingAuth(false);

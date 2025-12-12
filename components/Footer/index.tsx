@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Facebook, Twitter, Youtube, Linkedin } from "lucide-react";
+import { Facebook, Mail, Instagram, Phone } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -13,14 +13,14 @@ export default function Footer() {
           {/* Logo */}
           <Link href="/" className="flex-shrink-0">
             <Image
-              src="/images/logo/logo-1.svg"
+              src="/images/logo/squadlethics-logo.svg"
               alt="Bookufy logo"
               width={140}
               height={30}
               className="dark:hidden"
             />
             <Image
-              src="/images/logo/logo-1.svg"
+              src="/images/logo/squadlethics-logo.svg"
               alt="Bookufy logo"
               width={140}
               height={30}
@@ -31,29 +31,29 @@ export default function Footer() {
           {/* Social Links */}
           <div className="flex space-x-6 text-gray-600 dark:text-gray-400">
             {/* Facebook */}
-            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            <Link target="_blank" href="https://www.facebook.com/Squadlethicsph" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
               <Facebook size={20} />
             </Link>
 
-            {/* Twitter/X */}
-            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-              <Twitter size={20} />
+            {/* Email/X */}
+            <Link href="mailto:win@squadlethics.com" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              <Mail size={20} />
             </Link>
 
-            {/* YouTube */}
-            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-              <Youtube size={20} />
+            {/* Instagram */}
+            <Link target="_blank" href="https://www.instagram.com/squadlethicsph/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              <Instagram size={20} />
             </Link>
 
-            {/* LinkedIn */}
-            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-              <Linkedin size={20} />
+            {/* Phone */}
+            <Link href="tel:09606148364" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              <Phone size={20} />
             </Link>
           </div>
 
           {/* Copyright */}
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            © 2025 Bookufy. All Rights Reserved.
+            © 2025 Squadlethics. All Rights Reserved.
           </p>
         </div>
       </div>

@@ -54,7 +54,7 @@ export function OTPDialog({
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (countdown > 0) {
-      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      timer = setTimeout(() => setCountdown(countdown - 1), 5000);
     }
     return () => {
       if (timer) clearTimeout(timer);
@@ -125,7 +125,7 @@ export function OTPDialog({
       if (result.success && result.value) {
         setRequestId(result.value);
         setOtpSent(true);
-        setCountdown(60); // 60 seconds countdown
+        setCountdown(300); // 60 seconds countdown
         showSuccess(isResend ? "New OTP sent to your email!" : "OTP sent to your email!");
         
         // Focus OTP input

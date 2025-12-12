@@ -4,8 +4,9 @@ export default function proxy(request) {
   const { pathname } = request.nextUrl;
 
   const publicPaths = [
-    '/signin',
-    '/signup',
+    '/login',
+    '/login-customer',
+    '/register',
     '/book-now',
     '/api/auth/login-bc',
     '/api/auth/login-user',
@@ -23,7 +24,7 @@ export default function proxy(request) {
   const sessionToken = request.cookies.get('session_token')?.value;
 
   if (isPublicPath) {
-    if (sessionToken && (pathname === '/signin' || pathname === '/signup')) {
+    if (sessionToken && (pathname === '/login' || pathname === '/login-customer' || pathname === '/register')) {
       return NextResponse.redirect(new URL('/calendar', request.url));
     }
     return NextResponse.next();
@@ -37,7 +38,7 @@ export default function proxy(request) {
       );
     }
 
-    const signinUrl = new URL('/signin', request.url);
+    const signinUrl = new URL('/login', request.url);
     signinUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(signinUrl);
   }
