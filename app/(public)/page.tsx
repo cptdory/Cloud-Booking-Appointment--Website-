@@ -4,50 +4,9 @@ import Footer from "@/components/Footer";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Squadlethics",
-  description:
-    "Squadlethics is an easy-to-use online appointment scheduling and booking system for businesses. Manage bookings, clients, schedules, reminders, and more.",
-  keywords: [
-    "booking system",
-    "appointment scheduling",
-    "online booking",
-    "saas booking",
-    "business scheduling software",
-    "Squadlethics",
-  ],
-
-  // Canonical URL
-  alternates: {
-    canonical: "https://squadlethics.com/",
-  },
-
-  // OpenGraph (Facebook, LinkedIn, etc.)
-  openGraph: {
-    title: "Squadlethics",
-    description:
-      "Manage your bookings, schedules, and appointments effortlessly using Squadlethics.",
-    url: "https://squadlethics.com/",
-    type: "website",
-    siteName: "Squadlethics",
-  },
-
-  // Icons
-  icons: {
-    icon: "/favicon.ico",
-  },
-
-  // Metadata for SEO robots
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-      "max-video-preview": -1,
-    },
-  },
+  title: "Bookufy",
+  description: "",
+  // other metadata
 };
 
 export default function Home() {
