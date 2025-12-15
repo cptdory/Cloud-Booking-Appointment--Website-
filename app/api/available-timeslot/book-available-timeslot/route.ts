@@ -75,11 +75,11 @@ async function bookTimeSlot(
     _BookingNote: String(body._BookingNote || ''),
     _BookingEntryNo: String(body._BookingEntryNo || ''),
     _CustomerNoOrEmailAdd: String(body._CustomerNoOrEmailAdd || ''),
-    _CustomerName: String(body.customerName || ''),
-    _CustomerPhoneNo:'',
+    _CustomerName: String(body._CustomerName || ''),
+    _CustomerPhoneNo:String(body._CustomerPhoneNo || ''),
     _CustomerBirthDate:'',
-    _CustomerAddress1:'',
-    _CustomerAddress2:''
+    _CustomerAddress1:String(body._CustomerAddress1 || ''),
+    _CustomerAddress2:String(body._CustomerAddress2 || ''),
 
   };
 

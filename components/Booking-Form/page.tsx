@@ -26,13 +26,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info, XCircle } from "lucide-react";
 import { Branch } from "@/types/branch";
 import { BookingParameter } from "@/types/bookingParameter";
 
@@ -48,17 +47,35 @@ import { useToast } from "@/hooks/useToast";
 import { useBookingParams } from "@/hooks/useBookingParams";
 
 interface FormData {
+
   branch: string;
+
   service: string;
+
   staff: string;
+
   [key: string]: string;
+
   date: string;
+
   selectedTime: string;
+
   customerNo: string;
+
   customerEmail: string;
+
   customerName: string;
+
+  customerPhone: string;
+
+  customerAddress1: string;
+
+  customerAddress2: string;
+
   bookingNote: string;
+
   _BookingEntryNo: string;
+
 }
 
 interface BookingSummary {
@@ -129,6 +146,9 @@ export default function BookingForm() {
     customerNo: "",
     customerEmail: "",
     customerName: "",
+    customerPhone: "",
+    customerAddress1: "",
+    customerAddress2: "",
     bookingNote: "",
     _BookingEntryNo: "",
   });
@@ -149,6 +169,7 @@ export default function BookingForm() {
   const [isReschedule, setIsReschedule] = useState(false);
   const [isLoadingRescheduleData, setIsLoadingRescheduleData] = useState(false);
   const [readOnlyFields, setReadOnlyFields] = useState<Set<string>>(new Set());
+  const [isNewCustomer, setIsNewCustomer] = useState(false);
 
   // Use booking params hook for dynamic parameters
   const dynamicParametersData = useBookingParams(
@@ -233,7 +254,10 @@ export default function BookingForm() {
         selectedTime: entry.BookingStartTime || "",
         customerNo: entry.CustomerNo || "",
         customerEmail: entry.EMail || entry.Email || "",
-        customerName: entry.Name || entry.CustomerName || "",
+        customerName: entry.CustomerName || entry.Name || "",
+        customerPhone: "",
+        customerAddress1: "",
+        customerAddress2: "",
         bookingNote: entry.BookingNote || "",
         _BookingEntryNo: entryNo,
       };
@@ -401,16 +425,24 @@ export default function BookingForm() {
 
       // Set customer info
       if (userRole === "admin" || userRole === "global-admin") {
-        // For admin users, use selected customer
-        const selectedCustomer = customers.find(
-          (c) => c.customerNo === formData.customerNo
-        );
-        if (selectedCustomer) {
+        if (isNewCustomer) {
           summary.customer = {
-            customerNo: selectedCustomer.customerNo,
-            name: selectedCustomer.name,
-            email: selectedCustomer.email || "",
+            customerNo: "New",
+            name: formData.customerName,
+            email: formData.customerEmail,
           };
+        } else {
+          // For admin users, use selected customer
+          const selectedCustomer = customers.find(
+            (c) => c.customerNo === formData.customerNo
+          );
+          if (selectedCustomer) {
+            summary.customer = {
+              customerNo: selectedCustomer.customerNo,
+              name: selectedCustomer.name,
+              email: selectedCustomer.email || "",
+            };
+          }
         }
       } else {
         // For non-admin users, use their own info
@@ -730,26 +762,16 @@ export default function BookingForm() {
       (param) => formData[param.BookingParameterId.toString()]
     );
 
-    // Email validation for non-admin users
-    if (userRole !== "admin" && userRole !== "global-admin") {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.customerEmail)) {
-        showError(
-          "Invalid Email",
-          "Please enter a valid email address."
-        );
-        return;
-      }
-    }
+    const isNewCustomerAdmin = (userRole === "admin" || userRole === "global-admin") && isNewCustomer;
 
+    // Validation
     if (
       !formData.branch ||
       !formData.service ||
       !formData.staff ||
       !allDynamicSelected ||
       !formData.date ||
-      !formData.selectedTime ||
-      !formData.customerNo
+      !formData.selectedTime
     ) {
       showError(
         "Missing Information",
@@ -758,13 +780,25 @@ export default function BookingForm() {
       return;
     }
 
-    // Additional validation for non-admin users
-    if (userRole !== "admin" && userRole !== "global-admin") {
-      if (!formData.customerName) {
-        showError(
-          "Missing Information",
-          "Please enter your name before submitting."
-        );
+    // Customer validation
+    if (isNewCustomerAdmin) {
+      if (!formData.customerName || !formData.customerEmail) {
+        showError("Missing Information", "Please enter the new customer's name and email.");
+        return;
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.customerEmail)) {
+        showError("Invalid Email", "Please enter a valid email address for the new customer.");
+        return;
+      }
+    } else if (userRole === "admin" || userRole === "global-admin") {
+      if (!formData.customerNo) {
+        showError("Missing Information", "Please select a customer.");
+        return;
+      }
+    } else { // Regular customer
+      if (!formData.customerNo) {
+        showError("Customer Error", "Your customer information could not be found.");
         return;
       }
     }
@@ -804,13 +838,18 @@ export default function BookingForm() {
         _BookingParameterCount: (2 + dynamicParameters.length).toString(),
         _BookingParameterIDs: parameterIds,
         _BookingParameterValueIDs: parameterValues,
-        _CustomerNoOrEmailAdd: formData.customerNo,
+        _CustomerNoOrEmailAdd: isNewCustomerAdmin ? formData.customerEmail : formData.customerNo,
         _BookingNote: formData.bookingNote || "",
         _BookingEntryNo: isReschedule ? formData._BookingEntryNo : "",
       };
 
-      // Add customer name for public-like functionality
-      if (userRole !== "admin" && userRole !== "global-admin") {
+      // Add customer name for new customer bookings by admin or for non-admin users
+      if (isNewCustomerAdmin) {
+        bodyToSend._CustomerName = formData.customerName;
+        bodyToSend._CustomerPhoneNo = formData.customerPhone;
+        bodyToSend._CustomerAddress1 = formData.customerAddress1;
+        bodyToSend._CustomerAddress2 = formData.customerAddress2;
+      } else if (userRole !== "admin" && userRole !== "global-admin") {
         bodyToSend._CustomerName = formData.customerName;
       }
 
@@ -850,6 +889,9 @@ export default function BookingForm() {
           customerNo: userRole === "admin" || userRole === "global-admin" ? "" : customerNo,
           customerEmail: "",
           customerName: "",
+          customerPhone: "",
+          customerAddress1: "",
+          customerAddress2: "",
           bookingNote: "",
           _BookingEntryNo: "",
         };
@@ -1422,145 +1464,250 @@ export default function BookingForm() {
                   {/* For admin users: Customer selection */}
                   {(userRole === "global-admin" || userRole === "admin") ? (
                     <>
-                      {customersLoading || isLoadingRescheduleData ? (
-                        <div className="flex items-center justify-center py-4">
-                          <Loader2 className="w-4 h-4 animate-spin mr-2 text-blue-600" />
-                          <span className="text-slate-500 dark:text-slate-400">
-                            {isLoadingRescheduleData ? "Loading booking details..." : "Loading customers..."}
-                          </span>
-                        </div>
-                      ) : isReschedule ? (
-                        // Display customer info as read-only during reschedule
-                        <div className="space-y-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-                          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-medium text-sm">
-                            <Lock className="w-4 h-4" />
-                            Customer locked for reschedule
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="new-customer-checkbox"
+                          checked={isNewCustomer}
+                          onCheckedChange={(checked) => {
+                            setIsNewCustomer(!!checked);
+                            // Clear customer fields when toggling
+                            setFormData((prev) => ({
+                              ...prev,
+                              customerNo: "",
+                              customerName: "",
+                              customerEmail: "",
+                            }));
+                          }}
+                        />
+                        <label
+                          htmlFor="new-customer-checkbox"
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          New Customer
+                        </label>
+                      </div>
+
+                      {isNewCustomer ? (
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="customer-name" className="text-base font-semibold mb-2 block dark:text-slate-300">
+                              Full Name *
+                            </Label>
+                            <Input
+                              id="customer-name"
+                              type="text"
+                              placeholder="Enter customer's full name"
+                              value={formData.customerName}
+                              onChange={(e) =>
+                                handleInputChange("customerName", e.target.value)
+                              }
+                              className="text-base border-slate-300 dark:border-slate-700 dark:bg-slate-800 focus:border-blue-500 focus:ring-blue-500"
+                            />
                           </div>
-                          <div className="space-y-3">
-                            {formData.customerName ? (
-                              <div className="flex justify-between items-center">
-                                <span className="text-slate-600 dark:text-slate-400 font-medium">Customer Name:</span>
-                                <span className="dark:text-slate-200 font-semibold text-right">{formData.customerName}</span>
-                              </div>
-                            ) : null}
-                            {formData.customerEmail ? (
-                              <div className="flex justify-between items-center">
-                                <span className="text-slate-600 dark:text-slate-400 font-medium">Email:</span>
-                                <span className="dark:text-slate-200 font-semibold text-right text-sm">{formData.customerEmail}</span>
-                              </div>
-                            ) : null}
-                            {formData.customerNo ? (
-                              <div className="flex justify-between items-center">
-                                <span className="text-slate-600 dark:text-slate-400 font-medium">Customer ID:</span>
-                                <span className="dark:text-slate-200 font-semibold text-right">{formData.customerNo}</span>
-                              </div>
-                            ) : null}
-                            {!formData.customerName && !formData.customerEmail && !formData.customerNo && (
-                              <div className="text-slate-500 dark:text-slate-400 text-sm italic">
-                                Loading customer information...
-                              </div>
-                            )}
+                          <div>
+                            <Label htmlFor="customer-email" className="text-base font-semibold mb-2 block dark:text-slate-300">
+                              Email Address *
+                            </Label>
+                            <Input
+                              id="customer-email"
+                              type="email"
+                              placeholder="Enter customer's email address"
+                              value={formData.customerEmail}
+                              onChange={(e) =>
+                                handleInputChange("customerEmail", e.target.value)
+                              }
+                              className="text-base border-slate-300 dark:border-slate-700 dark:bg-slate-800 focus:border-blue-500 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="customer-phone" className="text-base font-semibold mb-2 block dark:text-slate-300">
+                              Phone Number
+                            </Label>
+                            <Input
+                              id="customer-phone"
+                              type="text"
+                              placeholder="Enter customer's phone number"
+                              value={formData.customerPhone}
+                              onChange={(e) =>
+                                handleInputChange("customerPhone", e.target.value)
+                              }
+                              className="text-base border-slate-300 dark:border-slate-700 dark:bg-slate-800 focus:border-blue-500 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="customer-address1" className="text-base font-semibold mb-2 block dark:text-slate-300">
+                              Address 1
+                            </Label>
+                            <Input
+                              id="customer-address1"
+                              type="text"
+                              placeholder="House No / Street / Barangay"
+                              value={formData.customerAddress1}
+                              onChange={(e) =>
+                                handleInputChange("customerAddress1", e.target.value)
+                              }
+                              className="text-base border-slate-300 dark:border-slate-700 dark:bg-slate-800 focus:border-blue-500 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="customer-address2" className="text-base font-semibold mb-2 block dark:text-slate-300">
+                              Address 2
+                            </Label>
+                            <Input
+                              id="customer-address2"
+                              type="text"
+                              placeholder="City / Province / Additional Info"
+                              value={formData.customerAddress2}
+                              onChange={(e) =>
+                                handleInputChange("customerAddress2", e.target.value)
+                              }
+                              className="text-base border-slate-300 dark:border-slate-700 dark:bg-slate-800 focus:border-blue-500 focus:ring-blue-500"
+                            />
                           </div>
                         </div>
                       ) : (
-                        <Popover
-                          open={isCustomerPopoverOpen}
-                          onOpenChange={setCustomerPopoverOpen}
-                        >
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              aria-expanded={isCustomerPopoverOpen}
-                              className="w-full justify-between h-12 text-base dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500"
-                            >
-                              <span className="truncate dark:text-slate-200">
-                                {formData.customerNo
-                                  ? customers.find(
-                                      (customer) =>
-                                        customer.customerNo ===
-                                        formData.customerNo
-                                    )?.name
-                                  : "Select a customer"}
+                        <>
+                          {customersLoading || isLoadingRescheduleData ? (
+                            <div className="flex items-center justify-center py-4">
+                              <Loader2 className="w-4 h-4 animate-spin mr-2 text-blue-600" />
+                              <span className="text-slate-500 dark:text-slate-400">
+                                {isLoadingRescheduleData ? "Loading booking details..." : "Loading customers..."}
                               </span>
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-
-                          <PopoverContent className="w-[550px] p-0 dark:bg-slate-950 dark:border-slate-800 shadow-2xl rounded-xl">
-                            <div className="p-2 border-b border-slate-200 dark:border-slate-800">
-                              <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 dark:text-slate-400" />
-                                <Input
-                                  placeholder="Search by name, email, or ID..."
-                                  value={customerSearch}
-                                  onChange={(e) =>
-                                    setCustomerSearch(e.target.value)
-                                  }
-                                  className="pl-10 h-11 text-base dark:bg-slate-900 dark:border-slate-700"
-                                />
+                            </div>
+                          ) : isReschedule ? (
+                            // Display customer info as read-only during reschedule
+                            <div className="space-y-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-medium text-sm">
+                                <Lock className="w-4 h-4" />
+                                Customer locked for reschedule
+                              </div>
+                              <div className="space-y-3">
+                                {formData.customerName ? (
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-slate-600 dark:text-slate-400 font-medium">Customer Name:</span>
+                                    <span className="dark:text-slate-200 font-semibold text-right">{formData.customerName}</span>
+                                  </div>
+                                ) : null}
+                                {formData.customerEmail ? (
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-slate-600 dark:text-slate-400 font-medium">Email:</span>
+                                    <span className="dark:text-slate-200 font-semibold text-right text-sm">{formData.customerEmail}</span>
+                                  </div>
+                                ) : null}
+                                {formData.customerNo ? (
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-slate-600 dark:text-slate-400 font-medium">Customer ID:</span>
+                                    <span className="dark:text-slate-200 font-semibold text-right">{formData.customerNo}</span>
+                                  </div>
+                                ) : null}
+                                {!formData.customerName && !formData.customerEmail && !formData.customerNo && (
+                                  <div className="text-slate-500 dark:text-slate-400 text-sm italic">
+                                    Loading customer information...
+                                  </div>
+                                )}
                               </div>
                             </div>
+                          ) : (
+                            <Popover
+                              open={isCustomerPopoverOpen}
+                              onOpenChange={setCustomerPopoverOpen}
+                            >
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={isCustomerPopoverOpen}
+                                  className="w-full justify-between h-12 text-base dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500"
+                                >
+                                  <span className="truncate dark:text-slate-200">
+                                    {formData.customerNo
+                                      ? customers.find(
+                                          (customer) =>
+                                            customer.customerNo ===
+                                            formData.customerNo
+                                        )?.name
+                                      : "Select a customer"}
+                                  </span>
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
 
-                            <div className="max-h-[300px] overflow-y-auto">
-                              {filteredCustomers.length > 0 ? (
-                                <div className="p-1">
-                                  {filteredCustomers.map((customer) => (
-                                    <div
-                                      key={customer.id}
-                                      onClick={() => {
-                                        handleCustomerSelect(
-                                          customer.customerNo
-                                        );
-                                        setCustomerPopoverOpen(false);
-                                      }}
-                                      className={`p-3 flex items-center justify-between rounded-lg cursor-pointer transition-colors duration-150 ${
-                                        formData.customerNo ===
-                                        customer.customerNo
-                                          ? "bg-blue-600 text-white"
-                                          : "hover:bg-blue-100 dark:hover:bg-slate-800"
-                                      }`}
-                                    >
-                                      <div className="flex flex-col">
-                                        <span
-                                          className={`font-semibold ${
+                              <PopoverContent className="w-[550px] p-0 dark:bg-slate-950 dark:border-slate-800 shadow-2xl rounded-xl">
+                                <div className="p-2 border-b border-slate-200 dark:border-slate-800">
+                                  <div className="relative">
+                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 dark:text-slate-400" />
+                                    <Input
+                                      placeholder="Search by name, email, or ID..."
+                                      value={customerSearch}
+                                      onChange={(e) =>
+                                        setCustomerSearch(e.target.value)
+                                      }
+                                      className="pl-10 h-11 text-base dark:bg-slate-900 dark:border-slate-700"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="max-h-[300px] overflow-y-auto">
+                                  {filteredCustomers.length > 0 ? (
+                                    <div className="p-1">
+                                      {filteredCustomers.map((customer) => (
+                                        <div
+                                          key={customer.id}
+                                          onClick={() => {
+                                            handleCustomerSelect(
+                                              customer.customerNo
+                                            );
+                                            setCustomerPopoverOpen(false);
+                                          }}
+                                          className={`p-3 flex items-center justify-between rounded-lg cursor-pointer transition-colors duration-150 ${
                                             formData.customerNo ===
                                             customer.customerNo
-                                              ? "text-white"
-                                              : "text-slate-800 dark:text-slate-200"
+                                              ? "bg-blue-600 text-white"
+                                              : "hover:bg-blue-100 dark:hover:bg-slate-800"
                                           }`}
                                         >
-                                          {customer.name}
-                                        </span>
-                                        <span
-                                          className={`text-sm ${
-                                            formData.customerNo ===
-                                            customer.customerNo
-                                              ? "text-blue-200"
-                                              : "text-slate-500 dark:text-slate-400"
-                                          }`}
-                                        >
-                                          {customer.customerNo}
-                                          {customer.email &&
-                                            ` • ${customer.email}`}
-                                        </span>
-                                      </div>
-                                      {formData.customerNo ===
-                                        customer.customerNo && (
-                                        <CheckCircle2 className="h-5 w-5 text-white" />
-                                      )}
+                                          <div className="flex flex-col">
+                                            <span
+                                              className={`font-semibold ${
+                                                formData.customerNo ===
+                                                customer.customerNo
+                                                  ? "text-white"
+                                                  : "text-slate-800 dark:text-slate-200"
+                                              }`}
+                                            >
+                                              {customer.name}
+                                            </span>
+                                            <span
+                                              className={`text-sm ${
+                                                formData.customerNo ===
+                                                customer.customerNo
+                                                  ? "text-blue-200"
+                                                  : "text-slate-500 dark:text-slate-400"
+                                              }`}
+                                            >
+                                              {customer.customerNo}
+                                              {customer.email &&
+                                                ` • ${customer.email}`}
+                                            </span>
+                                          </div>
+                                          {formData.customerNo ===
+                                            customer.customerNo && (
+                                            <CheckCircle2 className="h-5 w-5 text-white" />
+                                          )}
+                                        </div>
+                                      ))}
                                     </div>
-                                  ))}
+                                  ) : (
+                                    <div className="p-6 text-center text-base text-slate-500 dark:text-slate-400">
+                                      <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                                      No customers found.
+                                    </div>
+                                  )}
                                 </div>
-                              ) : (
-                                <div className="p-6 text-center text-base text-slate-500 dark:text-slate-400">
-                                  <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                                  No customers found.
-                                </div>
-                              )}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
+                              </PopoverContent>
+                            </Popover>
+                          )}
+                        </>
                       )}
 
                       {customers.length === 0 && !customersLoading && (
@@ -1696,7 +1843,7 @@ export default function BookingForm() {
                     disabled={
                       submitting ||
                       !formData.selectedTime ||
-                      !formData.customerNo ||
+                      ((userRole === "admin" || userRole === "global-admin") && isNewCustomer ? (!formData.customerName || !formData.customerEmail) : !formData.customerNo) ||
                       (userRole !== "admin" && userRole !== "global-admin" && (!formData.customerName || !formData.customerEmail))
                     }
                     className="w-full h-14 text-lg font-bold bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300"

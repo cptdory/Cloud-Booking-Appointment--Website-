@@ -23,8 +23,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info, XCircle } from "lucide-react";
 import { Branch } from "@/types/branch";
 import { BookingParameter } from "@/types/bookingParameter";
 
@@ -43,12 +41,15 @@ interface FormData {
   branch: string;
   service: string;
   staff: string;
-  [key: string]: string;
+  [key: string]: string | undefined;
   date: string;
   selectedTime: string;
   customerName: string;
   customerEmail: string;
   bookingNote: string;
+  _CustomerPhoneNo?: string;
+  _CustomerAddress1?: string;
+  _CustomerAddress2?: string;
 }
 
 interface BookingSummary {
@@ -114,6 +115,9 @@ export default function PublicBooking() {
     customerName: "",
     customerEmail: "",
     bookingNote: "",
+    _CustomerPhoneNo: "",
+    _CustomerAddress1: "",
+    _CustomerAddress2: "",
   });
 
   const [bookingSummary, setBookingSummary] = useState<BookingSummary>({
@@ -483,6 +487,9 @@ export default function PublicBooking() {
         customerName: "",
         customerEmail: "",
         bookingNote: "",
+        _CustomerPhoneNo: "",
+        _CustomerAddress1: "",
+        _CustomerAddress2: "",
       };
 
       const dynamicParameters = getDynamicParameters();
@@ -589,6 +596,9 @@ export default function PublicBooking() {
         _BookingNote: formData.bookingNote || "",
         _BookingEntryNo: "",
         _CustomerName: formData.customerName,
+        _CustomerPhoneNo: formData._CustomerPhoneNo || '',
+        _CustomerAddress1: formData._CustomerAddress1 || '',
+        _CustomerAddress2: formData._CustomerAddress2 || '',
       };
 
       console.log("📤 Booking data prepared:", bodyToSend);
@@ -964,6 +974,18 @@ const handleProceedWithBooking = (bookingData: any) => {
                       <Label htmlFor="customer-email" className="text-base font-semibold mb-2 block text-slate-700 dark:text-slate-300">Email Address *</Label>
                       <Input id="customer-email" type="email" placeholder="Enter your email address" value={formData.customerEmail} onChange={(e) => handleInputChange("customerEmail", e.target.value)} className="text-base border-slate-300 dark:border-slate-700 dark:bg-slate-800 focus:border-blue-500 focus:ring-blue-500" />
                       <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">A confirmation with OTP will be sent to this email.</p>
+                    </div>
+                    <div>
+                      <Label htmlFor="customer-phone" className="text-base font-semibold mb-2 block text-slate-700 dark:text-slate-300">Phone Number</Label>
+                      <Input id="customer-phone" type="text" placeholder="Enter your phone number" value={formData._CustomerPhoneNo} onChange={(e) => handleInputChange("_CustomerPhoneNo", e.target.value)} className="text-base border-slate-300 dark:border-slate-700 dark:bg-slate-800 focus:border-blue-500 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <Label htmlFor="customer-address1" className="text-base font-semibold mb-2 block text-slate-700 dark:text-slate-300">Address 1</Label>
+                      <Textarea id="customer-address1" placeholder="House No / Street / Barangay" value={formData._CustomerAddress1} onChange={(e) => handleInputChange("_CustomerAddress1", e.target.value)} className="text-base border-slate-300 dark:border-slate-700 dark:bg-slate-800 focus:border-blue-500 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <Label htmlFor="customer-address2" className="text-base font-semibold mb-2 block text-slate-700 dark:text-slate-300">Address 2</Label>
+                      <Textarea id="customer-address2" placeholder="City / Province / Additional Info" value={formData._CustomerAddress2} onChange={(e) => handleInputChange("_CustomerAddress2", e.target.value)} className="text-base border-slate-300 dark:border-slate-700 dark:bg-slate-800 focus:border-blue-500 focus:ring-blue-500" />
                     </div>
                   </CardContent>
                 </Card>
