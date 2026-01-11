@@ -53,7 +53,7 @@ export default function Footer() {
 
           {/* Copyright */}
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            © 2025 Squadlethics. All Rights Reserved.
+            © 2026 Squadlethics. All Rights Reserved.
           </p>
         </div>
       </div>

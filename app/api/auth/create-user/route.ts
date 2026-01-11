@@ -50,6 +50,7 @@ async function createCustomer(
     _Age: body.Age || "",
     _BirthDate: body.BirthDate || "",
     _PortalPassword: body.PortalPassword || "",
+    _ExecInternally: "false"
   };
 
   console.log("Request body:", requestBody);

@@ -24,7 +24,9 @@ interface OTPDialogProps {
   onProceedWithBooking: (bookingData: any) => void;
   customerEmail: string;
   bookingData: any;
-}
+  verificationType?: string; // "Appointment Verification" or "Login Verification"
+  successMessage?: string; // Custom success message
+} 
 
 export function OTPDialog({
   isOpen,
@@ -33,6 +35,8 @@ export function OTPDialog({
   onProceedWithBooking,
   customerEmail,
   bookingData,
+  verificationType = "Appointment Verification",
+  successMessage = "OTP verified successfully! Creating your booking...",
 }: OTPDialogProps) {
   const { showError, showSuccess, showInfo } = useToast();
   const [otp, setOtp] = useState("");
@@ -105,13 +109,14 @@ export function OTPDialog({
     setSuccess(null);
 
     try {
-      const response = await fetch("/api/one-time-password/otp-send-to-email", {
+      const response = await fetch("/api/one-time-password/otp-generation", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           _EmailAddress: customerEmail,
+          _VerificationType: verificationType,
         }),
       });
 
@@ -181,7 +186,7 @@ export function OTPDialog({
       }
 
       if (result.success && result.isValid) {
-        showSuccess("OTP verified successfully! Creating your booking...");
+        showSuccess(successMessage);
         setIsVerified(true);
         onOTPVerified();
         
@@ -330,7 +335,9 @@ export function OTPDialog({
                 OTP Verified Successfully!
               </p>
               <p className="text-center text-sm text-gray-600 mt-1">
-                Your booking is being created...
+                {verificationType === "Login Verification" 
+                  ? "Logging you in..."
+                  : "Your booking is being created..."}
               </p>
             </div>
           )}
@@ -368,7 +375,11 @@ export function OTPDialog({
           <DialogFooter>
             <div className="w-full text-center">
               <Loader2 className="w-5 h-5 animate-spin inline-block mr-2 text-blue-600" />
-              <span className="text-blue-600">Processing your booking...</span>
+              <span className="text-blue-600">
+                {verificationType === "Login Verification" 
+                  ? "Logging you in..."
+                  : "Processing your booking..."}
+              </span>
             </div>
           </DialogFooter>
         )}

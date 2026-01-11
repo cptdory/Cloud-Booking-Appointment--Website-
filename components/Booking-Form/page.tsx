@@ -782,15 +782,15 @@ export default function BookingForm() {
 
     // Customer validation
     if (isNewCustomerAdmin) {
-      if (!formData.customerName || !formData.customerEmail) {
+      if (!formData.customerName) {
         showError("Missing Information", "Please enter the new customer's name and email.");
         return;
       }
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.customerEmail)) {
-        showError("Invalid Email", "Please enter a valid email address for the new customer.");
-        return;
-      }
+      // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      // if (!emailRegex.test(formData.customerEmail)) {
+      //   showError("Invalid Email", "Please enter a valid email address for the new customer.");
+      //   return;
+      // }
     } else if (userRole === "admin" || userRole === "global-admin") {
       if (!formData.customerNo) {
         showError("Missing Information", "Please select a customer.");
@@ -877,7 +877,7 @@ export default function BookingForm() {
 
       // Reset or redirect
       if (isReschedule) {
-        router.push("/calendar");
+        router.push(userRole === "customer" ? "/appointment" : "/calendar");
       } else {
         // Reset form
         const resetData: FormData = {
@@ -1843,8 +1843,8 @@ export default function BookingForm() {
                     disabled={
                       submitting ||
                       !formData.selectedTime ||
-                      ((userRole === "admin" || userRole === "global-admin") && isNewCustomer ? (!formData.customerName || !formData.customerEmail) : !formData.customerNo) ||
-                      (userRole !== "admin" && userRole !== "global-admin" && (!formData.customerName || !formData.customerEmail))
+                      ((userRole === "admin" || userRole === "global-admin") && isNewCustomer ? (!formData.customerName) : !formData.customerNo) ||
+                      (userRole !== "admin" && userRole !== "global-admin" && (!formData.customerName))
                     }
                     className="w-full h-14 text-lg font-bold bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300"
                     size="lg"

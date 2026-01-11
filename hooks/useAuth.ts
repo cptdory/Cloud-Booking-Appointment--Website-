@@ -33,5 +33,9 @@ export function useAuth() {
       });
   }, [router]);
 
-  return { userRole, username, staffCode, customerNo, customerEmail, checkingAuth }; // Return customerEmail
+  const updateCustomerEmail = (newEmail: string) => {
+    setCustomerEmail(newEmail);
+  };
+
+  return { userRole, username, staffCode, customerNo, customerEmail, checkingAuth, updateCustomerEmail };
 }

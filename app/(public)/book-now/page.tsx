@@ -1028,6 +1028,8 @@ const handleProceedWithBooking = (bookingData: any) => {
           onProceedWithBooking={handleProceedWithBooking}
           customerEmail={formData.customerEmail}
           bookingData={pendingBookingData}
+          verificationType="Appointment Verification"
+          successMessage="OTP verified successfully! Creating your booking..."
         />
       )}
     </main>

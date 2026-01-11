@@ -1,6 +1,6 @@
 // stores/sidebar-store.ts
 import { create } from 'zustand';
-import { Building, Calendar, Users, Info, ListCheck, BedDouble, BriefcaseBusiness, ContactRound } from 'lucide-react';
+import { Building, Calendar, Users, Info, ListCheck, BedDouble, BriefcaseBusiness, ContactRound, CalendarCheck } from 'lucide-react';
 
 interface UserData {
   role: "global-admin" | "admin" | "customer";
@@ -39,6 +39,7 @@ interface SidebarState {
   initialize: () => Promise<void>;
   setActiveTeam: (team: Team) => void;
   loadDynamicNav: (teamCode: string) => Promise<void>;
+  updateUserEmail: (email: string) => void;
 }
 
 // Module-level flag - survives component re-renders
@@ -95,7 +96,9 @@ export const useSidebarStore = create<SidebarState>()(
           if (user.role === "customer") {
             set({
               userData,
-              staticNav: [{ title: "Appointment", url: "/booking", icon: ListCheck }],
+              staticNav: [{ title: "Book Now", url: "/booking", icon: ListCheck },
+                { title: "Appointment", url: "/appointment", icon: CalendarCheck }
+              ],
               loading: false,
               initialized: true,
             });
@@ -117,7 +120,7 @@ export const useSidebarStore = create<SidebarState>()(
 
           const staticNav: NavItem[] = [
             { title: "Calendar", url: "/calendar", icon: Calendar },
-            { title: "Appointment", url: "/booking", icon: ListCheck },
+            { title: "Book Now", url: "/booking", icon: ListCheck },
             { title: "Customer", url: "/customers", icon: Users },
             { title: "Business Information", url: "/business-information", icon: Info },
           ];
@@ -222,6 +225,13 @@ export const useSidebarStore = create<SidebarState>()(
         });
       } catch (error) {
         console.error("[Store] Failed to load dynamic nav:", error);
+      }
+    },
+
+    updateUserEmail: (email: string) => {
+      const current = get().userData;
+      if (current) {
+        set({ userData: { ...current, email } });
       }
     },
   })

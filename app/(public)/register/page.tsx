@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,21 +15,48 @@ import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { OTPDialog } from "@/components/otp-dialog";
 const CustomerSignupForm = () => {
   const router = useRouter();
 
-  const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
   const [phoneNo, setPhoneNo] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
   const [address2, setAddress2] = useState("");
   const [birthDate, setBirthDate] = useState("");
-  const [portalPassword, setPortalPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showOTPDialog, setShowOTPDialog] = useState(false);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<any>(null);
 
   const handleCustomerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+
+    // Validate email is provided
+    if (!email) {
+      showErrorAlert("Email is required");
+      setIsLoading(false);
+      return;
+    }
+
+    // Store form data and show OTP dialog
+    const formData = {
+      name,
+      phoneNo,
+      email,
+      address,
+      address2,
+      birthDate,
+    };
+
+    setPendingFormData(formData);
+    setShowOTPDialog(true);
+    setIsLoading(false);
+  };
+
+  const createAccount = async (formData: any) => {
     setIsLoading(true);
 
     try {
@@ -38,14 +64,14 @@ const CustomerSignupForm = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          Name: name,
-          PhoneNo: phoneNo,
-          EMail: email,
-          Address: address,
-          Address2: address2,
+          Name: formData.name,
+          PhoneNo: formData.phoneNo,
+          EMail: formData.email,
+          Address: formData.address,
+          Address2: formData.address2,
           Age: "",
-          BirthDate: birthDate,
-          PortalPassword: portalPassword,
+          BirthDate: formData.birthDate,
+          PortalPassword: '',
           _IsAdminLogin: "false",
         }),
       });
@@ -83,8 +109,28 @@ const CustomerSignupForm = () => {
     }
   };
 
+  const handleOTPVerified = () => {
+    setIsEmailVerified(true);
+  };
+
+  const handleProceedWithRegistration = async (registrationData: any) => {
+    if (pendingFormData) {
+      await createAccount(pendingFormData);
+      setShowOTPDialog(false);
+      setIsEmailVerified(false);
+      setPendingFormData(null);
+    }
+  };
+
+  const handleOTPDialogClose = () => {
+    setShowOTPDialog(false);
+    setIsEmailVerified(false);
+    setIsLoading(false);
+  };
+
   return (
-    <form className="p-6 md:p-8" onSubmit={handleCustomerSubmit}>
+    <>
+      <form className="p-6 md:p-8" onSubmit={handleCustomerSubmit}>
       <FieldGroup>
         <div className="flex flex-col items-center gap-2 text-center">
           <h1 className="text-2xl font-bold text-blue-500">
@@ -162,30 +208,6 @@ const CustomerSignupForm = () => {
           />
         </Field>
         <Field>
-          <FieldLabel htmlFor="password">
-            Password <span className="text-red-600">*</span>
-          </FieldLabel>
-          <div className="relative">
-            <Input
-              id="password"
-              required
-              type={showPassword ? "text" : "password"}
-              value={portalPassword}
-              onChange={(e) => setPortalPassword(e.target.value)}
-              placeholder="Enter your password"
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="absolute right-2 top-1/2 -translate-y-1/2"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? <EyeOff /> : <Eye />}
-            </Button>
-          </div>
-        </Field>
-        <Field>
           <Button
             type="submit"
             className="w-full bg-blue-500 hover:bg-blue-600 text-white"
@@ -205,6 +227,19 @@ const CustomerSignupForm = () => {
         </p>
       </FieldGroup>
     </form>
+
+    {/* OTP Dialog for email verification */}
+    <OTPDialog
+      isOpen={showOTPDialog}
+      onClose={handleOTPDialogClose}
+      onOTPVerified={handleOTPVerified}
+      onProceedWithBooking={handleProceedWithRegistration}
+      customerEmail={pendingFormData?.email || ""}
+      bookingData={pendingFormData}
+      verificationType="Email Verification"
+      successMessage="Email verified! Creating your account..."
+    />
+    </>
   );
 };
 

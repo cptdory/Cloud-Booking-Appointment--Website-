@@ -1,4 +1,4 @@
-// path: /api/one-time-password/otp-send-to-email
+// path: /api/one-time-password/otp-generation
 import { NextRequest, NextResponse } from "next/server";
 import { parseBCError, createErrorResponse } from "@/app/api/utils/bc-error-handler";
 
@@ -39,10 +39,11 @@ async function sendToEmail(
   const environment = process.env.ENVIRONMENT!;
   const company = process.env.COMPANY!;
 
-  const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_OTPSendToEmail?Company=${company}`;
+  const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_OTPGeneration?Company=${company}`;
 
   const requestBody = {
     _EmailAddress: body._EmailAddress,
+    _VerificationType: body._VerificationType,
   };
 
   console.log("Request body for OTP send:", requestBody);

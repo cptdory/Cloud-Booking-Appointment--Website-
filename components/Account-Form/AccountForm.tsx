@@ -14,6 +14,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/useToast";
 import { useModalAlert } from "@/hooks/useAlert";
+import { useAuth } from "@/hooks/useAuth";
+import { useSidebarStore } from "@/stores/sidebar-store";
+import { OTPDialog } from "@/components/otp-dialog";
 
 import {
   User,
@@ -56,6 +59,8 @@ export default function AccountForm() {
   const router = useRouter();
   const toast = useToast();
   const alert = useModalAlert();
+  const { updateCustomerEmail } = useAuth();
+  const updateUserEmail = useSidebarStore((state) => state.updateUserEmail);
   const [loading, setLoading] = useState(true);
 
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -82,9 +87,9 @@ export default function AccountForm() {
     birthDate: "",
   });
   const [updatingCustomerDetails, setUpdatingCustomerDetails] = useState(false);
-
-  // Message state (no longer used, replaced with toast/alert hooks)
-  // const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [originalEmail, setOriginalEmail] = useState("");
+  const [showOTPDialog, setShowOTPDialog] = useState(false);
+  const [pendingCustomerDetails, setPendingCustomerDetails] = useState<CustomerDetails | null>(null);
 
   // Fetch user data and initial staff color
   useEffect(() => {
@@ -189,18 +194,33 @@ export default function AccountForm() {
       }
 
       const data = await res.json();
+      const emailValue = data.email || "";
       setCustomerDetails({
         name: data.name || "",
         phoneNo: data.phoneNo || "",
-        email: data.email || "",
+        email: emailValue,
         address: data.address || "",
         address2: data.address2 || "",
         age: data.age || 0,
         birthDate: data.birthDate || "",
       });
+      setOriginalEmail(emailValue);
     } catch (error) {
       console.error("Error fetching customer details:", error);
     }
+  };
+
+  // Calculate age from birth date
+  const calculateAge = (birthDate: string): number => {
+    if (!birthDate) return 0;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
   };
 
   const handlePasswordChange = async () => {
@@ -312,6 +332,25 @@ export default function AccountForm() {
       return;
     }
 
+    // Check if email has changed
+    const emailChanged = customerDetails.email !== originalEmail;
+
+    if (emailChanged) {
+      // Show OTP dialog if email changed
+      setPendingCustomerDetails(customerDetails);
+      setShowOTPDialog(true);
+    } else {
+      // Save directly if email hasn't changed
+      await saveCustomerDetails();
+    }
+  };
+
+  const saveCustomerDetails = async () => {
+    if (!userData?.customerNo) {
+      alert.showError("Customer number is missing");
+      return;
+    }
+
     setUpdatingCustomerDetails(true);
 
     try {
@@ -326,13 +365,31 @@ export default function AccountForm() {
 
       if (!res.ok) throw new Error("Failed to update details");
 
+      // Refetch the latest user data from auth endpoint to ensure persistence
+      const authRes = await fetch("/api/auth/me", { cache: "no-store" });
+      const authData = await authRes.json();
+
+      if (authData.authenticated && authData.user) {
+        // Update both the global states with the fresh data from backend
+        updateCustomerEmail(authData.user.email);
+        updateUserEmail(authData.user.email);
+      }
+
       toast.showSuccess("Profile updated successfully!");
+      setOriginalEmail(customerDetails.email);
     } catch (error) {
       console.error("Error updating details:", error);
       alert.showError("Failed to update profile. Try again.");
     } finally {
       setUpdatingCustomerDetails(false);
     }
+  };
+
+  const handleOTPVerified = async () => {
+    // OTP has been verified, now save the details
+    await saveCustomerDetails();
+    setShowOTPDialog(false);
+    setPendingCustomerDetails(null);
   };
 
   if (loading) {
@@ -362,8 +419,6 @@ export default function AccountForm() {
           </CardDescription>
         </CardHeader>
       </Card>
-
-
 
       {/* Admin View - Staff Color and Password */}
       {isAdmin ? (
@@ -515,11 +570,11 @@ export default function AccountForm() {
           </TabsContent>
         </Tabs>
       ) : isCustomer ? (
-        // Customer View - Profile Details and Password
+        <>
+        {/* Customer View - Profile Details Only */}
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid grid-cols-2 w-full">
+          <TabsList className="grid grid-cols-1 w-full">
             <TabsTrigger value="details">Profile Details</TabsTrigger>
-            <TabsTrigger value="password">Change Password</TabsTrigger>
           </TabsList>
 
           {/* PROFILE DETAILS TAB */}
@@ -572,12 +627,15 @@ export default function AccountForm() {
                         id="birthDate"
                         type="date"
                         value={customerDetails.birthDate}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          const newBirthDate = e.target.value;
+                          const newAge = calculateAge(newBirthDate);
                           setCustomerDetails({
                             ...customerDetails,
-                            birthDate: e.target.value,
-                          })
-                        }
+                            birthDate: newBirthDate,
+                            age: newAge,
+                          });
+                        }}
                       />
                     </div>
                     <div className="space-y-2">
@@ -586,14 +644,8 @@ export default function AccountForm() {
                         id="age"
                         type="number"
                         value={customerDetails.age}
-                        disabled
-                        onChange={(e) =>
-                          setCustomerDetails({
-                            ...customerDetails,
-                            age: parseInt(e.target.value) || 0,
-                          })
-                        }
-                        placeholder="30"
+                        readOnly
+                        placeholder="Auto-calculated"
                       />
                     </div>
                   </div>
@@ -691,59 +743,23 @@ export default function AccountForm() {
               </CardContent>
             </Card>
           </TabsContent>
-
-          {/* PASSWORD TAB */}
-          <TabsContent value="password">
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Lock className="w-5 h-5 text-primary" />
-                  Change Password
-                </CardTitle>
-                <CardDescription>Update your account password</CardDescription>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>New Password</Label>
-                  <Input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Confirm New Password</Label>
-                  <Input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm new password"
-                  />
-                </div>
-
-                <Button
-                  className="w-full mt-4"
-                  disabled={
-                    changingPassword || !newPassword || !confirmPassword
-                  }
-                  onClick={handlePasswordChange}
-                >
-                  {changingPassword ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      Updating...
-                    </>
-                  ) : (
-                    "Update Password"
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
+
+        {/* OTP Verification Dialog for Email Change */}
+        <OTPDialog
+          isOpen={showOTPDialog}
+          onClose={() => {
+            setShowOTPDialog(false);
+            setPendingCustomerDetails(null);
+          }}
+          onOTPVerified={handleOTPVerified}
+          onProceedWithBooking={() => {}} // Not used for email verification
+          customerEmail={pendingCustomerDetails?.email || ""}
+          bookingData={pendingCustomerDetails}
+          verificationType="Change Email Verification"
+          successMessage="Email verified! Updating your profile..."
+        />
+        </>
       ) : (
         // Default fallback
         <Card>
@@ -757,7 +773,6 @@ export default function AccountForm() {
             </div>
           </CardContent>
         </Card>
-      )}
-    </div>
+      )}    </div>
   );
 }

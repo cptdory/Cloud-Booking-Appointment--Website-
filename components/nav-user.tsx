@@ -44,12 +44,14 @@ export function NavUser({
     const authRes = await fetch("/api/auth/me", { cache: "no-store" });
     const authData = await authRes.json();
 
+    const loginPath = user.role === "customer" ? "/login-customer" : "/login";
+    
     if (!authData.authenticated) {
-      router.replace("/login");
+      router.replace(loginPath);
       return;
     }
     // Hard refresh to clear all cached React pages
-    window.location.href = "/login";
+    window.location.href = loginPath;
   };
 
   // Display different info based on role

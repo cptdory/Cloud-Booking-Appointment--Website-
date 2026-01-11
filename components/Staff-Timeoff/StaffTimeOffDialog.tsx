@@ -23,34 +23,25 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon, Clock, Clock3 } from "lucide-react";
+import { Calendar as CalendarIcon, Clock3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import { useAlert, useModalAlert } from "@/hooks/useAlert";
 
-const timeOptions = [
-  "07:00",
-  "08:00",
-  "09:00",
-  "10:00",
-  "11:00",
-  "12:00",
-  "13:00",
-  "14:00",
-  "15:00",
-  "16:00",
-  "17:00",
-  "18:00",
-  "19:00",
-  "20:00",
-];
+// Generate time options with 30-minute intervals from 00:00 to 23:30
+const generateTimeOptions = () => {
+  const options = [];
+  for (let hour = 0; hour < 24; hour++) {
+    for (let minute = 0; minute < 60; minute += 30) {
+      const timeStr = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+      options.push(timeStr);
+    }
+  }
+  return options;
+};
+
+const timeOptions = generateTimeOptions();
 
 interface StaffTimeOffDialogProps {
   open?: boolean;
@@ -167,11 +158,58 @@ export default function StaffTimeOffDialog({
     fetchStaff();
   }, [open, userRole, username, bookingSetupCode]);
 
+  // Initialize form when initialData changes (edit mode)
+  useEffect(() => {
+    if (initialData) {
+      console.log("Edit Time Off - initialData received:", {
+        entryNo: initialData.entryNo,
+        staffCode: initialData.staffCode,
+        staffName: initialData.staffName,
+        date: initialData.date,
+        startTime: initialData.startTime,
+        endTime: initialData.endTime,
+        wholeDay: initialData.wholeDay,
+        reason: initialData.reason,
+      });
+      setDate(initialData.date);
+      setStartTime(initialData.startTime);
+      setEndTime(initialData.endTime);
+      setWholeDay(initialData.wholeDay);
+      setReason(initialData.reason);
+      setSelectedStaffCode(initialData.staffCode);
+      setSelectedStaffName(initialData.staffName);
+    }
+  }, [initialData]);
+
   // Auto-fill staff name when code is selected
   const handleStaffCodeChange = (code: string) => {
     setSelectedStaffCode(code);
     const staff = staffList.find((s) => s.BookingParameterValueCode === code);
     setSelectedStaffName(staff?.BookingParamterValueDescription || "");
+  };
+
+  // Handle whole day toggle - only clear times when user manually toggles to true
+  const handleWholeDayToggle = (checked: boolean) => {
+    setWholeDay(checked);
+    if (checked) {
+      setStartTime(undefined);
+      setEndTime(undefined);
+    }
+  };
+
+  // Reset form when dialog closes
+  const handleDialogOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      // Reset all values when closing
+      setSelectedStaffCode(initialData?.staffCode || "");
+      setSelectedStaffName(initialData?.staffName || "");
+      setDate(initialData?.date);
+      setStartTime(initialData?.startTime);
+      setEndTime(initialData?.endTime);
+      setWholeDay(initialData?.wholeDay ?? false);
+      setReason(initialData?.reason || "");
+    }
+    setOpen(newOpen);
   };
 
   // Submit handler (create or update)
@@ -232,29 +270,22 @@ export default function StaffTimeOffDialog({
         showToastSuccess("Time off created successfully!");
       }
 
-      // Reset form
-      setSelectedStaffCode("");
-      setSelectedStaffName("");
-      setDate(undefined);
-      setStartTime(undefined);
-      setEndTime(undefined);
-      setWholeDay(false);
-      setReason("");
-
-      // Close dialog after 2 seconds
-      setTimeout(() => {
-        setOpen(false);
-        if (onSuccess) onSuccess();
-      }, 2000);
+      // Close dialog immediately after success
+      // handleDialogOpenChange will reset all form values
+      setOpen(false);
+      if (onSuccess) onSuccess();
     } catch (err: any) {
       showErrorAlert("Error", err.message || "An error occurred");
+      // Close dialog on error
+      // handleDialogOpenChange will reset all form values
+      setOpen(false);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline" className="h-9 gap-2">
           <Clock3 className="w-4 h-4" />
@@ -327,89 +358,53 @@ export default function StaffTimeOffDialog({
 
               {/* Date */}
               <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                <Label>Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn("w-full justify-start", !date && "text-muted-foreground")}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : "Select date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="p-0">
-                    <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
-                  </PopoverContent>
-                </Popover>
+                <Label htmlFor="date-input">Date</Label>
+                <Input
+                  id="date-input"
+                  type="date"
+                  value={date ? format(date, "yyyy-MM-dd") : ""}
+                  onChange={(e) => setDate(e.target.value ? new Date(e.target.value) : undefined)}
+                />
               </div>
 
               {/* Start Time */}
               <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                <Label>Start Time</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      disabled={wholeDay}
-                      className={cn("w-full justify-start", !startTime && "text-muted-foreground")}
-                    >
-                      <Clock className="mr-2 h-4 w-4" />
-                      {startTime || "Select time"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-40 p-0">
-                    <div className="max-h-60 overflow-y-auto">
-                      {timeOptions.map((t) => (
-                        <Button
-                          key={t}
-                          variant="ghost"
-                          className="w-full justify-start"
-                          onClick={() => setStartTime(t)}
-                        >
-                          {t}
-                        </Button>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                <Label htmlFor="start-time">Start Time</Label>
+                <Select value={startTime || ""} onValueChange={setStartTime} disabled={wholeDay}>
+                  <SelectTrigger id="start-time">
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeOptions.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* End Time */}
               <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                <Label>End Time</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      disabled={wholeDay}
-                      className={cn("w-full justify-start", !endTime && "text-muted-foreground")}
-                    >
-                      <Clock className="mr-2 h-4 w-4" />
-                      {endTime || "Select time"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-40 p-0">
-                    <div className="max-h-60 overflow-y-auto">
-                      {timeOptions.map((t) => (
-                        <Button
-                          key={t}
-                          variant="ghost"
-                          className="w-full justify-start"
-                          onClick={() => setEndTime(t)}
-                        >
-                          {t}
-                        </Button>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                <Label htmlFor="end-time">End Time</Label>
+                <Select value={endTime || ""} onValueChange={setEndTime} disabled={wholeDay}>
+                  <SelectTrigger id="end-time">
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeOptions.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Whole Day */}
               <div className="grid grid-cols-[120px_1fr] items-center gap-4">
                 <Label>Whole Day</Label>
-                <Switch checked={wholeDay} onCheckedChange={setWholeDay} />
+                <Switch checked={wholeDay} onCheckedChange={handleWholeDayToggle} />
               </div>
 
               {/* Reason (Textarea) */}
@@ -426,9 +421,6 @@ export default function StaffTimeOffDialog({
 
             </div>
           </section>
-
-
-
         </div>
 
         {/* Footer */}

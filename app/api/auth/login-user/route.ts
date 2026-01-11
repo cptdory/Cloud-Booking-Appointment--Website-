@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { _PortalUsername, _PortalPassword, _IsAdminLogin } = body;
 
-    if (!_PortalUsername || !_PortalPassword) {
+    if (!_PortalUsername) {
       return NextResponse.json(
         { error: "Missing credentials" },
         { status: 400 }
