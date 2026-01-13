@@ -41,19 +41,46 @@ const CustomerSignupForm = () => {
       return;
     }
 
-    // Store form data and show OTP dialog
-    const formData = {
-      name,
-      phoneNo,
-      email,
-      address,
-      address2,
-      birthDate,
-    };
+    try {
+      // Validate if email already exists
+      const validateRes = await fetch("/api/customer/validate-customer-email-address", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ _Email: email }),
+      });
 
-    setPendingFormData(formData);
-    setShowOTPDialog(true);
-    setIsLoading(false);
+      const validateData = await validateRes.json();
+
+      if (!validateRes.ok) {
+        showErrorAlert("Failed to validate email");
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if email already exists
+      if (validateData.isValid === true) {
+        showErrorAlert("Looks like this email is already associated with an account.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Email is valid and doesn't exist, proceed to OTP
+      const formData = {
+        name,
+        phoneNo,
+        email,
+        address,
+        address2,
+        birthDate,
+      };
+
+      setPendingFormData(formData);
+      setShowOTPDialog(true);
+    } catch (err) {
+      showErrorAlert("Something went wrong while validating email");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const createAccount = async (formData: any) => {

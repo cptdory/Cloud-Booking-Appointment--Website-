@@ -336,9 +336,38 @@ export default function AccountForm() {
     const emailChanged = customerDetails.email !== originalEmail;
 
     if (emailChanged) {
-      // Show OTP dialog if email changed
-      setPendingCustomerDetails(customerDetails);
-      setShowOTPDialog(true);
+      // Validate if the new email already exists
+      setUpdatingCustomerDetails(true);
+      try {
+        const validateRes = await fetch("/api/customer/validate-customer-email-address", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ _Email: customerDetails.email }),
+        });
+
+        const validateData = await validateRes.json();
+
+        if (!validateRes.ok) {
+          alert.showError("Failed to validate email");
+          setUpdatingCustomerDetails(false);
+          return;
+        }
+
+        // Check if email already exists
+        if (validateData.isValid === true) {
+          alert.showError("Looks like this email is already associated with an account.");
+          setUpdatingCustomerDetails(false);
+          return;
+        }
+
+        // Email is valid and doesn't exist, show OTP dialog
+        setPendingCustomerDetails(customerDetails);
+        setShowOTPDialog(true);
+      } catch (error) {
+        alert.showError("Something went wrong while validating email");
+      } finally {
+        setUpdatingCustomerDetails(false);
+      }
     } else {
       // Save directly if email hasn't changed
       await saveCustomerDetails();
