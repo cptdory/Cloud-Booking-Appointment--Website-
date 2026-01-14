@@ -34,6 +34,7 @@ import { useTimeSlots } from "@/hooks/useTimeSlots";
 import { useToast } from "@/hooks/useToast";
 import { useModalAlert } from "@/hooks/useAlert";
 import { useBookingParams } from "@/hooks/useBookingParams";
+import { useBookingOrganizationSetup } from "@/hooks/useBookingOrganizationSetup";
 // Import OTP Dialog component
 import { OTPDialog } from "@/components/otp-dialog";
 
@@ -102,6 +103,7 @@ export default function PublicBooking() {
   } = useTimeSlots();
   const { showError, showSuccess } = useToast();
   const { showError: showErrorAlert, showSuccess: showSuccessAlert } = useModalAlert();
+  const { fetchBookingOrganizationSetup } = useBookingOrganizationSetup();
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [latestCompletedStep, setLatestCompletedStep] = useState<number>(1);
@@ -150,6 +152,24 @@ export default function PublicBooking() {
       showError(error, "Failed to load branches");
     });
   }, []);
+
+  // Client-side fallback: Verify public booking is enabled (middleware check first line of defense)
+  useEffect(() => {
+    const verifyPublicBookingEnabled = async () => {
+      try {
+        const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || "9903ED01-A73C-4874-8ABF-D2678E3AE23D";
+        const orgSetup = await fetchBookingOrganizationSetup(tenantId);
+        
+        if (orgSetup && !orgSetup.EnablePublicBooking) {
+          router.push("/unavailable");
+        }
+      } catch (error) {
+        console.error("Failed to verify booking status:", error);
+      }
+    };
+
+    verifyPublicBookingEnabled();
+  }, [fetchBookingOrganizationSetup, router]);
 
   // Update booking summary when form data changes
   useEffect(() => {

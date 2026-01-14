@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 let memoryCache: { access_token: string; expires_at: number } | null = null;
+let orgSetupCache: { [key: string]: { data: any; expires_at: number } } = {};
 
 // Helper: Fetch/refresh Access Token
 async function getAccessToken() {
@@ -32,10 +33,19 @@ async function getAccessToken() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const {_TenantId } = body;
+    const { _TenantId } = body;
 
     if (!_TenantId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    // Check if we have cached data for this tenant ID
+    const cacheKey = `org-setup-${_TenantId}`;
+    const isVercel = !!process.env.VERCEL;
+    
+    if (isVercel && orgSetupCache[cacheKey] && Date.now() < orgSetupCache[cacheKey].expires_at) {
+      console.log(`Returning cached org setup for tenant ${_TenantId}`);
+      return NextResponse.json({ success: true, data: orgSetupCache[cacheKey].data });
     }
 
     if (!process.env.TENANT_ID) {
@@ -56,7 +66,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        _TenantId: _TenantId,
+        _TenantId: "9903ED01-A73C-4874-8ABF-D2678E3AE23D", // sample
       }),
     });
 
@@ -73,7 +83,30 @@ export async function POST(req: Request) {
       throw new Error(data?.error?.message || "Failed to get entry");
     }
 
-    return NextResponse.json({ success: true, data });
+    // Parse the OData response and extract the actual data
+    let parsedData = data;
+    if (data?.value) {
+      try {
+        // If value is a JSON string, parse it
+        let valueData = typeof data.value === "string" ? JSON.parse(data.value) : data.value;
+        // Get the first object from the array if it's an array
+        parsedData = Array.isArray(valueData) ? valueData[0] : valueData;
+      } catch (err) {
+        console.warn("Failed to parse value field:", err);
+        parsedData = data;
+      }
+    }
+
+    // Cache the result for this tenant ID (60 minutes)
+    if (isVercel) {
+      orgSetupCache[cacheKey] = {
+        data: parsedData,
+        expires_at: Date.now() + 1000 * 60 * 60, // cache 60 min
+      };
+      console.log(`Cached org setup for tenant ${_TenantId}`);
+    }
+
+    return NextResponse.json({ success: true, data: parsedData });
   } catch (err: any) {
     console.error("POST /api/booking-organization-setup/get-booking-organization-setup failed:", err);
     return NextResponse.json({ error: err.message || "Internal Server Error" }, { status: 500 });

@@ -6,18 +6,22 @@ import {
   Field,
   FieldGroup,
   FieldLabel,
-  FieldSeparator,
+  FieldSeparator, 
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Eye, EyeOff } from "lucide-react"
 import { useRouter } from "next/navigation";
+
 import { showErrorAlert, showResponseToast } from "@/components/Common/SweetAlert";
+import { useOrgSetup } from "@/components/Header";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false)
   const togglePasswordVisibility = () => setShowPassword(!showPassword)
@@ -26,6 +30,11 @@ export function LoginForm({
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  // Use global org setup context (single call at root level)
+  const { orgSetup, loading: orgLoading } = useOrgSetup();
+  const orgName = orgSetup?.Name || "";
+  const loginImage = orgSetup?.LoginImage || "";
+  const orgLoaded = !!orgSetup;
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -80,9 +89,15 @@ export function LoginForm({
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
                 <h1 className="text-2xl font-bold text-blue-500">Welcome back</h1>
-                <p className="text-muted-foreground text-balance">
-                  Login to your Squadlethics account
-                </p>
+                {(!orgLoaded || orgLoading) ? (
+                  <div className="text-muted-foreground text-balance">
+                    <Skeleton className="h-5 w-40 inline-block align-middle" />
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-balance">
+                    Login to your {orgName && orgName.trim() !== "" ? orgName : "Bookufy"} account
+                  </p>
+                )}
               </div>
               <Field>
                 <FieldLabel htmlFor="username">Username</FieldLabel>
@@ -126,11 +141,15 @@ export function LoginForm({
             </FieldGroup>
           </form>
           <div className="bg-muted relative hidden md:block">
-            <img
-              src="/images/login-img.png"
-              alt="Image"
-              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
-            />
+            {orgLoading || !orgLoaded ? (
+              <Skeleton className="absolute inset-0 h-full w-full" />
+            ) : (
+              <img
+                src={loginImage && loginImage.trim() !== "" ? `data:image/png;base64,${loginImage}` : "/images/login-img.png"}
+                alt="Image"
+                className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+              />
+            )}
           </div>
         </CardContent>
       </Card>

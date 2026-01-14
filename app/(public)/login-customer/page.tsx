@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useBookingOrganizationSetup } from "@/hooks/useBookingOrganizationSetup";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,14 +15,25 @@ import { cn } from "@/lib/utils";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { OTPDialog } from "@/components/otp-dialog";
+import { useOrgSetup } from "@/components/Header";
+
 
 // LoginForm component for customer login
-const CustomerLoginForm = () => {
+interface CustomerLoginFormProps {
+  orgLoaded: boolean;
+  orgLoading: boolean;
+  orgName: string;
+}
+
+const CustomerLoginForm = ({ orgLoaded, orgLoading, orgName }: CustomerLoginFormProps) => {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showOTPDialog, setShowOTPDialog] = useState(false);
   const [isOTPVerified, setIsOTPVerified] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
+  const { fetchBookingOrganizationSetup } = useBookingOrganizationSetup();
+
+  // No fetching here, handled in parent
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,9 +142,15 @@ const CustomerLoginForm = () => {
         <FieldGroup>
           <div className="flex flex-col items-center gap-2 text-center">
             <h1 className="text-2xl font-bold text-blue-500">Welcome</h1>
-            <p className="text-muted-foreground text-balance">
-              Login to your Squadlethics account
-            </p>
+            {(!orgLoaded || orgLoading) ? (
+              <div className="text-muted-foreground text-balance">
+                <Skeleton className="h-5 w-40 inline-block align-middle" />
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-balance">
+                <>Login to your {orgName && orgName.trim() !== "" ? orgName : "Bookufy"} account</>
+              </p>
+            )}
           </div>
           <Field>
             <FieldLabel htmlFor="email">Email</FieldLabel>
@@ -215,6 +234,12 @@ const CustomerLoginForm = () => {
 };
 
 export default function CustomerLoginPage() {
+  // Use global org setup context (single call at root level)
+  const { orgSetup, loading: orgLoading } = useOrgSetup();
+  const orgName = orgSetup?.Name || "";
+  const loginImage = orgSetup?.CustomerPortalLoginImage || "";
+  const orgLoaded = !!orgSetup;
+
   return (
     <>
       <Header />
@@ -222,13 +247,17 @@ export default function CustomerLoginPage() {
         <div className={cn("flex flex-col gap-6 w-full max-w-4xl")}>
           <Card className="overflow-hidden p-0">
             <CardContent className="grid p-0 md:grid-cols-2">
-              <CustomerLoginForm />
+              <CustomerLoginForm orgLoaded={orgLoaded} orgLoading={orgLoading} orgName={orgName} />
               <div className="bg-muted relative hidden md:block">
-                <img
-                  src="/images/login-img.png"
-                  alt="Image"
-                  className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
-                />
+                {orgLoading || !orgLoaded ? (
+                  <Skeleton className="absolute inset-0 h-full w-full" />
+                ) : (
+                  <img
+                    src={loginImage && loginImage.trim() !== "" ? `data:image/png;base64,${loginImage}` : "/images/login-img.png"}
+                    alt="Image"
+                    className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+                  />
+                )}
               </div>
             </CardContent>
           </Card>

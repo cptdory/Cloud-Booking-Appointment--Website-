@@ -3,11 +3,63 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
+import { useBookingOrganizationSetup } from "@/hooks/useBookingOrganizationSetup";
+import { Skeleton } from "@/components/ui/skeleton";
+
+import type { ReactNode } from "react";
+import type { BookingOrganizationSetup } from "@/hooks/useBookingOrganizationSetup";
+
+interface OrgSetupContextType {
+  orgSetup: BookingOrganizationSetup | null;
+  loading: boolean;
+  error: string | null;
+}
+
+const OrgSetupContext = createContext<OrgSetupContextType | undefined>(undefined);
+
+interface OrgSetupProviderProps {
+  children: ReactNode;
+}
+
+export function OrgSetupProvider({ children }: OrgSetupProviderProps) {
+  const { orgSetup, loading, error, fetchBookingOrganizationSetup } = useBookingOrganizationSetup();
+  const [fetched, setFetched] = useState(false);
+
+  useEffect(() => {
+    if (!fetched) {
+      fetchBookingOrganizationSetup("9903ED01-A73C-4874-8ABF-D2678E3AE23D").catch((err) => {
+        console.error("OrgSetupProvider: Failed to fetch org setup", err);
+      });
+      setFetched(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetched]);
+
+  return (
+    <OrgSetupContext.Provider value={{ orgSetup, loading, error }}>
+      {children}
+    </OrgSetupContext.Provider>
+  );
+}
+
+export function useOrgSetup() {
+  const ctx = useContext(OrgSetupContext);
+  if (!ctx) throw new Error("useOrgSetup must be used within OrgSetupProvider");
+  return ctx;
+}
 
 export default function Header() {
   const pathname = usePathname();
   const [sticky, setSticky] = useState(false);
+  const { orgSetup, loading } = useOrgSetup();
+  
+  // Log to debug what's in orgSetup
+  // useEffect(() => {
+  //   console.log("orgSetup:", orgSetup);
+  // }, [orgSetup]);
+  
+  const headline = orgSetup?.Headline || "404";
 
   useEffect(() => {
     const handleScroll = () => setSticky(window.scrollY > 80);
@@ -24,7 +76,6 @@ export default function Header() {
       }`}
     >
       <div className="container mx-auto flex items-center justify-between py-4">
-        
         {/* Logo */}
         <Link href="/" className="flex items-center">
           <Image
@@ -42,10 +93,13 @@ export default function Header() {
             className="hidden dark:block"
           />
         </Link>
-        <p className="hidden md:block text-sm text-gray-600 dark:text-gray-400">
-          A doctor-led Physical Therapy clinic designed for injury prevention and multidisciplinary approach for rehabilitation.
-        </p>
-
+        {loading ? (
+          <Skeleton className="hidden md:block h-5 w-40" />
+        ) : (
+          <p className="hidden md:block text-sm text-gray-600 dark:text-gray-400">
+            {headline}
+          </p>
+        )}
       </div>
     </header>
   );
