@@ -31,6 +31,10 @@ const Toast = Swal.mixin({
   },
 });
 
+
+// Always use a super-high z-index for SweetAlert popups
+const alwaysOnTopClass = 'swal-super-high-z';
+
 export const showSuccessAlert = (message: string, title: string = 'Success') => {
   Swal.fire({
     title,
@@ -38,7 +42,7 @@ export const showSuccessAlert = (message: string, title: string = 'Success') => 
     icon: 'success',
     confirmButtonText: 'OK',
     customClass: {
-      popup: 'sa-success',
+      popup: `sa-success ${alwaysOnTopClass}`,
     },
   });
 };
@@ -50,7 +54,7 @@ export const showErrorAlert = (message: string, title: string = 'Error') => {
     icon: 'error',
     confirmButtonText: 'OK',
     customClass: {
-      popup: 'sa-error',
+      popup: `sa-error ${alwaysOnTopClass}`,
     },
   });
 };
@@ -62,7 +66,7 @@ export const showWarningAlert = (message: string, title: string = 'Warning') => 
     icon: 'warning',
     confirmButtonText: 'OK',
     customClass: {
-      popup: 'sa-warning',
+      popup: `sa-warning ${alwaysOnTopClass}`,
     },
   });
 };
@@ -74,7 +78,7 @@ export const showInfoAlert = (message: string, title: string = 'Information') =>
     icon: 'info',
     confirmButtonText: 'OK',
     customClass: {
-      popup: 'sa-info',
+      popup: `sa-info ${alwaysOnTopClass}`,
     },
   });
 };
@@ -117,14 +121,13 @@ export const showAlert = (title: string, message: string, variant: 'default' | '
     warning: 'warning' as const,
     info: 'info' as const,
   };
-
   Swal.fire({
     title,
     html: message,
     icon: iconMap[variant],
     confirmButtonText: 'OK',
     customClass: {
-      popup: `sa-${variant}`,
+      popup: `sa-${variant} ${alwaysOnTopClass}`,
     },
   });
 };
@@ -137,8 +140,9 @@ export const showConfirmationAlert = async (options: SweetAlertOptions) => {
     showCancelButton: options.showCancelButton !== undefined ? options.showCancelButton : true,
     confirmButtonText: options.confirmButtonText || 'Yes',
     cancelButtonText: options.cancelButtonText || 'No',
-    customClass: options.customClass || {
-      popup: 'sa-confirm',
+    customClass: {
+      ...(options.customClass || {}),
+      popup: `${(options.customClass?.popup || 'sa-confirm')} ${alwaysOnTopClass}`,
     },
   });
   return result.isConfirmed;

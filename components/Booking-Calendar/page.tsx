@@ -28,6 +28,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BookingEntry } from "@/types/bookingEntry";
 import { CalendarEvent } from "@/types/calendarEvent";
 import StaffTimeOffDialog from "@/components/Staff-Timeoff/StaffTimeOffDialog";
+import Swal from "sweetalert2";
 import EventDetailsDialog from "@/components/Booking-Calendar/EventDetailsDialog";
 
 // Import hooks
@@ -69,12 +70,28 @@ export default function BookingCalendar() {
     start: Date;
     end: Date;
   } | null>(null);
-  const [calendarView, setCalendarView] = useState<string>("dayGridMonth");
+  const [calendarView, setCalendarView] = useState<string>("timeGridWeek");
   const [isMobile, setIsMobile] = useState(false);
   const [currentTitle, setCurrentTitle] = useState<string>("");
   const [initialLoading, setInitialLoading] = useState(true);
   const [isDeletingTimeOff, setIsDeletingTimeOff] = useState(false);
   const [showTimeOffDialog, setShowTimeOffDialog] = useState(false);
+  // Error state for SweetAlert at page level
+  const [alertError, setAlertError] = useState<{ title: string; message: string } | null>(null);
+
+  // Show SweetAlert when alertError is set, but do not render as a React child
+  useEffect(() => {
+    if (alertError) {
+      Swal.fire({
+        title: alertError.title,
+        html: alertError.message,
+        icon: 'error',
+        confirmButtonText: 'OK',
+        customClass: { popup: 'swal-super-high-z' },
+        willClose: () => setAlertError(null),
+      });
+    }
+  }, [alertError]);
 
   const branchCode = searchParams.get("code") || "MAIN";
 
@@ -691,8 +708,11 @@ export default function BookingCalendar() {
               );
             }
           }}
+          onError={(title, message) => setAlertError({ title, message })}
         />
       )}
+
+      {/* SweetAlert is now triggered by useEffect, not rendered here */}
     </div>
   );
 }

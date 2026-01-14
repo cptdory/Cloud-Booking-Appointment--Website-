@@ -54,12 +54,13 @@ export default function Header() {
   const [sticky, setSticky] = useState(false);
   const { orgSetup, loading } = useOrgSetup();
   
-  // Log to debug what's in orgSetup
   // useEffect(() => {
   //   console.log("orgSetup:", orgSetup);
   // }, [orgSetup]);
   
-  const headline = orgSetup?.Headline || "404";
+  const headline = orgSetup?.Headline || "";
+  const customerPortalHeadline = orgSetup?.CustomerPortalHeadline || "";
+  const logo = orgSetup?.Logo;
 
   useEffect(() => {
     const handleScroll = () => setSticky(window.scrollY > 80);
@@ -78,26 +79,59 @@ export default function Header() {
       <div className="container mx-auto flex items-center justify-between py-4">
         {/* Logo */}
         <Link href="/" className="flex items-center">
-          <Image
-            src="/images/logo/squadlethics-logo.svg"
-            alt="Logo"
-            width={140}
-            height={40}
-            className="dark:hidden"
-          />
-          <Image
-            src="/images/logo/squadlethics-logo.svg"
-            alt="Logo"
-            width={140}
-            height={40}
-            className="hidden dark:block"
-          />
+          {loading ? (
+            <Skeleton className="w-[100px] h-[20px]" />
+          ) : logo && logo.trim() !== "" ? (
+            <>
+              <Image
+                src={`data:image/png;base64,${logo}`}
+                alt="Logo"
+                width={100}
+                height={20}
+                className="dark:hidden"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.src = "/images/logo/bookufy-logo.png";
+                }}
+              />
+              <Image
+                src={`data:image/png;base64,${logo}`}
+                alt="Logo"
+                width={100}
+                height={20}
+                className="hidden dark:block"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.src = "/images/logo/bookufy-logo.png";
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <Image
+                src="/images/logo/bookufy-logo.png"
+                alt="Logo"
+                width={140}
+                height={40}
+                className="dark:hidden"
+              />
+              <Image
+                src="/images/logo/bookufy-logo.png"
+                alt="Logo"
+                width={140}
+                height={40}
+                className="hidden dark:block"
+              />
+            </>
+          )}
         </Link>
         {loading ? (
           <Skeleton className="hidden md:block h-5 w-40" />
         ) : (
           <p className="hidden md:block text-sm text-gray-600 dark:text-gray-400">
-            {headline}
+            {pathname === "/login" ? headline : pathname === "/login-customer" ? customerPortalHeadline : headline}
           </p>
         )}
       </div>

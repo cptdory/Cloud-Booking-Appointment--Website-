@@ -745,9 +745,6 @@ const handleProceedWithBooking = (bookingData: any) => {
             <Calendar className="w-12 h-12 mr-6 opacity-50 flex-shrink-0" />
             <div>
                 <h1 className="text-3xl font-bold">Book Your Appointment</h1>
-                <p className="mt-1 text-blue-100 dark:text-blue-200">
-                  Effortless booking at Squadlethics. Choose your service and time below.
-                </p>
             </div>
         </div>
 
