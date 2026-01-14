@@ -20,16 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Plus, Key, Palette, CheckCircle } from "lucide-react";
+import { Edit, Trash2, Plus, Key, Palette, Mail } from "lucide-react";
 
 import { useBookingParams } from "@/hooks/useBookingParams";
 import { useParameterCRUD } from "@/hooks/useParameterCRUD";
@@ -74,15 +66,13 @@ export default function StaffPage() {
   const crud = useParameterCRUD({
     code: _BookingSetupCode,
     parameterId,
-    isParamStaff, // pass as string per hook design
+    isParamStaff,
     isParamService,
     loadValues,
     getItemType,
   });
 
-  // -------------------------
-  // Staff color state + logic
-  // -------------------------
+
   const [staffColors, setStaffColors] = useState<Record<string, { background: string; text: string }>>({});
   const [colorDialogOpen, setColorDialogOpen] = useState(false);
   const [colorStaff, setColorStaff] = useState<any | null>(null);
@@ -224,7 +214,6 @@ export default function StaffPage() {
       setCurrentColor("");
     } catch (err: any) {
       console.error(err);
-      // set error message via crud.error? hook doesn't expose setter. Use console and keep page-level alert by invoking loadValues which will keep UI consistent.
     } finally {
       setUpdatingColor(false);
       // refresh list
@@ -241,11 +230,54 @@ export default function StaffPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [updatingPassword, setUpdatingPassword] = useState(false);
 
+  // -------------------------
+  // Email update state + logic
+  // -------------------------
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailStaff, setEmailStaff] = useState<any | null>(null);
+  const [email, setEmail] = useState("");
+  const [updatingEmail, setUpdatingEmail] = useState(false);
+  const [loadingEmail, setLoadingEmail] = useState(false);
+
   const openPasswordDialog = (staff: any) => {
     setPasswordStaff(staff);
     setPasswordDialogOpen(true);
     setNewPassword("");
     setConfirmPassword("");
+  };
+
+  const openEmailDialog = async (staff: any) => {
+    setEmailStaff(staff);
+    setEmailDialogOpen(true);
+    setEmail("");
+    setLoadingEmail(true);
+    
+    try {
+      const body = {
+        _BookingSetupCode,
+        _BookingParameterId: parameterId,
+        _BookingParameterValueId: String(staff.BookingParameterValueId),
+      };
+
+      const res = await fetch("/api/booking-staff-auth/get-booking-staff-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.email) {
+        setEmail(json.email);
+      } else {
+        console.error("Failed to fetch email:", json?.error);
+        setEmail("");
+      }
+    } catch (err) {
+      console.error("Error fetching email:", err);
+      setEmail("");
+    } finally {
+      setLoadingEmail(false);
+    }
   };
 
   const handleUpdatePassword = async () => {
@@ -288,11 +320,39 @@ export default function StaffPage() {
     }
   };
 
-  // -------------------------
-  // local helpers for UI
-  // -------------------------
-  const displayError = bookingError || crud.error;
-  const displaySuccess = crud.success;
+  const handleUpdateEmail = async () => {
+    if (!emailStaff || !email) return;
+
+    setUpdatingEmail(true);
+    try {
+      const body = {
+        _BookingSetupCode,
+        _BookingParameterId: parameterId,
+        _BookingParameterValueId: String(emailStaff.BookingParameterValueId),
+        _StaffEmail: email,
+      };
+
+      const res = await fetch("/api/booking-staff-auth/update-booking-staff-auth-email-address", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.message || "Failed to update email");
+
+      setEmailDialogOpen(false);
+      setEmailStaff(null);
+      setEmail("");
+      // refresh data
+      await loadValues();
+    } catch (err: any) {
+      console.error(err);
+    } finally {
+      setUpdatingEmail(false);
+    }
+  };
+
 
   // Add auth hook and determine permission
   const { userRole } = useAuth();
@@ -303,14 +363,6 @@ export default function StaffPage() {
   // -------------------------
   return (
     <div className="flex flex-1 flex-col p-6 md:p-8">
-      {/* Success Alert */}
-      {displaySuccess && (
-        <Alert className="mb-4">
-          <CheckCircle className="h-4 w-4" />
-          <AlertDescription>{displaySuccess}</AlertDescription>
-        </Alert>
-      )}
-
       <Card className="w-full">
         <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle>{parameterName || "Staff Management"}</CardTitle>
@@ -326,12 +378,6 @@ export default function StaffPage() {
         </CardHeader>
 
         <CardContent>
-          {displayError && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertDescription>{displayError}</AlertDescription>
-            </Alert>
-          )}
-
           {loading ? (
             <p className="text-muted-foreground">Loading...</p>
           ) : (
@@ -366,6 +412,9 @@ export default function StaffPage() {
                             </Button>
                             <Button size="sm" variant="ghost" onClick={() => openPasswordDialog(v)} title="Change Password">
                               <Key className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => openEmailDialog(v)} title="Change Email">
+                              <Mail className="w-4 h-4" />
                             </Button>
                             <Button size="sm" variant="ghost" onClick={() => crud.setDeleteItem(v)} title="Delete Staff">
                               <Trash2 className="w-4 h-4" />
@@ -410,7 +459,7 @@ export default function StaffPage() {
             </div>
 
             <div>
-              <Label>Description</Label>
+              <Label>Name</Label>
               <Input
                 value={crud.newItem.BookingParamterValueDescription}
                 onChange={(e) => crud.setNewItem({ ...crud.newItem, BookingParamterValueDescription: e.target.value })}
@@ -593,6 +642,44 @@ export default function StaffPage() {
                 <Button variant="ghost" onClick={() => setPasswordDialogOpen(false)}>Cancel</Button>
                 <Button onClick={handleUpdatePassword} disabled={updatingPassword || !newPassword || !confirmPassword}>
                   {updatingPassword ? "Updating..." : "Update Password"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* -------------------- */}
+      {/* EMAIL DIALOG */}
+      {/* -------------------- */}
+      <Dialog open={emailDialogOpen} onOpenChange={(open) => !open && setEmailDialogOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Staff Email</DialogTitle>
+          </DialogHeader>
+
+          {emailStaff && (
+            <div className="grid gap-4">
+              <div>
+                <Label>Staff</Label>
+                <Input value={emailStaff.BookingParameterValueCode} disabled />
+              </div>
+
+              <div>
+                <Label>Email</Label>
+                <Input 
+                  type="email" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                  placeholder="Enter email address"
+                  disabled={loadingEmail}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 mt-4">
+                <Button variant="ghost" onClick={() => setEmailDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleUpdateEmail} disabled={updatingEmail || !email || loadingEmail}>
+                  {updatingEmail ? "Updating..." : "Update Email"}
                 </Button>
               </div>
             </div>

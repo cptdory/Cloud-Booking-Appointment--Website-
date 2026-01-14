@@ -2,6 +2,8 @@
 import React from "react";
 
 import { useState } from "react";
+import { useToast } from "@/hooks/useToast";
+import { useModalAlert } from "@/hooks/useAlert";
 
 export function useParameterCRUD({
   code,
@@ -11,8 +13,8 @@ export function useParameterCRUD({
   loadValues,
   getItemType,
 }: any) {
-  const [success, setSuccess] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { showSuccess } = useToast();
+  const { showError: showErrorAlert } = useModalAlert();
 
   // Edit
   const [editing, setEditing] = useState(false);
@@ -31,14 +33,6 @@ export function useParameterCRUD({
   // Delete
   const [deleteItem, setDeleteItem] = useState<any | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  // Auto hide success
-  React.useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => setSuccess(null), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [success]);
 
   // OPEN EDIT
   const openEdit = (item: any) => {
@@ -87,9 +81,9 @@ export function useParameterCRUD({
       setEditing(false);
       setEditItem(null);
 
-      setSuccess(`${getItemType()} updated successfully!`);
+      showSuccess(`${getItemType()} updated successfully!`);
     } catch (err: any) {
-      setError(err.message);
+      showErrorAlert(err.message, "Update Failed");
     } finally {
       setSaving(false);
     }
@@ -133,9 +127,9 @@ export function useParameterCRUD({
         BookingParameterValueDuration: 60,
       });
 
-      setSuccess(`${getItemType()} created successfully!`);
+      showSuccess(`${getItemType()} created successfully!`);
     } catch (err: any) {
-      setError(err.message);
+      showErrorAlert(err.message, "Create Failed");
     } finally {
       setCreatingSaving(false);
     }
@@ -168,19 +162,15 @@ export function useParameterCRUD({
       await loadValues();
       setDeleteItem(null);
 
-      setSuccess(`${getItemType()} deleted successfully!`);
+      showSuccess(`${getItemType()} deleted successfully!`);
     } catch (err: any) {
-      setError(err.message);
+      showErrorAlert(err.message, "Delete Failed");
     } finally {
       setDeleting(false);
     }
   };
 
   return {
-    // Alerts
-    success,
-    error,
-
     // EDIT
     editing,
     editItem,

@@ -8,6 +8,7 @@ export function useAuth() {
   const [username, setUsername] = useState<string | null>(null);
   const [staffCode, setStaffCode] = useState<string | null>(null);
   const [customerNo, setCustomerNo] = useState<string>("");
+  const [customerEmail, setCustomerEmail] = useState<string>(""); // New state for customer email
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
@@ -15,21 +16,26 @@ export function useAuth() {
       .then((res) => res.json())
       .then((data) => {
         if (!data.authenticated) {
-          router.replace("/signin");
+          router.replace("/login");
         } else {
           setUsername(data.user.name);
           setStaffCode(data.user.staffCode);
           setUserRole(data.user.role);
           setCustomerNo(data.user.customerNo || "");
+          setCustomerEmail(data.user.email || ""); // Set customer email
         }
       })
       .catch(() => {
-        router.replace("/signin");
+        router.replace("/login");
       })
       .finally(() => {
         setCheckingAuth(false);
       });
   }, [router]);
 
-  return { userRole, username,staffCode, customerNo, checkingAuth };
+  const updateCustomerEmail = (newEmail: string) => {
+    setCustomerEmail(newEmail);
+  };
+
+  return { userRole, username, staffCode, customerNo, customerEmail, checkingAuth, updateCustomerEmail };
 }

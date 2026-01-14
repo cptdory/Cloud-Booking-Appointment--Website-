@@ -29,17 +29,13 @@ async function getAccessToken() {
 
 export async function GET() {
   try {
-    console.log("GET /api/customer/get-customers called");
     const accessToken = await getAccessToken();
-    console.log("Access token obtained");
 
     const tenantId = process.env.TENANT_ID!;
     const environment = process.env.ENVIRONMENT!;
     const company = process.env.COMPANY!;
 
     const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_GetCustomers?Company=${company}`;
-
-    console.log("Calling Business Central API:", url);
 
     const res = await fetch(url, {
       method: "POST",
@@ -62,7 +58,6 @@ export async function GET() {
     }
 
     const json = await res.json();
-    console.log("Business Central API response:", json);
 
     if (!json?.value) {
       console.warn("No value in response, returning empty array");
@@ -80,7 +75,6 @@ export async function GET() {
     }
 
     const finalData = Array.isArray(value) ? value : [value];
-    console.log("Final customers data:", finalData);
 
     return NextResponse.json({ value: finalData });
   } catch (err: any) {

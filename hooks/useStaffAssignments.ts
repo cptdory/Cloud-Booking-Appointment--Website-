@@ -1,12 +1,12 @@
 // hooks/useStaffAssignments.ts
-import { useState } from "react";
+import { useState, useCallback } from "react"; // Import useCallback
 import { StaffAssignment } from "@/types/staffAssignment";
 
 export function useStaffAssignments() {
   const [staffAssignments, setStaffAssignments] = useState<StaffAssignment[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchStaffAssignments = async (branchCode: string, serviceId: string) => {
+  const fetchStaffAssignments = useCallback(async (branchCode: string, serviceId: string) => { // Wrap with useCallback
     setLoading(true);
     try {
       const res = await fetch(
@@ -41,7 +41,8 @@ export function useStaffAssignments() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // Empty dependency array as it doesn't depend on any props or state within the hook
+  // The setter functions (setLoading, setStaffAssignments) are guaranteed to be stable.
 
   return { staffAssignments, loading, fetchStaffAssignments };
 }

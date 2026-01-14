@@ -1,12 +1,12 @@
 // hooks/useBookingSetup.ts
-import { useState } from "react";
+import { useState, useCallback } from "react"; // Import useCallback
 import { BookingSetup } from "@/types/bookingSetup";
 
 export function useBookingSetup() {
   const [bookingSetup, setBookingSetup] = useState<BookingSetup | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const fetchBookingSetup = async (branchCode: string) => {
+  const fetchBookingSetup = useCallback(async (branchCode: string) => { // Wrap with useCallback
     setLoading(true);
     try {
       const res = await fetch("/api/booking-setup/get-booking-setup", {
@@ -35,7 +35,8 @@ export function useBookingSetup() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // Empty dependency array as it doesn't depend on any props or state within the hook
+  // The setter functions (setLoading, setBookingSetup) are guaranteed to be stable.
 
   return { bookingSetup, loading, fetchBookingSetup };
 }

@@ -12,8 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
-import { useAlert } from "@/hooks/useAlert";
+import { useToast } from "@/hooks/useToast";
 import { useBookingSetup } from "@/hooks/useBookingSetup";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -77,6 +76,7 @@ function BusinessHoursForm({
   bookingSetupCode,
   onSuccess,
 }: BusinessHoursFormProps) {
+  const { showError, showSuccess } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     dayOfWeek: "",
@@ -111,7 +111,7 @@ function BusinessHoursForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.dayOfWeek) {
-      toast.error("Please select a day of week");
+      showError("Please select a day of week");
       return;
     }
 
@@ -140,12 +140,12 @@ function BusinessHoursForm({
         throw new Error(errorData.message || "Failed to save");
       }
 
-      toast.success(`Business hours ${businessHour ? "updated" : "created"} successfully`);
+      showSuccess(`Business hours ${businessHour ? "updated" : "created"} successfully`);
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
       console.error('Error saving business hours:', error);
-      toast.error(error.message || `Failed to ${businessHour ? "update" : "create"} business hours`);
+      showError(error.message || `Failed to ${businessHour ? "update" : "create"} business hours`);
     } finally {
       setLoading(false);
     }
@@ -259,7 +259,7 @@ function BusinessHoursForm({
 function useBusinessHours(code: string) {
   const [businessHours, setBusinessHours] = useState<BusinessHour[]>([]);
   const [loading, setLoading] = useState(true);
-  const { showAlert } = useAlert();
+  const { showError, showSuccess } = useToast();
   const { fetchBookingSetup } = useBookingSetup();
 
   const loadBusinessHours = async () => {
@@ -275,11 +275,7 @@ function useBusinessHours(code: string) {
       }
     } catch (error: any) {
       console.error("Error loading business hours:", error);
-      showAlert(
-        "Failed to Load Business Hours",
-        error.message || "Please try again later.",
-        "destructive"
-      );
+      showError(error.message || "Failed to load business hours");
     } finally {
       setLoading(false);
     }
@@ -303,16 +299,12 @@ function useBusinessHours(code: string) {
 
       if (!res.ok) throw new Error("Failed to delete");
 
-      toast.success("Business hour deleted successfully");
+      showSuccess("Business hour deleted successfully");
       await loadBusinessHours();
       return true;
     } catch (error: any) {
       console.error("Error deleting business hour:", error);
-      showAlert(
-        "Failed to Delete",
-        error.message || "Please try again.",
-        "destructive"
-      );
+      showError(error.message || "Failed to delete business hour");
       return false;
     }
   };

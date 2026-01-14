@@ -22,28 +22,19 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { CheckCircle, Edit, Trash2, Plus, Users } from "lucide-react";
+import { Edit, Trash2, Plus, Users } from "lucide-react";
 
 import { useBookingParams } from "@/hooks/useBookingParams";
 import { useParameterCRUD } from "@/hooks/useParameterCRUD";
-
+import { useToast } from "@/hooks/useToast";
+import { useModalAlert } from "@/hooks/useAlert";
 import { useAuth } from "@/hooks/useAuth";
 
-/**
- * Page: app/(dashboard)/staff/page.tsx
- *
- * Re-uses:
- * - useBookingParams(code, parameterId)
- * - useParameterCRUD({ code, parameterId, isParamStaff, isParamService, loadValues, getItemType })
- *
- * Notes:
- * - This is intentionally compact: CRUD dialogs are driven by the hook.
- * - Assigned-staff fetch/create/delete operations remain on-page (they're specific to relation endpoints).
- */
-
 export default function StaffPage() {
+  const { showSuccess } = useToast();
+  const { showError: showErrorAlert } = useModalAlert();
+
   // url params (same usage as before)
   const search =
     typeof window !== "undefined"
@@ -159,7 +150,9 @@ export default function StaffPage() {
       if (!res.ok) throw new Error("Failed to delete assignment");
       // refresh
       await loadAssignedStaff(serviceId);
+      showSuccess("Staff assignment deleted successfully!");
     } catch (err: any) {
+      showErrorAlert(err.message, "Delete Failed");
       console.error("deleteAssignedStaff error:", err);
     }
   };
@@ -188,7 +181,9 @@ export default function StaffPage() {
       setAssignDialogOpen(false);
       setSelectedStaffId(null);
       setSelectedService(null);
+      showSuccess("Staff assigned successfully!");
     } catch (err: any) {
+      showErrorAlert(err.message, "Assignment Failed");
       console.error("handleAssignService error:", err);
     } finally {
       setAssigning(false);
@@ -201,20 +196,6 @@ export default function StaffPage() {
 
   return (
     <div className="flex flex-1 flex-col p-6 md:p-8 space-y-6">
-      {/* Success / Error from the CRUD hook */}
-      {crud.success && (
-        <Alert className="mb-4">
-          <CheckCircle className="h-4 w-4" />
-          <AlertDescription>{crud.success}</AlertDescription>
-        </Alert>
-      )}
-
-      {crud.error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertDescription>{crud.error}</AlertDescription>
-        </Alert>
-      )}
-
       <Card className="w-full">
         <CardHeader className="flex justify-between items-center">
           <CardTitle>{pageTitle}</CardTitle>
@@ -223,7 +204,7 @@ export default function StaffPage() {
             {/* Only show New button for global-admin */}
             {canEdit && (
               <Button size="sm" variant="outline" onClick={() => crud.setCreating(true)}>
-                <Plus className="w-4 h-4 mr-2" /> New Staff
+                <Plus className="w-4 h-4 mr-2" /> New Service
               </Button>
             )}
           </div>

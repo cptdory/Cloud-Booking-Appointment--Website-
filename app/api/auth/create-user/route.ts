@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { parseBCError, createErrorResponse } from "@/app/api/utils/bc-error-handler";
 
 let memoryCache: { access_token: string; expires_at: number } | null = null;
 
@@ -49,6 +50,7 @@ async function createCustomer(
     _Age: body.Age || "",
     _BirthDate: body.BirthDate || "",
     _PortalPassword: body.PortalPassword || "",
+    _ExecInternally: "false"
   };
 
   console.log("Request body:", requestBody);
@@ -76,9 +78,8 @@ async function createCustomer(
       url,
       response: text,
     });
-    throw new Error(
-      `Failed request (${res.status}): ${res.statusText} - ${text}`
-    );
+    const bcError = parseBCError(text);
+    throw new Error(JSON.stringify(bcError));
   }
 
   const json = await res.json();
@@ -101,9 +102,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("Error creating customer:", error);
-    return NextResponse.json(
-      { error: "Failed to create customer", message: error.message },
-      { status: 500 }
-    );
+    const errorResponse = createErrorResponse(error, "Failed to create customer");
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }

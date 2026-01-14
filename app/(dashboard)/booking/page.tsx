@@ -1,6 +1,7 @@
+import { Suspense } from "react";
 import BookingForm from "@/components/Booking-Form/page";
 
-export default function BookingPage() {
+function BookingFormWrapper() {
   return (
     <div className="flex flex-1 flex-col">
       <div className="@container/main flex flex-1 flex-col gap-2">
@@ -9,5 +10,13 @@ export default function BookingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function BookingPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <BookingFormWrapper />
+    </Suspense>
   );
 }

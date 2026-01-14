@@ -33,8 +33,8 @@ export default function Hero() {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
             <Button asChild size="lg" className="px-8 py-6 text-base font-bold bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300">
-              <Link href="/signup" className="flex items-center gap-2">
-                Get Started
+              <Link href="/book-now" className="flex items-center gap-2">
+                Book Now
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </Button>

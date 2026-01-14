@@ -1,3 +1,10 @@
+export type BookingParameterDetail = {
+  BookingParameterId: number;
+  BookingParameterCode: string;
+  BookingParameterValueId: number;
+  BookingParameterValueCode: string;
+};
+
 export type BookingEntry = {
   BookingParameterValueIds?: string;
   ServiceId?: string;
@@ -28,4 +35,5 @@ export type BookingEntry = {
   BirthDate: string;
   Address: string;
   Address2: string;
+  BookingParameters?: BookingParameterDetail[];
 };
