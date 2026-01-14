@@ -2,8 +2,9 @@
 
 import { ErrorPage } from "@/components/ErrorPage";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function UnavailablePage() {
+function UnavailablePageContent() {
   const searchParams = useSearchParams();
   const desc = searchParams.get("desc") || "This page is unavailable.";
   return (
@@ -14,5 +15,13 @@ export default function UnavailablePage() {
       showContactAdmin
       contactAdminEmail="admin@example.com"
     />
+  );
+}
+
+export default function UnavailablePage() {
+  return (
+    <Suspense>
+      <UnavailablePageContent />
+    </Suspense>
   );
 }
