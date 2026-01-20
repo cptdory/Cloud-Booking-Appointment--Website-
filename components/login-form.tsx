@@ -43,9 +43,9 @@ export function LoginForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          _PortalUsername: staffCode,
-          _PortalPassword: password,
-          _IsAdminLogin: "true",
+          _EmailAddress: staffCode,
+          _Password: password,
+          _IsUserLogin: "true",
         }),
         cache: "no-store",
       });

@@ -31,12 +31,12 @@ export async function POST(req: Request) {
     const body = await req.json();
     console.log("📨 Received request body:", body);
     
-    const { _CustomerNo, _PortalPassword } = body;
+    const { _CustomerNo, _Password } = body;
 
-    if (!_CustomerNo || !_PortalPassword) {
-      console.log("❌ Missing fields:", { _CustomerNo, _PortalPassword });
+    if (!_CustomerNo || !_Password) {
+      console.log("❌ Missing fields:", { _CustomerNo, _Password });
       return NextResponse.json({ 
-        error: "Missing required fields: _CustomerNo and _PortalPassword are required" 
+        error: "Missing required fields: _CustomerNo and _Password are required" 
       }, { status: 400 });
     }
 
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
         console.log("🔄 Trying endpoint:", url);
         console.log("📤 Sending data to BC:", {
           _CustomerNo,
-          _PortalPassword
+          _Password
         });
 
         const res = await fetch(url, {
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
           },
           body: JSON.stringify({
             _CustomerNo: _CustomerNo,
-            _PortalPassword: _PortalPassword,
+            _Password: _Password,
           }),
         });
 

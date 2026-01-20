@@ -44,9 +44,9 @@ const CustomerLoginForm = ({ orgLoaded, orgLoading }: CustomerLoginFormProps) =>
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          _PortalUsername: email,
-          _PortalPassword: '', // dont remove this one leave it blank
-          _IsAdminLogin: "false",
+          _EmailAddress: email,
+          _Password: '', // dont remove this one leave it blank
+          _IsUserLogin: "false",
         }),
         cache: "no-store",
       });
@@ -93,9 +93,9 @@ const CustomerLoginForm = ({ orgLoaded, orgLoading }: CustomerLoginFormProps) =>
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          _PortalUsername: pendingEmail,
-          _PortalPassword: '',
-          _IsAdminLogin: "false",
+          _EmailAddress: pendingEmail,
+          _Password: '',
+          _IsUserLogin: "false",
         }),
         cache: "no-store",
       });

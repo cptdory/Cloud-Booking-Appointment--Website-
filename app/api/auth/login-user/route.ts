@@ -5,9 +5,9 @@ import { createErrorResponse } from "@/app/api/utils/bc-error-handler";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { _PortalUsername, _PortalPassword, _IsAdminLogin } = body;
+    const { _EmailAddress, _Password, _IsUserLogin } = body;
 
-    if (!_PortalUsername) {
+    if (!_EmailAddress) {
       return NextResponse.json(
         { error: "Missing credentials" },
         { status: 400 }
@@ -20,9 +20,9 @@ export async function POST(request: Request) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        _PortalUsername,
-        _PortalPassword,
-        _IsAdminLogin,
+        _EmailAddress,
+        _Password,
+        _IsUserLogin,
       }),
     });
 
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const isAdmin = String(_IsAdminLogin) === "true";
+    const isAdmin = String(_IsUserLogin) === "true";
 
     //if (isAdmin) {
     //  // ADMIN LOGIN: Validate staff data
@@ -85,19 +85,16 @@ if (isAdmin) {
   const bookingSetup = {
     code: loginResult.BookingSetupCode || "",
     parameterId: loginResult.BookingParameterId || 0,
-    parameterValueId: loginResult.BookingParameterValueId || 0
+    parameterValueId: loginResult.BookingParameterValueId || 0,
+
   };
 
-  const isGlobalAdmin = loginResult.Admin === true;
+  const isAdmin = loginResult.Admin === true;
 
   tokenData = {
-    role: isGlobalAdmin ? "global-admin" : "admin",
-    username: loginResult.StaffCode,
-    name: loginResult.StaffName,
-    email: "",
-    staffCode: loginResult.StaffCode,
-    staffName: loginResult.StaffName,
-    staffColor: loginResult.StaffColor || "",
+    role: isAdmin ? "admin" : "user",
+    name: loginResult.Name,
+    email: loginResult.Email,
     currentBookingSetup: bookingSetup,
   };
 

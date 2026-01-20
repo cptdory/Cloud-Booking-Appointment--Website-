@@ -49,7 +49,7 @@ async function createCustomer(
     _Address2: body.Address2 || "",
     _Age: body.Age || "",
     _BirthDate: body.BirthDate || "",
-    _PortalPassword: body.PortalPassword || "",
+    _Password: body.PortalPassword || "",
     _ExecInternally: "false"
   };
 

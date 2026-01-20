@@ -32,10 +32,10 @@ async function getAccessToken() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { _BookingSetupCode, _BookingParameterId, _BookingParameterValueId, _PortalPassword } = body;
+    const { _BookingSetupCode, _EmailAddress, _Password } = body;
 
     // Validate required fields based on your sample body
-    if (!_PortalPassword) {
+    if (!_Password) {
       return NextResponse.json({ 
         error: "Missing required fields" 
       }, { status: 400 });
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     const company = process.env.COMPANY!;
 
     // 
-    const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_UpdateBookingStaffAuthPassword?Company=${encodeURIComponent(company)}`;
+    const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_UpdateBookingUserPassword?Company=${encodeURIComponent(company)}`;
 
     const res = await fetch(url, {
       method: "POST",
@@ -62,9 +62,8 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         _BookingSetupCode: _BookingSetupCode || "",
-        _BookingParameterId: _BookingParameterId || "0",
-        _BookingParameterValueId: _BookingParameterValueId || "0",
-        _PortalPassword: _PortalPassword,
+        _EmailAddress: _EmailAddress || "",
+        _Password: _Password,
       }),
     });
 
@@ -93,7 +92,7 @@ export async function POST(req: Request) {
     });
     
   } catch (err: any) {
-    console.error("POST /api/booking-staff-auth/update-booking-staff-auth-password failed:", err);
+    console.error("POST /api/booking-user/update-booking-user-password failed:", err);
     return NextResponse.json({ 
       error: err.message || "Internal Server Error" 
     }, { status: 500 });

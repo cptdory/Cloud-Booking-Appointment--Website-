@@ -160,7 +160,7 @@ export default function StaffTimeOffDialog({
           let filteredStaff = staffParam.BookingParameterValue;
 
           // If admin role, filter to only the current user's staff
-          if (userRole === "admin" && username) {
+          if (userRole === "user" && username) {
             const adminFiltered = filteredStaff.filter(
               (staff: any) => staff.BookingParamterValueDescription === username
             );
@@ -170,10 +170,10 @@ export default function StaffTimeOffDialog({
               filteredStaff = adminFiltered;
             }
           }
-          // If global-admin, load all staff (no filter)
+          // If admin, load all staff (no filter)
           setStaffList(filteredStaff);
           // Pre-select first staff for admin users
-          if (userRole === "admin" && filteredStaff.length > 0) {
+          if (userRole === "user" && filteredStaff.length > 0) {
             setSelectedStaffCode(filteredStaff[0].BookingParameterValueCode);
 
             setSelectedStaffName(
@@ -374,7 +374,7 @@ export default function StaffTimeOffDialog({
                     const staff = staffList.find((s) => s.BookingParameterValueCode === code);
                     setSelectedStaffName(staff?.BookingParamterValueDescription || "");
                   }}
-                  disabled={loadingStaff || isEditMode || (userRole === "admin" && staffList.length === 1)}
+                  disabled={loadingStaff || isEditMode || (userRole === "user" && staffList.length === 1)}
                 >
                   <SelectTrigger id="staff-name">
                     <SelectValue placeholder={loadingStaff ? "Loading..." : "Select staff name"} />

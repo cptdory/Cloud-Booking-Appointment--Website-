@@ -43,7 +43,7 @@ export function useCustomers(userRole: string | null) {
   };
 
   useEffect(() => {
-    if (userRole === "global-admin" || userRole === "admin") {
+    if (userRole === "admin" || userRole === "user") {
       fetchCustomers();
     }
   }, [userRole]);

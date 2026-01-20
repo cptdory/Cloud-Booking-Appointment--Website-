@@ -424,7 +424,7 @@ export default function BookingForm() {
       };
 
       // Set customer info
-      if (userRole === "admin" || userRole === "global-admin") {
+      if (userRole === "user" || userRole === "admin") {
         if (isNewCustomer) {
           summary.customer = {
             customerNo: "New",
@@ -762,7 +762,7 @@ export default function BookingForm() {
       (param) => formData[param.BookingParameterId.toString()]
     );
 
-    const isNewCustomerAdmin = (userRole === "admin" || userRole === "global-admin") && isNewCustomer;
+    const isNewCustomerAdmin = (userRole === "user" || userRole === "admin") && isNewCustomer;
 
     // Validation
     if (
@@ -791,7 +791,7 @@ export default function BookingForm() {
       //   showError("Invalid Email", "Please enter a valid email address for the new customer.");
       //   return;
       // }
-    } else if (userRole === "admin" || userRole === "global-admin") {
+    } else if (userRole === "user" || userRole === "admin") {
       if (!formData.customerNo) {
         showError("Missing Information", "Please select a customer.");
         return;
@@ -849,7 +849,7 @@ export default function BookingForm() {
         bodyToSend._CustomerPhoneNo = formData.customerPhone;
         bodyToSend._CustomerAddress1 = formData.customerAddress1;
         bodyToSend._CustomerAddress2 = formData.customerAddress2;
-      } else if (userRole !== "admin" && userRole !== "global-admin") {
+      } else if (userRole !== "user" && userRole !== "admin") {
         bodyToSend._CustomerName = formData.customerName;
       }
 
@@ -886,7 +886,7 @@ export default function BookingForm() {
           staff: "",
           date: "",
           selectedTime: "",
-          customerNo: userRole === "admin" || userRole === "global-admin" ? "" : customerNo,
+          customerNo: userRole === "user" || userRole === "admin" ? "" : customerNo,
           customerEmail: "",
           customerName: "",
           customerPhone: "",
@@ -927,7 +927,7 @@ export default function BookingForm() {
 
   // Set customer info for non-admin users
   useEffect(() => {
-    if (customerNo && userRole !== "admin" && userRole !== "global-admin") {
+    if (customerNo && userRole !== "user" && userRole !== "admin") {
       setFormData((prev) => ({
         ...prev,
         customerNo: customerNo,
@@ -958,7 +958,7 @@ export default function BookingForm() {
       formData.customerNo &&
       customers.length > 0 &&
       !customersLoading &&
-      (userRole === "admin" || userRole === "global-admin")
+      (userRole === "user" || userRole === "admin")
     ) {
       handleCustomerSelect(formData.customerNo);
     }
@@ -1100,17 +1100,17 @@ export default function BookingForm() {
                 <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-400">
                   <Badge
                     variant={
-                      userRole === "admin" || userRole === "global-admin"
+                      userRole === "user" || userRole === "admin"
                         ? "default"
                         : "secondary"
                     }
                     className="bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
                   >
-                    {userRole === "admin" || userRole === "global-admin"
+                    {userRole === "user" || userRole === "admin"
                       ? "Administrator"
                       : "Customer"}
                   </Badge>
-                  {userRole !== "admin" && userRole !== "global-admin" && customerNo && (
+                  {userRole !== "user" && userRole !== "admin" && customerNo && (
                     <span className="dark:text-slate-400">ID: {customerNo}</span>
                   )}
                 </div>
@@ -1462,7 +1462,7 @@ export default function BookingForm() {
 
                 <CardContent className="pt-6 space-y-4">
                   {/* For admin users: Customer selection */}
-                  {(userRole === "global-admin" || userRole === "admin") ? (
+                  {(userRole === "admin" || userRole === "user") ? (
                     <>
                       <div className="flex items-center space-x-2">
                         <Checkbox
@@ -1735,8 +1735,8 @@ export default function BookingForm() {
                   ) : (
                     // For non-admin users: Display and edit their info
                     <>
-                      {/* Check if the customer is logged in (not admin/global-admin and has a customerNo) and not rescheduling */}
-                      {!isReschedule && customerNo && (userRole !== "admin" && userRole !== "global-admin") ? (
+                      {/* Check if the customer is logged in (not user/admin and has a customerNo) and not rescheduling */}
+                      {!isReschedule && customerNo && (userRole !== "user" && userRole !== "admin") ? (
                         <div className="space-y-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
                           <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-medium text-sm">
                             <Lock className="w-4 h-4" />
@@ -1843,8 +1843,8 @@ export default function BookingForm() {
                     disabled={
                       submitting ||
                       !formData.selectedTime ||
-                      ((userRole === "admin" || userRole === "global-admin") && isNewCustomer ? (!formData.customerName) : !formData.customerNo) ||
-                      (userRole !== "admin" && userRole !== "global-admin" && (!formData.customerName))
+                      ((userRole === "user" || userRole === "admin") && isNewCustomer ? (!formData.customerName) : !formData.customerNo) ||
+                      (userRole !== "user" && userRole !== "admin" && (!formData.customerName))
                     }
                     className="w-full h-14 text-lg font-bold bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300"
                     size="lg"
@@ -1861,7 +1861,7 @@ export default function BookingForm() {
                       </>
                     )}
                   </Button>
-                  {(userRole !== "admin" && userRole !== "global-admin") && (
+                  {(userRole !== "user" && userRole !== "admin") && (
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 text-center">
                       By clicking "Confirm Booking", you agree to receive confirmation emails for your appointment.
                     </p>

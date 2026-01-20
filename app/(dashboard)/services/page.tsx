@@ -192,7 +192,7 @@ export default function StaffPage() {
 
   // auth + permission
   const { userRole } = useAuth();
-  const canEdit = userRole === "global-admin";
+  const canEdit = userRole === "admin";
 
   return (
     <div className="flex flex-1 flex-col p-6 md:p-8 space-y-6">
@@ -201,7 +201,7 @@ export default function StaffPage() {
           <CardTitle>{pageTitle}</CardTitle>
 
           <div className="flex items-center gap-2">
-            {/* Only show New button for global-admin */}
+            {/* Only show New button for admin */}
             {canEdit && (
               <Button size="sm" variant="outline" onClick={() => crud.setCreating(true)}>
                 <Plus className="w-4 h-4 mr-2" /> New Service
@@ -220,7 +220,7 @@ export default function StaffPage() {
                   <TableRow>
                     <TableHead>Code</TableHead>
                     <TableHead>Name</TableHead>
-                    {/* Only show Actions header for global-admin */}
+                    {/* Only show Actions header for admin */}
                     {canEdit && <TableHead className="w-60 text-center">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
@@ -406,7 +406,7 @@ export default function StaffPage() {
               <Button variant="ghost" onClick={() => setAssignDialogOpen(false)}>
                 Cancel
               </Button>
-              {/* Only allow Assign action for global-admin */}
+              {/* Only allow Assign action for admin */}
               {canEdit && (
                 <Button onClick={handleAssignService} disabled={assigning}>
                   {assigning ? "Assigning..." : "Assign"}
@@ -439,7 +439,7 @@ export default function StaffPage() {
                       <TableHead>Staff ID</TableHead>
                       <TableHead>Staff Code</TableHead>
                       <TableHead>Description</TableHead>
-                      {/* Only show Actions header for global-admin */}
+                      {/* Only show Actions header for admin */}
                       {canEdit && <TableHead className="text-right">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
@@ -472,7 +472,7 @@ export default function StaffPage() {
               <Button variant="ghost" onClick={() => setViewStaffDialogOpen(false)}>
                 Close
               </Button>
-              {/* Only allow Assign More for global-admin */}
+              {/* Only allow Assign More for admin */}
               {canEdit && (
                 <Button onClick={() => { setViewStaffDialogOpen(false); setAssignDialogOpen(true); }}>
                   Assign More

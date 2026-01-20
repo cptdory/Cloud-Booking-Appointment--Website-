@@ -335,7 +335,7 @@ function BusinessHoursContent() {
 
   // auth + permission
   const { userRole } = useAuth();
-  const canEdit = userRole === "global-admin";
+  const canEdit = userRole === "admin";
 
   useEffect(() => {
     loadBusinessHours();

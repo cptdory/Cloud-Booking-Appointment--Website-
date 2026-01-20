@@ -295,10 +295,10 @@ export default function StaffPage() {
         _BookingSetupCode,
         _BookingParameterId: parameterId,
         _BookingParameterValueId: String(passwordStaff.BookingParameterValueId),
-        _PortalPassword: newPassword,
+        _Password: newPassword,
       };
 
-      const res = await fetch("/api/booking-staff-auth/update-booking-staff-auth-password", {
+      const res = await fetch("/api/booking-user/update-booking-user-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -356,7 +356,7 @@ export default function StaffPage() {
 
   // Add auth hook and determine permission
   const { userRole } = useAuth();
-  const canEdit = userRole === "global-admin";
+  const canEdit = userRole === "admin";
 
   // -------------------------
   // Render
@@ -368,7 +368,7 @@ export default function StaffPage() {
           <CardTitle>{parameterName || "Staff Management"}</CardTitle>
 
           <div>
-            {/* Only show New Staff for global-admin */}
+            {/* Only show New Staff for admin */}
             {canEdit && (
               <Button onClick={() => crud.setCreating(true)} size="sm" variant="outline">
                 <Plus className="w-4 h-4 mr-2" /> New Staff
@@ -388,7 +388,7 @@ export default function StaffPage() {
                     <TableHead>Code</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Color</TableHead>
-                    {/* Only show Actions header for global-admin */}
+                    {/* Only show Actions header for admin */}
                     {canEdit && <TableHead className="w-48 text-center">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>

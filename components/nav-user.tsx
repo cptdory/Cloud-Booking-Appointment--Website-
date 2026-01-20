@@ -30,7 +30,7 @@ export function NavUser({
     name: string;
     email: string;
     avatar: string;
-    role: "admin" | "customer" | "global-admin";
+    role:  "user" | "customer" | "admin";
     staffCode?: string;
   };
 }) {
@@ -55,13 +55,13 @@ export function NavUser({
   };
 
   // Display different info based on role
-  const displayName = user.role === "admin" && user.staffCode 
-    ? `${user.name} (${user.staffCode})`
-    : user.name;
+  const displayName = user.role === "user" || user.role === "admin"
+    ? user.name
+    : " ";
 
-  const displayEmail = user.role === "admin" 
-    ? "Administrator"
-    : user.email;
+  const displayEmail = user.role === "user" || user.role === "admin"
+    ? user.email
+    : " ";
 
   return (
     <SidebarMenu>
@@ -75,12 +75,12 @@ export function NavUser({
               <Avatar className="h-8 w-8 rounded-lg border-2 border-blue-300">
                 <AvatarImage src={user.avatar} alt={user.name} />
                 <AvatarFallback className="rounded-lg bg-blue-600 text-white">
-                  {user.role === "admin" ? "A" : "C"}
+                  {user.role === "user" ? "U" : "C"}
                 </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium text-white">{displayName}</span>
-                <span className="truncate text-xs text-blue-200">{displayEmail}</span>
+                <span className="truncate text-xs text-blue-300 capitalize">{user.role}</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4 text-blue-300" />
             </SidebarMenuButton>
@@ -96,15 +96,12 @@ export function NavUser({
                 <Avatar className="h-8 w-8 rounded-lg border-2 border-blue-300">
                   <AvatarImage src={user.avatar} alt={user.name} />
                   <AvatarFallback className="rounded-lg bg-blue-600 text-white">
-                    {user.role === "admin" ? "A" : "C"}
+                    {user.role === "user" ? "U" : "C"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium text-white">{displayName}</span>
-                  <span className="truncate text-xs text-blue-200">{displayEmail}</span>
-                  <span className="truncate text-xs text-blue-300 capitalize">
-                    {user.role}
-                  </span>
+                  <span className="truncate text-xs text-blue-300 capitalize">{user.role}</span>
                 </div>
               </div>
             </DropdownMenuLabel>

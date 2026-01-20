@@ -31,13 +31,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface UserData {
   role: string;
-  username?: string;
+  customerNo?: string;
   name: string;
   email: string;
-  customerNo?: string;
-  staffCode?: string;
-  staffName?: string;
-  staffColor?: string;
   currentBookingSetup?: {
     code: string;
     parameterId: number;
@@ -107,8 +103,8 @@ export default function AccountForm() {
 
         setUserData(authData.user);
         const isAdminRole =
-          authData.user?.role === "admin" ||
-          authData.user?.role === "global-admin";
+          authData.user?.role === "user" ||
+          authData.user?.role === "admin";
         const isCustomerRole = authData.user?.role === "customer";
 
         setIsAdmin(isAdminRole);
@@ -240,17 +236,14 @@ export default function AccountForm() {
       if (isAdmin && userData?.currentBookingSetup) {
         // Admin password change for staff
         const res = await fetch(
-          "/api/booking-staff-auth/update-booking-staff-auth-password",
+          "/api/booking-user/update-booking-user-password",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               _BookingSetupCode: userData.currentBookingSetup.code,
-              _BookingParameterId:
-                userData.currentBookingSetup.parameterId.toString(),
-              _BookingParameterValueId:
-                userData.currentBookingSetup.parameterValueId.toString(),
-              _PortalPassword: newPassword,
+              _EmailAddress: userData.email,
+              _Password: newPassword,
             }),
           }
         );
@@ -267,7 +260,7 @@ export default function AccountForm() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             _CustomerNo: userData.customerNo,
-            _PortalPassword: newPassword,
+            _Password: newPassword,
           }),
         });
 
@@ -453,7 +446,7 @@ export default function AccountForm() {
       {isAdmin ? (
         <Tabs defaultValue="color" className="w-full">
           <TabsList className="grid grid-cols-2 w-full">
-            <TabsTrigger value="color">Account</TabsTrigger>
+            <TabsTrigger value="color">Account Info</TabsTrigger>
             <TabsTrigger value="password">Change Password</TabsTrigger>
           </TabsList>
 
@@ -463,10 +456,10 @@ export default function AccountForm() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Palette className="w-5 h-5 text-primary" />
-                  Account
+                  Account Info
                 </CardTitle>
                 <CardDescription>
-                  Account Information
+                  Account Details
                 </CardDescription>
               </CardHeader>
 
@@ -474,9 +467,6 @@ export default function AccountForm() {
                 {/* Account Info */}
                 <div className="space-y-4 p-4 bg-muted rounded-lg">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      Account Information
-                    </Label>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="font-medium">E-mail:</span>{" "}

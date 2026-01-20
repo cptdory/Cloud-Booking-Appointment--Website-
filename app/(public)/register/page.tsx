@@ -99,7 +99,7 @@ const CustomerSignupForm = () => {
           Age: "",
           BirthDate: formData.birthDate,
           PortalPassword: '',
-          _IsAdminLogin: "false",
+          _IsUserLogin: "false",
         }),
       });
 
