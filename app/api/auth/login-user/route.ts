@@ -93,6 +93,8 @@ if (isAdmin) {
     role: isAdmin ? "admin" : "user",
     name: loginResult.Name,
     email: loginResult.Email,
+    staffCode: loginResult.StaffCode,
+    staffName: loginResult.StaffName,
     currentBookingSetup: bookingSetup,
   };
 

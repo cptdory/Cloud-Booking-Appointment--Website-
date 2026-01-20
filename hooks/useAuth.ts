@@ -6,6 +6,7 @@ export function useAuth() {
   const router = useRouter();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [staffCode, setStaffCode] = useState<string | null>(null);
   const [bookingSetup, setBookingSetup] = useState<{
     code: string;
     parameterId: number;
@@ -26,6 +27,7 @@ useEffect(() => {
       if (!data.authenticated) {
         router.replace("/login");
       } else {
+        setStaffCode(data.user.staffCode);
         setUsername(data.user.name);
         setUserRole(data.user.role);
         setCustomerNo(data.user.customerNo || "");
@@ -52,7 +54,8 @@ useEffect(() => {
 
   return { 
     userRole, 
-    username, 
+    username,
+    staffCode, 
     customerNo, 
     bookingSetup, 
     customerEmail, 
