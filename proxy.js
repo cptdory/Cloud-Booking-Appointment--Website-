@@ -65,7 +65,7 @@ export default async function proxy(request) {
       url.searchParams.set('desc', 'The system is temporarily unavailable. Please contact the administrator.');
       return NextResponse.redirect(url);
     }
-    console.log('orgSetup full object:', orgSetup);
+    // console.log('orgSetup full object:', orgSetup);
     
     // Check if EnablePublicBooking and EnableCustomerPortal are true
     const enablePublicBooking = typeof orgSetup?.EnablePublicBooking === 'string' 
