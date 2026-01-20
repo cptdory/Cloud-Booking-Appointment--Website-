@@ -198,6 +198,7 @@ export default function CustomerLoginPage() {
           <Card className="overflow-hidden p-0 mx-auto" style={{ maxWidth: 600, maxHeight: 500, width: '100%', height: '100%' }}>
             <CardContent className="grid p-0 md:grid-cols-2" style={{ minHeight: 400, height: 400 }}>
               <CustomerLoginForm orgLoaded={orgLoaded} orgLoading={orgLoading} />
+              
               <div className="bg-muted relative hidden md:block" style={{ minHeight: 400, height: 400 }}>
                 {orgLoading || !orgLoaded ? (
                   <Skeleton className="absolute inset-0 h-full w-full" />
@@ -205,7 +206,7 @@ export default function CustomerLoginPage() {
                   <img
                     src={loginImage && loginImage.trim() !== "" ? `data:image/png;base64,${loginImage}` : "/images/login-image.png"}
                     alt="Image"
-                    className="absolute inset-0 h-full w-full object-contain dark:brightness-[0.2] dark:grayscale"
+                    className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
                   />
                 )}
               </div>

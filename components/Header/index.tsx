@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, createContext, useContext } from "react";
 import { useBookingOrganizationSetup } from "@/hooks/useBookingOrganizationSetup";
@@ -78,7 +77,6 @@ export default function Header() {
     >
       <div className="container mx-auto flex items-center justify-between py-4">
         {/* Logo */}
-        <Link href="/" className="flex items-center">
           {loading ? (
             <Skeleton className="w-[100px] h-[20px]" />
           ) : logo && logo.trim() !== "" ? (
@@ -126,7 +124,6 @@ export default function Header() {
               />
             </>
           )}
-        </Link>
         {loading ? (
           <Skeleton className="hidden md:block h-5 w-40" />
         ) : (

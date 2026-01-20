@@ -37,7 +37,7 @@ export default async function proxy(request) {
   const publicPaths = [
     '/login',
     '/login-customer',
-    '/register',
+    '/register-customer',
     '/unavailable',
     '/api/auth/login-bc',
     '/api/auth/login-user',
@@ -91,7 +91,7 @@ export default async function proxy(request) {
   }
 
   if (isPublicPath) {
-    if (sessionToken && (pathname === '/login' || pathname === '/login-customer' || pathname === '/register')) {
+    if (sessionToken && (pathname === '/login' || pathname === '/login-customer' || pathname === '/register-customer')) {
       return NextResponse.redirect(new URL('/calendar', request.url));
     }
     return NextResponse.next();

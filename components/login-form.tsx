@@ -150,8 +150,8 @@ export function LoginForm({
                 <img
                   src={loginImage && loginImage.trim() !== "" ? `data:image/png;base64,${loginImage}` : "/images/login-image.png"}
                   alt="Image"
-                  className="max-h-full max-w-full object-contain dark:brightness-[0.2] dark:grayscale"
-                  style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                  className="max-h-full max-w-full object-cover dark:brightness-[0.2] dark:grayscale"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />
               </div>
             )}
