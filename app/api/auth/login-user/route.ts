@@ -56,23 +56,23 @@ export async function POST(request: Request) {
 
     const isAdmin = String(_IsAdminLogin) === "true";
 
-    if (isAdmin) {
-      // ADMIN LOGIN: Validate staff data
-      if (!loginResult.StaffCode) {
-        return NextResponse.json(
-          { error: "Invalid admin credentials" },
-          { status: 401 }
-        );
-      }
-    } else {
-      // CUSTOMER LOGIN: Must have CustomerNo (adjust based on your BC customer response)
-      if (!loginResult.CustomerNo) {
-        return NextResponse.json(
-          { error: "Invalid customer credentials" },
-          { status: 401 }
-        );
-      }
-    }
+    //if (isAdmin) {
+    //  // ADMIN LOGIN: Validate staff data
+    //  if (!loginResult.StaffCode) {
+    //    return NextResponse.json(
+    //      { error: "Invalid admin credentials" },
+    //      { status: 401 }
+    //    );
+    //  }
+    //} else {
+    //  // CUSTOMER LOGIN: Must have CustomerNo (adjust based on your BC customer response)
+    //  if (!loginResult.CustomerNo) {
+    //    return NextResponse.json(
+    //      { error: "Invalid customer credentials" },
+    //      { status: 401 }
+    //    );
+    //  }
+    //}
 
     // -------------------------------
     // CREATE JWT PAYLOAD
@@ -88,10 +88,7 @@ if (isAdmin) {
     parameterValueId: loginResult.BookingParameterValueId || 0
   };
 
-  const isGlobalAdmin =
-    bookingSetup.code === "" &&
-    bookingSetup.parameterId === 0 &&
-    bookingSetup.parameterValueId === 0;
+  const isGlobalAdmin = loginResult.Admin === true;
 
   tokenData = {
     role: isGlobalAdmin ? "global-admin" : "admin",
