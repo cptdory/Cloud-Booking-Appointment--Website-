@@ -23,6 +23,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Branch } from "@/types/branch";
 import { BookingParameter } from "@/types/bookingParameter";
 
@@ -108,11 +109,21 @@ export default function PublicBooking() {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [latestCompletedStep, setLatestCompletedStep] = useState<number>(1);
   const [modifiedSteps, setModifiedSteps] = useState<Set<number>>(new Set());
+  
+  // Get today's date in YYYY-MM-DD format
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [formData, setFormData] = useState<FormData>({
     branch: "",
     service: "",
     staff: "",
-    date: "",
+    date: getTodayDate(),
     selectedTime: "",
     customerName: "",
     customerEmail: "",
@@ -930,14 +941,28 @@ const handleProceedWithBooking = (bookingData: any) => {
                   <div className="space-y-4">
                     <div>
                       <Label htmlFor="booking-date" className="text-base font-semibold mb-2 block text-slate-700 dark:text-slate-300">Select Date</Label>
-                      <Input id="booking-date" type="date" value={formData.date} onChange={(e) => handleInputChange("date", e.target.value)} min={new Date().toISOString().split("T")[0]} className="text-base border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 focus:border-blue-500 focus:ring-blue-500" />
-                      {formData.date && (<p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Selected: {new Date(formData.date).toLocaleDateString()}</p>)}
+                      <div className="border border-slate-300 dark:border-slate-700 rounded-lg p-3 bg-white dark:bg-slate-800 w-fit [&_[data-selected-single=true]]:bg-blue-600 [&_[data-selected-single=true]]:text-white">
+                        <CalendarComponent
+                          mode="single"
+                          selected={formData.date ? new Date(formData.date) : undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              const year = date.getFullYear();
+                              const month = String(date.getMonth() + 1).padStart(2, '0');
+                              const day = String(date.getDate()).padStart(2, '0');
+                              const dateString = `${year}-${month}-${day}`;
+                              handleInputChange("date", dateString);
+                            }
+                          }}
+                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                        />
+                      </div>
                     </div>
                     {formData.date && availableTimeSlots.length > 0 && (
                       <Card className="border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"><CardContent className="p-4"><div className="grid grid-cols-3 gap-2 text-center">
                             <div><div className="text-2xl font-bold text-slate-800 dark:text-slate-200">{availableTimeSlots.length}</div><div className="text-xs text-slate-500 dark:text-slate-400">Total</div></div>
                             <div><div className="text-2xl font-bold text-green-600">{availableTimeSlots.filter((s) => s.available).length}</div><div className="text-xs text-slate-500 dark:text-slate-400">Available</div></div>
-                            <div><div className="text-2xl font-bold text-red-600">{availableTimeSlots.filter((s) => !s.available).length}</div><div className="text-xs text-slate-500 dark:text-slate-400">Booked</div></div>
+                            <div><div className="text-2xl font-bold text-red-600">{availableTimeSlots.filter((s) => !s.available).length}</div><div className="text-xs text-slate-500 dark:text-slate-400">Unavailable</div></div>
                       </div></CardContent></Card>
                     )}
                   </div>
