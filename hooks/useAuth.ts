@@ -6,7 +6,8 @@ export function useAuth() {
   const router = useRouter();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
-  const [staffCode, setStaffCode] = useState<string | null>(null);
+  // const [staffCode, setBookingParameterValueCode] = useState<string | null>(null);
+  const [bookingParameterValueId, setBookingParameterValueId] = useState<string | null>(null);
   const [customerNo, setCustomerNo] = useState<string>("");
   const [customerEmail, setCustomerEmail] = useState<string>(""); // New state for customer email
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -19,7 +20,8 @@ export function useAuth() {
           router.replace("/login");
         } else {
           setUsername(data.user.name);
-          setStaffCode(data.user.staffCode);
+          // setStaffCode(data.user.staffCode);
+          setBookingParameterValueId(data.user.bookingParameterValueId);
           setUserRole(data.user.role);
           setCustomerNo(data.user.customerNo || "");
           setCustomerEmail(data.user.email || ""); // Set customer email
@@ -37,5 +39,5 @@ export function useAuth() {
     setCustomerEmail(newEmail);
   };
 
-  return { userRole, username, staffCode, customerNo, customerEmail, checkingAuth, updateCustomerEmail };
+  return { userRole, username, customerNo, bookingParameterValueId, customerEmail, checkingAuth, updateCustomerEmail };
 }

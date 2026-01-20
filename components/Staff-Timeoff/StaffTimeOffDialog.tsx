@@ -73,7 +73,7 @@ export default function StaffTimeOffDialog({
 
   onSuccess,
 }: StaffTimeOffDialogProps) {
-  const { userRole, username } = useAuth();
+  const { userRole,bookingParameterValueId } = useAuth();
   const { showSuccess: showToastSuccess } = useToast();
   const { showError: showErrorAlert } = useModalAlert();
   const searchParams = useSearchParams();
@@ -160,9 +160,9 @@ export default function StaffTimeOffDialog({
           let filteredStaff = staffParam.BookingParameterValue;
 
           // If admin role, filter to only the current user's staff
-          if (userRole === "user" && username) {
+          if (userRole === "user" && bookingParameterValueId) {
             const adminFiltered = filteredStaff.filter(
-              (staff: any) => staff.BookingParamterValueDescription === username
+              (staffParam: any) => staffParam.BookingParameterValueId === bookingParameterValueId
             );
 
             // Only use filtered list if we found matches
@@ -177,7 +177,7 @@ export default function StaffTimeOffDialog({
             setSelectedStaffCode(filteredStaff[0].BookingParameterValueCode);
 
             setSelectedStaffName(
-              filteredStaff[0].BookingParamterValueDescription
+              filteredStaff[0].BookingParameterValueId
             );
           }
         } else {
@@ -196,7 +196,7 @@ export default function StaffTimeOffDialog({
     };
 
     fetchStaff();
-  }, [open, userRole, username, bookingSetupCode]);
+  }, [open, userRole, bookingParameterValueId, bookingSetupCode]);
 
   useEffect(() => {
     if (initialData) {
@@ -213,11 +213,11 @@ export default function StaffTimeOffDialog({
   }, [initialData]);
 
   // Auto-fill staff name when code is selected
-  const handleStaffCodeChange = (code: string) => {
-    setSelectedStaffCode(code);
-    const staff = staffList.find((s) => s.BookingParameterValueCode === code);
-    setSelectedStaffName(staff?.BookingParamterValueDescription || "");
-  };
+  // const handleStaffCodeChange = (code: string) => {
+  //   setSelectedStaffCode(code);
+  //   const staff = staffList.find((s) => s.BookingParameterValueCode === code);
+  //   setSelectedStaffName(staff?.BookingParamterValueDescription || "");
+  // };
 
   // Handle whole day toggle - only clear times when user manually toggles to true
   const handleWholeDayToggle = (checked: boolean) => {
@@ -372,7 +372,7 @@ export default function StaffTimeOffDialog({
                   onValueChange={(code) => {
                     setSelectedStaffCode(code);
                     const staff = staffList.find((s) => s.BookingParameterValueCode === code);
-                    setSelectedStaffName(staff?.BookingParamterValueDescription || "");
+                    setSelectedStaffName(staff?.BookingParamterValueId || "");
                   }}
                   disabled={loadingStaff || isEditMode || (userRole === "user" && staffList.length === 1)}
                 >

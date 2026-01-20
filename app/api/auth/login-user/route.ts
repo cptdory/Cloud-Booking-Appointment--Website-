@@ -95,6 +95,7 @@ if (isAdmin) {
     role: isAdmin ? "admin" : "user",
     name: loginResult.Name,
     email: loginResult.Email,
+    bookingParameterValueId: loginResult.BookingParameterValueId,
     currentBookingSetup: bookingSetup,
   };
 
