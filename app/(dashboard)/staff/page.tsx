@@ -239,13 +239,6 @@ export default function StaffPage() {
   const [updatingEmail, setUpdatingEmail] = useState(false);
   const [loadingEmail, setLoadingEmail] = useState(false);
 
-  const openPasswordDialog = (staff: any) => {
-    setPasswordStaff(staff);
-    setPasswordDialogOpen(true);
-    setNewPassword("");
-    setConfirmPassword("");
-  };
-
   const openEmailDialog = async (staff: any) => {
     setEmailStaff(staff);
     setEmailDialogOpen(true);
@@ -409,9 +402,6 @@ export default function StaffPage() {
                             </Button>
                             <Button size="sm" variant="ghost" onClick={() => openColorDialog(v)} title="Change Color">
                               <Palette className="w-4 h-4" />
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => openPasswordDialog(v)} title="Change Password">
-                              <Key className="w-4 h-4" />
                             </Button>
                             <Button size="sm" variant="ghost" onClick={() => openEmailDialog(v)} title="Change Email">
                               <Mail className="w-4 h-4" />
@@ -605,43 +595,6 @@ export default function StaffPage() {
                 </Button>
                 <Button onClick={handleUpdateColor} disabled={updatingColor || !selectedColor}>
                   {updatingColor ? "Updating..." : "Update Color"}
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* -------------------- */}
-      {/* PASSWORD DIALOG */}
-      {/* -------------------- */}
-      <Dialog open={passwordDialogOpen} onOpenChange={(open) => !open && setPasswordDialogOpen(false)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update Staff Password</DialogTitle>
-          </DialogHeader>
-
-          {passwordStaff && (
-            <div className="grid gap-4">
-              <div>
-                <Label>Staff</Label>
-                <Input value={passwordStaff.BookingParameterValueCode} disabled />
-              </div>
-
-              <div>
-                <Label>New Password</Label>
-                <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Enter new password" />
-              </div>
-
-              <div>
-                <Label>Confirm Password</Label>
-                <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" />
-              </div>
-
-              <div className="flex justify-end gap-2 mt-4">
-                <Button variant="ghost" onClick={() => setPasswordDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleUpdatePassword} disabled={updatingPassword || !newPassword || !confirmPassword}>
-                  {updatingPassword ? "Updating..." : "Update Password"}
                 </Button>
               </div>
             </div>
