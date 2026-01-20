@@ -86,16 +86,13 @@ if (isAdmin) {
     code: loginResult.BookingSetupCode || "",
     parameterId: loginResult.BookingParameterId || 0,
     parameterValueId: loginResult.BookingParameterValueId || 0,
-
   };
-
   const isAdmin = loginResult.Admin === true;
 
   tokenData = {
     role: isAdmin ? "admin" : "user",
     name: loginResult.Name,
     email: loginResult.Email,
-    bookingParameterValueId: loginResult.BookingParameterValueId,
     currentBookingSetup: bookingSetup,
   };
 
