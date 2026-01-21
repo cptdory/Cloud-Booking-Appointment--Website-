@@ -99,7 +99,7 @@ const CustomerSignupForm = () => {
           Age: "",
           BirthDate: formData.birthDate,
           PortalPassword: '',
-          _IsAdminLogin: "false",
+          _IsUserLogin: "false",
         }),
       });
 
@@ -163,9 +163,6 @@ const CustomerSignupForm = () => {
           <h1 className="text-2xl font-bold text-blue-500">
             Customer Registration
           </h1>
-          <p className="text-muted-foreground text-balance">
-            Create an account to book appointments with Squadlethics.
-          </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field>

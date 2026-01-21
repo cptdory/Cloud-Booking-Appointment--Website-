@@ -54,7 +54,7 @@ export function AppSidebar({ ...props }) {
   // Memoize role check to avoid recalculation
   const isGlobalAdmin = React.useMemo(() => {
     if (!userData) return false;
-    return userData.role === "global-admin";
+    return userData.role === "admin";
   }, [userData?.role]); // Only depend on role, not entire userData object
 
   // Memoize team filtering
@@ -63,7 +63,7 @@ export function AppSidebar({ ...props }) {
     
     if (isGlobalAdmin) {
       return teams;
-    } else if (userData.role === "admin") {
+    } else if (userData.role === "user") {
       const userBookingSetupCode = userData.currentBookingSetup?.code;
       return userBookingSetupCode 
         ? teams.filter(team => team.name === userBookingSetupCode)
@@ -94,17 +94,17 @@ export function AppSidebar({ ...props }) {
     if (isGlobalAdmin) {
       return { 
         name: userData.name, 
-        email: "Global Administrator", 
+        email: userData.email, 
         avatar: "/avatars/admin.png", 
         role: "admin" as const,
         staffCode: userData.staffCode 
       };
-    } else if (userData.role === "admin") {
+    } else if (userData.role === "user") {
       return { 
         name: userData.name, 
-        email: "Administrator", 
+        email: userData.email, 
         avatar: "/avatars/admin.png", 
-        role: "admin" as const, 
+        role: "user" as const, 
         staffCode: userData.staffCode 
       };
     }
@@ -123,10 +123,10 @@ export function AppSidebar({ ...props }) {
       return [{ label: "Booking", items: staticNavWithCode }];
     }
     
-    const isAdmin = userData.role === "admin" || isGlobalAdmin;
-    const groups = [{ label: isAdmin ? "Management" : "Booking", items: staticNavWithCode }];
+    const isUser = userData.role === "user" || isGlobalAdmin;
+    const groups = [{ label: isUser ? "Management" : "Booking", items: staticNavWithCode }];
     
-    if (dynamicNav.length > 0 && isAdmin) {
+    if (dynamicNav.length > 0 && isUser) {
       groups.push({ label: "Booking Parameters", items: dynamicNav });
     }
     
@@ -144,7 +144,7 @@ export function AppSidebar({ ...props }) {
     );
   }
 
-  const showTeamSwitcher = userData && (isGlobalAdmin || userData.role === "admin");
+  const showTeamSwitcher = userData && (isGlobalAdmin || userData.role === "user");
 
   return (
     <Sidebar collapsible="icon" className="bg-blue-900 border-blue-700 text-white" {...props}>
@@ -155,7 +155,7 @@ export function AppSidebar({ ...props }) {
             teams={filteredTeams}
             activeTeam={activeTeam}
             onTeamSelect={handleTeamClick}
-            disabled={userData?.role === "admin" && !isGlobalAdmin}
+            disabled={userData?.role === "user" && !isGlobalAdmin}
           />
         </SidebarHeader>
       ) : (

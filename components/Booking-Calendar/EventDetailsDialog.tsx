@@ -302,8 +302,8 @@ export default function EventDetailsDialog({
 
             {/* Delete Time Off Button - Show only if is TimeOff and has permission */}
             {selectedEvent?.extendedProps.rawData?.TimeOff && (() => {
-              const isGlobalAdmin = userRole === "global-admin";
-              const isAdminWithMatchingStaff = userRole === "admin" && staffCode === selectedEvent.extendedProps.staffCode;
+              const isGlobalAdmin = userRole === "admin";
+              const isAdminWithMatchingStaff = userRole === "user" && staffCode === selectedEvent.extendedProps.staffCode;
               const isOwnTimeOff = staffCode === selectedEvent.extendedProps.staffCode;
               const hasPermission = isGlobalAdmin || isAdminWithMatchingStaff || isOwnTimeOff;
               
@@ -341,8 +341,8 @@ export default function EventDetailsDialog({
 
             {/* Edit Time Off Button - Show only if is TimeOff and has permission */}
             {selectedEvent?.extendedProps.rawData?.TimeOff && (() => {
-              const isGlobalAdmin = userRole === "global-admin";
-              const isAdminWithMatchingStaff = userRole === "admin" && staffCode === selectedEvent.extendedProps.staffCode;
+              const isGlobalAdmin = userRole === "admin";
+              const isAdminWithMatchingStaff = userRole === "user" && staffCode === selectedEvent.extendedProps.staffCode;
               const isOwnTimeOff = staffCode === selectedEvent.extendedProps.staffCode;
               const hasPermission = isGlobalAdmin || isAdminWithMatchingStaff || isOwnTimeOff;
               

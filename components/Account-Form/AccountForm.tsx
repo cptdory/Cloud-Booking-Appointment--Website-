@@ -31,13 +31,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface UserData {
   role: string;
-  username?: string;
+  customerNo?: string;
   name: string;
   email: string;
-  customerNo?: string;
-  staffCode?: string;
-  staffName?: string;
-  staffColor?: string;
   currentBookingSetup?: {
     code: string;
     parameterId: number;
@@ -107,8 +103,8 @@ export default function AccountForm() {
 
         setUserData(authData.user);
         const isAdminRole =
-          authData.user?.role === "admin" ||
-          authData.user?.role === "global-admin";
+          authData.user?.role === "user" ||
+          authData.user?.role === "admin";
         const isCustomerRole = authData.user?.role === "customer";
 
         setIsAdmin(isAdminRole);
@@ -240,17 +236,14 @@ export default function AccountForm() {
       if (isAdmin && userData?.currentBookingSetup) {
         // Admin password change for staff
         const res = await fetch(
-          "/api/booking-staff-auth/update-booking-staff-auth-password",
+          "/api/booking-user/update-booking-user-password",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               _BookingSetupCode: userData.currentBookingSetup.code,
-              _BookingParameterId:
-                userData.currentBookingSetup.parameterId.toString(),
-              _BookingParameterValueId:
-                userData.currentBookingSetup.parameterValueId.toString(),
-              _PortalPassword: newPassword,
+              _EmailAddress: userData.email,
+              _Password: newPassword,
             }),
           }
         );
@@ -267,7 +260,7 @@ export default function AccountForm() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             _CustomerNo: userData.customerNo,
-            _PortalPassword: newPassword,
+            _Password: newPassword,
           }),
         });
 
@@ -453,93 +446,39 @@ export default function AccountForm() {
       {isAdmin ? (
         <Tabs defaultValue="color" className="w-full">
           <TabsList className="grid grid-cols-2 w-full">
-            <TabsTrigger value="color">Staff Color</TabsTrigger>
+            <TabsTrigger value="color">Account Info</TabsTrigger>
             <TabsTrigger value="password">Change Password</TabsTrigger>
           </TabsList>
 
-          {/* STAFF COLOR TAB */}
+          {/* ACCOUNT TAB */}
           <TabsContent value="color">
             <Card className="mt-6">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Palette className="w-5 h-5 text-primary" />
-                  Staff Color Settings
+                  Account Info
                 </CardTitle>
                 <CardDescription>
-                  Choose a color that represents you in the booking calendar
+                  Account Details
                 </CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-6">
-                {/* Staff Info */}
+                {/* Account Info */}
                 <div className="space-y-4 p-4 bg-muted rounded-lg">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      Staff Information
-                    </Label>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="font-medium">Staff Code:</span>{" "}
-                        {userData?.staffCode}
+                        <span className="font-medium">E-mail:</span>{" "}
+                        {userData?.email}
                       </div>
                       <div>
-                        <span className="font-medium">Staff Name:</span>{" "}
-                        {userData?.staffName}
-                      </div>
-                      <div>
-                        <span className="font-medium">Current Color:</span>
-                        <span
-                          className="ml-2 px-2 py-1 rounded text-xs border"
-                          style={{
-                            backgroundColor: staffColor + "20",
-                            color: staffColor,
-                            borderColor: staffColor,
-                          }}
-                        >
-                          {staffColor}
-                        </span>
+                        <span className="font-medium">Name:</span>{" "}
+                        {userData?.name}
                       </div>
                     </div>
                   </div>
                 </div>
-
-                <div className="space-y-4">
-                  <Label htmlFor="staffColor">Select New Staff Color</Label>
-                  <div className="flex items-center gap-4">
-                    <Input
-                      id="staffColor"
-                      type="color"
-                      value={staffColor}
-                      onChange={(e) => setStaffColor(e.target.value)}
-                      className="w-20 h-10 p-1"
-                    />
-                    <div className="flex-1">
-                      <Input
-                        value={staffColor}
-                        onChange={(e) => setStaffColor(e.target.value)}
-                        placeholder="#3b82f6"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Enter a color code or use the color picker
-                  </p>
-                </div>
-
-                <Button
-                  className="w-full"
-                  disabled={changingColor}
-                  onClick={handleColorChange}
-                >
-                  {changingColor ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      Updating Color...
-                    </>
-                  ) : (
-                    "Update Staff Color"
-                  )}
-                </Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -553,7 +492,7 @@ export default function AccountForm() {
                   Change Password
                 </CardTitle>
                 <CardDescription>
-                  Update your staff portal password
+                  Update your password
                 </CardDescription>
               </CardHeader>
 

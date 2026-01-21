@@ -29,12 +29,17 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import { useAlert, useModalAlert } from "@/hooks/useAlert";
 
-// Generate time options with 30-minute intervals from 00:00 to 23:30
+// Generate time options with 15-minute intervals in 12-hour format (AM/PM)
 const generateTimeOptions = () => {
   const options = [];
   for (let hour = 0; hour < 24; hour++) {
-    for (let minute = 0; minute < 60; minute += 30) {
-      const timeStr = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+    for (let minute = 0; minute < 60; minute += 15) {
+      let displayHour = hour % 12 === 0 ? 12 : hour % 12;
+      let ampm = hour < 12 ? "AM" : "PM";
+      const timeStr = `${displayHour}:${String(minute).padStart(
+        2,
+        "0",
+      )} ${ampm}`;
       options.push(timeStr);
     }
   }
@@ -43,35 +48,36 @@ const generateTimeOptions = () => {
 
 const timeOptions = generateTimeOptions();
 
-interface StaffTimeOffDialogProps {
+export interface StaffTimeOffDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   initialData?: {
     entryNo: string;
     staffCode: string;
     staffName: string;
-    date: Date;
+    date: Date; // This will be treated as startDate
+    endDate?: Date; // Optional end date for existing data
     startTime: string;
     endTime: string;
     wholeDay: boolean;
     reason: string;
   };
   onSuccess?: () => void;
+  onError?: (title: string, message: string) => void;
 }
 
 export default function StaffTimeOffDialog({
   open: controlledOpen,
   onOpenChange: controlledOpenChange,
   initialData,
+
   onSuccess,
 }: StaffTimeOffDialogProps) {
-  const { userRole, username } = useAuth();
+  const { userRole, bookingSetup } = useAuth();
   const { showSuccess: showToastSuccess } = useToast();
   const { showError: showErrorAlert } = useModalAlert();
   const searchParams = useSearchParams();
   const bookingSetupCode = searchParams.get("code") || "MAIN";
-
-  // Use controlled or internal state
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = (value: boolean) => {
@@ -83,19 +89,43 @@ export default function StaffTimeOffDialog({
   };
 
   const isEditMode = !!initialData;
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    initialData?.date,
+  );
+  const [endDate, setEndDate] = useState<Date | undefined>(
+    initialData?.endDate || initialData?.date,
+  );
 
-  const [date, setDate] = useState<Date | undefined>(initialData?.date);
-  const [startTime, setStartTime] = useState<string | undefined>(initialData?.startTime);
-  const [endTime, setEndTime] = useState<string | undefined>(initialData?.endTime);
+  // Single day switch: always true and not editable in edit mode
+  const [isSingleDay, setIsSingleDay] = useState(true);
+  const [startTime, setStartTime] = useState<string | undefined>(
+    initialData?.startTime,
+  );
+
+  const [endTime, setEndTime] = useState<string | undefined>(
+    initialData?.endTime,
+  );
+
   const [wholeDay, setWholeDay] = useState(initialData?.wholeDay ?? false);
   const [reason, setReason] = useState<string | undefined>(initialData?.reason);
-
   const [staffList, setStaffList] = useState<any[]>([]);
-  const [selectedStaffCode, setSelectedStaffCode] = useState<string | undefined>(initialData?.staffCode);
-  const [selectedStaffName, setSelectedStaffName] = useState<string | undefined>(initialData?.staffName);
-  const [loadingStaff, setLoadingStaff] = useState(false);
+  const [selectedStaffCode, setSelectedStaffCode] = useState<
+    string | undefined
+  >(initialData?.staffCode);
 
+  const [selectedStaffName, setSelectedStaffName] = useState<
+    string | undefined
+  >(initialData?.staffName);
+  const [loadingStaff, setLoadingStaff] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Sync end date with start date for single-day time off
+  useEffect(() => {
+    if (isSingleDay) {
+      setEndDate(startDate);
+    } else if (endDate && startDate && endDate < startDate) {
+      setEndDate(startDate);
+    }
+  }, [startDate, isSingleDay]);
 
   // Fetch staff when dialog opens
   useEffect(() => {
@@ -103,44 +133,47 @@ export default function StaffTimeOffDialog({
 
     const fetchStaff = async () => {
       setLoadingStaff(true);
+
       try {
-        const res = await fetch(`/api/booking-setup/get-booking-setup?code=${bookingSetupCode}`);
+        const res = await fetch(
+          `/api/booking-setup/get-booking-setup?code=${bookingSetupCode}`,
+        );
         const json = await res.json();
         const setup = json.value?.[0];
-        
         if (!setup) {
           throw new Error("No booking setup found");
         }
 
-        // Find Staff parameter by code "STAFF" (more reliable than ID)
         const staffParam = setup?.BookingParameter?.find(
-          (p: any) => String(p.BookingParameterCode).toLowerCase() === "staff"
+          (p: any) => String(p.BookingParameterCode).toLowerCase() === "staff",
         );
-        
+
         if (!staffParam) {
           throw new Error("Staff parameter not found in booking setup");
         }
 
-        if (staffParam?.BookingParameterValue && Array.isArray(staffParam.BookingParameterValue)) {
+        if (
+          staffParam?.BookingParameterValue &&
+          Array.isArray(staffParam.BookingParameterValue)
+        ) {
           let filteredStaff = staffParam.BookingParameterValue;
 
-          // If admin role, filter to only the current user's staff
-          if (userRole === "admin" && username) {
+          // If user role, filter to only the current user's staff
+          if (userRole === "user" && bookingSetup.parameterValueId) {
             const adminFiltered = filteredStaff.filter(
-              (staff: any) => staff.BookingParamterValueDescription === username
+              (staffParam: any) =>
+                staffParam.BookingParameterValueId ===
+                bookingSetup.parameterValueId,
             );
-            
-            // Only use filtered list if we found matches
+
             if (adminFiltered.length > 0) {
               filteredStaff = adminFiltered;
             }
           }
-          // If global-admin, load all staff (no filter)
 
           setStaffList(filteredStaff);
-          
-          // Pre-select first staff for admin users
-          if (userRole === "admin" && filteredStaff.length > 0) {
+
+          if (userRole === "user" && filteredStaff.length > 0) {
             setSelectedStaffCode(filteredStaff[0].BookingParameterValueCode);
             setSelectedStaffName(filteredStaff[0].BookingParamterValueDescription);
           }
@@ -149,44 +182,31 @@ export default function StaffTimeOffDialog({
         }
       } catch (err: any) {
         console.error("Failed to fetch staff:", err.message);
-        showErrorAlert("Error Loading Staff", `Failed to load staff: ${err.message}`);
+        showErrorAlert(
+          "Error Loading Staff",
+          `Failed to load staff: ${err.message}`,
+        );
       } finally {
         setLoadingStaff(false);
       }
     };
 
     fetchStaff();
-  }, [open, userRole, username, bookingSetupCode]);
+  }, [open, userRole, bookingSetup.parameterValueId, bookingSetupCode]);
 
-  // Initialize form when initialData changes (edit mode)
   useEffect(() => {
     if (initialData) {
-      console.log("Edit Time Off - initialData received:", {
-        entryNo: initialData.entryNo,
-        staffCode: initialData.staffCode,
-        staffName: initialData.staffName,
-        date: initialData.date,
-        startTime: initialData.startTime,
-        endTime: initialData.endTime,
-        wholeDay: initialData.wholeDay,
-        reason: initialData.reason,
-      });
-      setDate(initialData.date);
+      setStartDate(initialData.date);
+      setEndDate(initialData.endDate || initialData.date);
       setStartTime(initialData.startTime);
       setEndTime(initialData.endTime);
       setWholeDay(initialData.wholeDay);
       setReason(initialData.reason);
       setSelectedStaffCode(initialData.staffCode);
       setSelectedStaffName(initialData.staffName);
+      setIsSingleDay(true);
     }
   }, [initialData]);
-
-  // Auto-fill staff name when code is selected
-  const handleStaffCodeChange = (code: string) => {
-    setSelectedStaffCode(code);
-    const staff = staffList.find((s) => s.BookingParameterValueCode === code);
-    setSelectedStaffName(staff?.BookingParamterValueDescription || "");
-  };
 
   // Handle whole day toggle - only clear times when user manually toggles to true
   const handleWholeDayToggle = (checked: boolean) => {
@@ -203,7 +223,9 @@ export default function StaffTimeOffDialog({
       // Reset all values when closing
       setSelectedStaffCode(initialData?.staffCode || "");
       setSelectedStaffName(initialData?.staffName || "");
-      setDate(initialData?.date);
+      setStartDate(initialData?.date);
+      setEndDate(initialData?.endDate || initialData?.date);
+      setIsSingleDay(true);
       setStartTime(initialData?.startTime);
       setEndTime(initialData?.endTime);
       setWholeDay(initialData?.wholeDay ?? false);
@@ -214,12 +236,19 @@ export default function StaffTimeOffDialog({
 
   // Submit handler (create or update)
   const handleSubmit = async () => {
-    if (!selectedStaffCode || !selectedStaffName || !date || (!wholeDay && (!startTime || !endTime))) {
+    if (
+      !selectedStaffCode ||
+      !selectedStaffName ||
+      !startDate ||
+      !endDate ||
+      (!wholeDay && (!startTime || !endTime))
+    ) {
       showErrorAlert("Validation Error", "Please fill in all required fields");
       return;
     }
 
     setSubmitting(true);
+
     try {
       if (isEditMode) {
         // UPDATE
@@ -228,21 +257,24 @@ export default function StaffTimeOffDialog({
           _BookingEntryNo: String(initialData.entryNo),
           _StaffCode: selectedStaffCode,
           _StaffName: selectedStaffName,
-          _TimeOffStartDate: format(date, "MM/dd/yyyy"),
-          _TimeOffEndDate: format(date, "MM/dd/yyyy"),
+          _TimeOffDate: format(startDate, "MM/dd/yyyy"),
           _TimeOffStartTime: wholeDay ? "" : startTime,
           _TimeOffEndTime: wholeDay ? "" : endTime,
           _WholeDay: String(wholeDay),
           _TimeOffReason: reason || "",
         };
 
-        const res = await fetch("/api/booking-staff-timeoff/update-booking-staff-timeoff", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
+        const res = await fetch(
+          "/api/booking-staff-timeoff/update-booking-staff-timeoff",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          },
+        );
 
         const json = await res.json();
+
         if (!res.ok) throw new Error(json.error || "Failed to update time off");
 
         showToastSuccess("Time off updated successfully!");
@@ -252,35 +284,35 @@ export default function StaffTimeOffDialog({
           _BookingSetupCode: bookingSetupCode,
           _StaffCode: selectedStaffCode,
           _StaffName: selectedStaffName,
-          _TimeOffStartDate: format(date, "MM/dd/yyyy"),
-          _TimeOffEndDate: format(date, "MM/dd/yyyy"),
+          _TimeOffStartDate: format(startDate, "MM/dd/yyyy"),
+          _TimeOffEndDate: format(endDate, "MM/dd/yyyy"),
           _TimeOffStartTime: wholeDay ? "" : startTime,
           _TimeOffEndTime: wholeDay ? "" : endTime,
           _WholeDay: String(wholeDay),
           _TimeOffReason: reason || "",
         };
 
-        const res = await fetch("/api/booking-staff-timeoff/create-booking-staff-timeoff", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
+        const res = await fetch(
+          "/api/booking-staff-timeoff/create-booking-staff-timeoff",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          },
+        );
 
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || "Failed to create time off");
-
         showToastSuccess("Time off created successfully!");
       }
-
       // Close dialog immediately after success
-      // handleDialogOpenChange will reset all form values
       setOpen(false);
+
       if (onSuccess) onSuccess();
     } catch (err: any) {
       showErrorAlert("Error", err.message || "An error occurred");
-      // Close dialog on error
-      // handleDialogOpenChange will reset all form values
-      setOpen(false);
+
+      // Keep dialog open on error for correction
     } finally {
       setSubmitting(false);
     }
@@ -291,7 +323,9 @@ export default function StaffTimeOffDialog({
       <DialogTrigger asChild>
         <Button size="sm" variant="outline" className="h-9 gap-2">
           <Clock3 className="w-4 h-4" />
+
           <span className="hidden sm:inline">Add Time Off</span>
+
           <span className="sm:hidden">Time Off</span>
         </Button>
       </DialogTrigger>
@@ -301,15 +335,19 @@ export default function StaffTimeOffDialog({
           <DialogTitle className="text-2xl">
             {isEditMode ? "Edit Staff Time Off" : "Add Staff Time Off"}
           </DialogTitle>
+
           <DialogDescription className="text-base">
-            {isEditMode ? "Update time off details." : "Record time off for staff members."}
+            {isEditMode
+              ? "Update time off details."
+              : "Record time off for staff members."}
           </DialogDescription>
         </DialogHeader>
 
         {/* Scrollable Form */}
-        <div className="flex-1 overflow-y-auto pr-2 space-y-8 mt-2">
 
+        <div className="flex-1 overflow-y-auto pr-2 space-y-8 mt-2">
           {/* Staff Details */}
+
           <section className="space-y-4">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
               Staff Details
@@ -317,33 +355,40 @@ export default function StaffTimeOffDialog({
 
             <div className="space-y-4">
               <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                <Label htmlFor="staff-code">Staff Code</Label>
+                <Label htmlFor="staff-name">Staff Name</Label>
                 <Select
                   value={selectedStaffCode || ""}
-                  onValueChange={handleStaffCodeChange}
-                  disabled={loadingStaff || (isEditMode) || (userRole === "admin" && staffList.length === 1)}
+                  onValueChange={(code) => {
+                    setSelectedStaffCode(code);
+                    const staff = staffList.find(
+                      (s) => s.BookingParameterValueCode === code,
+                    );
+                    setSelectedStaffName(staff?.BookingParamterValueId || "");
+                  }}
+                  disabled={
+                    loadingStaff ||
+                    isEditMode ||
+                    (userRole === "user" && staffList.length === 1)
+                  }
                 >
-                  <SelectTrigger id="staff-code">
-                    <SelectValue placeholder={loadingStaff ? "Loading..." : "Select staff code"} />
+                  <SelectTrigger id="staff-name">
+                    <SelectValue
+                      placeholder={
+                        loadingStaff ? "Loading..." : "Select staff name"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {staffList.map((staff) => (
-                      <SelectItem key={staff.BookingParameterValueId} value={staff.BookingParameterValueCode}>
-                        {staff.BookingParameterValueCode} - {staff.BookingParamterValueDescription}
+                      <SelectItem
+                        key={staff.BookingParameterValueId}
+                        value={staff.BookingParameterValueCode}
+                      >
+                        {staff.BookingParamterValueDescription}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                <Label>Staff Name</Label>
-                <Input
-                  readOnly
-                  className="bg-muted/50"
-                  value={selectedStaffName}
-                  placeholder="Auto-filled from selection"
-                />
               </div>
             </div>
           </section>
@@ -357,22 +402,94 @@ export default function StaffTimeOffDialog({
             </h3>
 
             <div className="space-y-4">
+              {/* Single Day Switch */}
 
-              {/* Date */}
+              {/* Single Day Switch */}
               <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                <Label htmlFor="date-input">Date</Label>
+                <Label htmlFor="single-day-switch">Single Day</Label>
+                <Switch
+                  id="single-day-switch"
+                  checked={isSingleDay}
+                  disabled={isEditMode}
+                  onCheckedChange={(checked) => {
+                    if (!isEditMode) {
+                      setIsSingleDay(checked);
+                      if (checked && startDate) {
+                        setEndDate(startDate);
+                      }
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Start Date */}
+              <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+                <Label htmlFor="start-date-input">Start Date</Label>
                 <Input
-                  id="date-input"
+                  id="start-date-input"
                   type="date"
-                  value={date ? format(date, "yyyy-MM-dd") : ""}
-                  onChange={(e) => setDate(e.target.value ? new Date(e.target.value) : undefined)}
+                  value={startDate ? format(startDate, "yyyy-MM-dd") : ""}
+                  onChange={(e) => {
+                    const val = e.target.value
+                      ? new Date(e.target.value)
+                      : undefined;
+                    setStartDate(val);
+                    if (isSingleDay) setEndDate(val);
+                    else if (endDate && val && endDate < val) setEndDate(val);
+                  }}
+                  max={
+                    endDate && !isSingleDay
+                      ? format(endDate, "yyyy-MM-dd")
+                      : undefined
+                  }
+                />
+              </div>
+
+              {/* End Date */}
+              <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+                <Label htmlFor="end-date-input">End Date</Label>
+                <Input
+                  id="end-date-input"
+                  type="date"
+                  value={endDate ? format(endDate, "yyyy-MM-dd") : ""}
+                  onChange={(e) => {
+                    if (!isSingleDay) {
+                      const val = e.target.value
+                        ? new Date(e.target.value)
+                        : undefined;
+                      if (val && startDate && val < startDate) {
+                        setEndDate(startDate);
+                      } else {
+                        setEndDate(val);
+                      }
+                    }
+                  }}
+                  readOnly={isSingleDay}
+                  min={startDate ? format(startDate, "yyyy-MM-dd") : undefined}
+                  className={cn(
+                    isSingleDay && "bg-muted/50 cursor-not-allowed",
+                  )}
                 />
               </div>
 
               {/* Start Time */}
+
               <div className="grid grid-cols-[120px_1fr] items-center gap-4">
                 <Label htmlFor="start-time">Start Time</Label>
-                <Select value={startTime || ""} onValueChange={setStartTime} disabled={wholeDay}>
+                <Select
+                  value={startTime || ""}
+                  onValueChange={(val) => {
+                    setStartTime(val);
+                    // If endTime is before new startTime, reset endTime
+                    if (
+                      endTime &&
+                      timeOptions.indexOf(endTime) < timeOptions.indexOf(val)
+                    ) {
+                      setEndTime(val);
+                    }
+                  }}
+                  disabled={wholeDay}
+                >
                   <SelectTrigger id="start-time">
                     <SelectValue placeholder="Select time" />
                   </SelectTrigger>
@@ -387,9 +504,24 @@ export default function StaffTimeOffDialog({
               </div>
 
               {/* End Time */}
+
               <div className="grid grid-cols-[120px_1fr] items-center gap-4">
                 <Label htmlFor="end-time">End Time</Label>
-                <Select value={endTime || ""} onValueChange={setEndTime} disabled={wholeDay}>
+                <Select
+                  value={endTime || ""}
+                  onValueChange={(val) => {
+                    // Only allow endTime >= startTime
+                    if (
+                      startTime &&
+                      timeOptions.indexOf(val) < timeOptions.indexOf(startTime)
+                    ) {
+                      setEndTime(startTime);
+                    } else {
+                      setEndTime(val);
+                    }
+                  }}
+                  disabled={wholeDay}
+                >
                   <SelectTrigger id="end-time">
                     <SelectValue placeholder="Select time" />
                   </SelectTrigger>
@@ -404,14 +536,23 @@ export default function StaffTimeOffDialog({
               </div>
 
               {/* Whole Day */}
+
               <div className="grid grid-cols-[120px_1fr] items-center gap-4">
                 <Label>Whole Day</Label>
-                <Switch checked={wholeDay} onCheckedChange={handleWholeDayToggle} />
+
+                <Switch
+                  checked={wholeDay}
+                  onCheckedChange={handleWholeDayToggle}
+                />
               </div>
 
               {/* Reason (Textarea) */}
+
               <div className="grid grid-cols-[120px_1fr] items-start gap-4">
-                <Label htmlFor="reason" className="mt-1">Reason</Label>
+                <Label htmlFor="reason" className="mt-1">
+                  Reason
+                </Label>
+
                 <Textarea
                   id="reason"
                   placeholder="Enter reason for time off..."
@@ -420,18 +561,29 @@ export default function StaffTimeOffDialog({
                   className="min-h-[120px] resize-none"
                 />
               </div>
-
             </div>
           </section>
         </div>
 
         {/* Footer */}
+
         <div className="flex justify-end gap-3 pt-4 border-t shrink-0 bg-background">
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={submitting}
+          >
             Cancel
           </Button>
+
           <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting ? (isEditMode ? "Updating..." : "Creating...") : isEditMode ? "Update Time Off" : "Add Time Off"}
+            {submitting
+              ? isEditMode
+                ? "Updating..."
+                : "Creating..."
+              : isEditMode
+                ? "Update Time Off"
+                : "Add Time Off"}
           </Button>
         </div>
       </DialogContent>

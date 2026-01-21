@@ -32,7 +32,6 @@ export function LoginForm({
 
   // Use global org setup context (single call at root level)
   const { orgSetup, loading: orgLoading } = useOrgSetup();
-  const orgName = orgSetup?.Name || "";
   const loginImage = orgSetup?.LoginImage || "";
   const orgLoaded = !!orgSetup;
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,9 +43,9 @@ export function LoginForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          _PortalUsername: staffCode,
-          _PortalPassword: password,
-          _IsAdminLogin: "true",
+          _EmailAddress: staffCode,
+          _Password: password,
+          _IsUserLogin: "true",
         }),
         cache: "no-store",
       });
@@ -82,22 +81,25 @@ export function LoginForm({
   };
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card className="overflow-hidden p-0">
+    <div
+      className={cn(
+        "flex flex-col gap-6 items-center justify-center min-h-screen",
+        className
+      )}
+      {...props}
+    >
+      <Card
+        className="overflow-hidden p-0 w-full max-w-xl md:max-w-2xl"
+        style={{ minHeight: 420 }}
+      >
         <CardContent className="grid p-0 md:grid-cols-2">
           <form className="p-6 md:p-8" onSubmit={handleSubmit}>
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
                 <h1 className="text-2xl font-bold text-blue-500">Welcome back</h1>
-                {(!orgLoaded || orgLoading) ? (
-                  <div className="text-muted-foreground text-balance">
-                    <Skeleton className="h-5 w-40 inline-block align-middle" />
-                  </div>
-                ) : (
                   <p className="text-muted-foreground text-balance">
-                    Login to your {orgName && orgName.trim() !== "" ? orgName : "Bookufy"} account
+                    Login to your account
                   </p>
-                )}
               </div>
               <Field>
                 <FieldLabel htmlFor="username">Username</FieldLabel>
@@ -144,11 +146,14 @@ export function LoginForm({
             {orgLoading || !orgLoaded ? (
               <Skeleton className="absolute inset-0 h-full w-full" />
             ) : (
-              <img
-                src={loginImage && loginImage.trim() !== "" ? `data:image/png;base64,${loginImage}` : "/images/login-img.png"}
-                alt="Image"
-                className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
-              />
+              <div className="absolute inset-0 flex items-center justify-center h-full w-full">
+                <img
+                  src={loginImage && loginImage.trim() !== "" ? `data:image/png;base64,${loginImage}` : "/images/login-image.png"}
+                  alt="Image"
+                  className="max-h-full max-w-full object-cover dark:brightness-[0.2] dark:grayscale"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              </div>
             )}
           </div>
         </CardContent>

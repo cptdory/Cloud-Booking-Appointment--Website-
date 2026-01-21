@@ -36,9 +36,9 @@ async function authLogin(accessToken: string, body: any, retry = true): Promise<
 
   // Prepare request body based on login type
   const requestBody = {
-    _PortalUsername: String(body._PortalUsername || ""),
-    _PortalPassword: String(body._PortalPassword || ""),
-    _IsAdminLogin: String(body._IsAdminLogin || "false")
+    _EmailAddress: String(body._EmailAddress || ""),
+    _Password: String(body._Password || ""),
+    _IsUserLogin: String(body._IsUserLogin || "false")
   };
 
   const res = await fetch(url, {

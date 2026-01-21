@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
 let memoryCache: { access_token: string; expires_at: number } | null = null;
-let orgSetupCache: { [key: string]: { data: any; expires_at: number } } = {};
 
 // Helper: Fetch/refresh Access Token
 async function getAccessToken() {
@@ -39,14 +38,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // Check if we have cached data for this tenant ID
-    const cacheKey = `org-setup-${_TenantId}`;
-    const isVercel = !!process.env.VERCEL;
-    
-    if (isVercel && orgSetupCache[cacheKey] && Date.now() < orgSetupCache[cacheKey].expires_at) {
-      console.log(`Returning cached org setup for tenant ${_TenantId}`);
-      return NextResponse.json({ success: true, data: orgSetupCache[cacheKey].data });
-    }
+    // ...existing code...
 
     if (!process.env.TENANT_ID) {
       return NextResponse.json({ error: "TENANT_ID not set" }, { status: 500 });
@@ -95,15 +87,6 @@ export async function POST(req: Request) {
         console.warn("Failed to parse value field:", err);
         parsedData = data;
       }
-    }
-
-    // Cache the result for this tenant ID (60 minutes)
-    if (isVercel) {
-      orgSetupCache[cacheKey] = {
-        data: parsedData,
-        expires_at: Date.now() + 1000 * 60 * 60, // cache 60 min
-      };
-      console.log(`Cached org setup for tenant ${_TenantId}`);
     }
 
     return NextResponse.json({ success: true, data: parsedData });

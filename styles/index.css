@@ -324,3 +324,9 @@ layer(base);
 .sa-confirm-high-z {
   z-index: 9999 !important;
 }
+
+/* SweetAlert2 SUPER high z-index for error dialogs on complex pages */
+.swal-super-high-z {
+  z-index: 99999 !important;
+  pointer-events: auto !important;
+}

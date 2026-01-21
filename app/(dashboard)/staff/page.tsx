@@ -239,13 +239,6 @@ export default function StaffPage() {
   const [updatingEmail, setUpdatingEmail] = useState(false);
   const [loadingEmail, setLoadingEmail] = useState(false);
 
-  const openPasswordDialog = (staff: any) => {
-    setPasswordStaff(staff);
-    setPasswordDialogOpen(true);
-    setNewPassword("");
-    setConfirmPassword("");
-  };
-
   const openEmailDialog = async (staff: any) => {
     setEmailStaff(staff);
     setEmailDialogOpen(true);
@@ -295,10 +288,10 @@ export default function StaffPage() {
         _BookingSetupCode,
         _BookingParameterId: parameterId,
         _BookingParameterValueId: String(passwordStaff.BookingParameterValueId),
-        _PortalPassword: newPassword,
+        _Password: newPassword,
       };
 
-      const res = await fetch("/api/booking-staff-auth/update-booking-staff-auth-password", {
+      const res = await fetch("/api/booking-user/update-booking-user-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -356,7 +349,7 @@ export default function StaffPage() {
 
   // Add auth hook and determine permission
   const { userRole } = useAuth();
-  const canEdit = userRole === "global-admin";
+  const canEdit = userRole === "admin";
 
   // -------------------------
   // Render
@@ -368,7 +361,7 @@ export default function StaffPage() {
           <CardTitle>{parameterName || "Staff Management"}</CardTitle>
 
           <div>
-            {/* Only show New Staff for global-admin */}
+            {/* Only show New Staff for admin */}
             {canEdit && (
               <Button onClick={() => crud.setCreating(true)} size="sm" variant="outline">
                 <Plus className="w-4 h-4 mr-2" /> New Staff
@@ -388,7 +381,7 @@ export default function StaffPage() {
                     <TableHead>Code</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Color</TableHead>
-                    {/* Only show Actions header for global-admin */}
+                    {/* Only show Actions header for admin */}
                     {canEdit && <TableHead className="w-48 text-center">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
@@ -409,9 +402,6 @@ export default function StaffPage() {
                             </Button>
                             <Button size="sm" variant="ghost" onClick={() => openColorDialog(v)} title="Change Color">
                               <Palette className="w-4 h-4" />
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => openPasswordDialog(v)} title="Change Password">
-                              <Key className="w-4 h-4" />
                             </Button>
                             <Button size="sm" variant="ghost" onClick={() => openEmailDialog(v)} title="Change Email">
                               <Mail className="w-4 h-4" />
@@ -605,43 +595,6 @@ export default function StaffPage() {
                 </Button>
                 <Button onClick={handleUpdateColor} disabled={updatingColor || !selectedColor}>
                   {updatingColor ? "Updating..." : "Update Color"}
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* -------------------- */}
-      {/* PASSWORD DIALOG */}
-      {/* -------------------- */}
-      <Dialog open={passwordDialogOpen} onOpenChange={(open) => !open && setPasswordDialogOpen(false)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update Staff Password</DialogTitle>
-          </DialogHeader>
-
-          {passwordStaff && (
-            <div className="grid gap-4">
-              <div>
-                <Label>Staff</Label>
-                <Input value={passwordStaff.BookingParameterValueCode} disabled />
-              </div>
-
-              <div>
-                <Label>New Password</Label>
-                <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Enter new password" />
-              </div>
-
-              <div>
-                <Label>Confirm Password</Label>
-                <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" />
-              </div>
-
-              <div className="flex justify-end gap-2 mt-4">
-                <Button variant="ghost" onClick={() => setPasswordDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleUpdatePassword} disabled={updatingPassword || !newPassword || !confirmPassword}>
-                  {updatingPassword ? "Updating..." : "Update Password"}
                 </Button>
               </div>
             </div>

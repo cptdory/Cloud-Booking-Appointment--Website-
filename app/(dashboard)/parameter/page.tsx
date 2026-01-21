@@ -53,7 +53,7 @@ export default function ParameterPage() {
 
   // auth + permission
   const { userRole } = useAuth();
-  const canEdit = userRole === "global-admin";
+  const canEdit = userRole === "admin";
 
   return (
     <div className="flex flex-1 flex-col p-6 md:p-8">
@@ -62,7 +62,7 @@ export default function ParameterPage() {
         <CardHeader className="flex justify-between items-center">
           <CardTitle>{parameterName}</CardTitle>
 
-          {/* Only show New when global-admin */}
+          {/* Only show New when admin */}
           {canEdit && (
             <Button onClick={() => crud.setCreating(true)} variant="outline" size="sm">
               <Plus className="w-4 h-4 mr-2" /> New {getItemType()}
@@ -81,7 +81,7 @@ export default function ParameterPage() {
                     <TableHead>Code</TableHead>
                     <TableHead>Name</TableHead>
                     {checkDuration === "true" && <TableHead>Duration</TableHead>}
-                    {/* Only show Actions header for global-admin */}
+                    {/* Only show Actions header for admin */}
                     {canEdit && <TableHead className="text-center">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>

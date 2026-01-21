@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { Building, Calendar, Users, Info, ListCheck, BedDouble, BriefcaseBusiness, ContactRound, CalendarCheck } from 'lucide-react';
 
 interface UserData {
-  role: "global-admin" | "admin" | "customer";
+  role: "admin" | "user" | "customer";
   name: string;
   email: string;
   staffCode?: string;
@@ -105,7 +105,7 @@ export const useSidebarStore = create<SidebarState>()(
             return;
           }
 
-          // Both global-admin and admin continue with admin initialization
+          // Both admin and admin continue with admin initialization
           const teamsRes = await fetch("/api/booking-setup/get-booking-setup-list");
           const teamsJson = await teamsRes.json();
           const setups = typeof teamsJson.value === "string" 
@@ -128,12 +128,12 @@ export const useSidebarStore = create<SidebarState>()(
           // Determine initial active team
           let activeTeam: Team | null = null;
           
-          if (user.role === "admin") {
+          if (user.role === "user") {
             const assignedTeamCode = user.currentBookingSetup?.code;
             if (assignedTeamCode) {
               activeTeam = teams.find((t) => t.name === assignedTeamCode) || null;
             }
-          } else if (user.role === "global-admin") {
+          } else if (user.role === "admin") {
             const hasContext = user.currentBookingSetup?.code && user.currentBookingSetup?.parameterId !== 0;
             activeTeam = hasContext
               ? teams.find((t) => t.name === user.currentBookingSetup.code) || null

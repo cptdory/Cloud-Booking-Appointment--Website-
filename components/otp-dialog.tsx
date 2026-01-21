@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/useToast";
+import { useOrgSetup } from "@/components/Header";
 import {
   Dialog,
   DialogContent,
@@ -24,8 +25,8 @@ interface OTPDialogProps {
   onProceedWithBooking: (bookingData: any) => void;
   customerEmail: string;
   bookingData: any;
-  verificationType?: string; // "Appointment Verification" or "Login Verification"
-  successMessage?: string; // Custom success message
+  verificationType?: string;
+  successMessage?: string;
 } 
 
 export function OTPDialog({
@@ -39,6 +40,7 @@ export function OTPDialog({
   successMessage = "OTP verified successfully! Creating your booking...",
 }: OTPDialogProps) {
   const { showError, showSuccess, showInfo } = useToast();
+  const { orgSetup } = useOrgSetup();
   const [otp, setOtp] = useState("");
   const [requestId, setRequestId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -54,11 +56,12 @@ export function OTPDialog({
   const hasSentOTP = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const OTPValidityPeriod = orgSetup?.OTPValidityPeriod || 5; // in minutes
   // Countdown timer for resend
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (countdown > 0) {
-      timer = setTimeout(() => setCountdown(countdown - 1), 5000);
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
     }
     return () => {
       if (timer) clearTimeout(timer);
@@ -130,7 +133,8 @@ export function OTPDialog({
       if (result.success && result.value) {
         setRequestId(result.value);
         setOtpSent(true);
-        setCountdown(300); // 60 seconds countdown
+        const validityInSeconds = (orgSetup?.OTPValidityPeriod || 5) * 60;
+        setCountdown(validityInSeconds);
         showSuccess(isResend ? "New OTP sent to your email!" : "OTP sent to your email!");
         
         // Focus OTP input
