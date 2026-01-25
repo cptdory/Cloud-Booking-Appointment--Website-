@@ -90,7 +90,7 @@ export function LoginForm({
     >
       <Card
         className="overflow-hidden p-0 w-full max-w-xl md:max-w-2xl"
-        style={{ minHeight: 420 }}
+        style={{ minHeight: 0 }}
       >
         <CardContent className="grid p-0 md:grid-cols-2">
           <form className="p-6 md:p-8" onSubmit={handleSubmit}>
@@ -102,11 +102,11 @@ export function LoginForm({
                   </p>
               </div>
               <Field>
-                <FieldLabel htmlFor="username">Username</FieldLabel>
+                <FieldLabel htmlFor="email">Email</FieldLabel>
                 <Input
-                  id="username"
+                  id="email"
                   type="text"
-                  placeholder="Username"
+                  placeholder="email@example.com"
                   required
                   value={staffCode}
                   onChange={(e) => setStaffCode(e.target.value)}
