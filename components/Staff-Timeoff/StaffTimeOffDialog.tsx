@@ -56,7 +56,7 @@ export interface StaffTimeOffDialogProps {
     staffCode: string;
     staffName: string;
     date: Date; // This will be treated as startDate
-    endDate?: Date; // Optional end date for existing data
+    endDate?: Date;
     startTime: string;
     endTime: string;
     wholeDay: boolean;
@@ -175,7 +175,9 @@ export default function StaffTimeOffDialog({
 
           if (userRole === "user" && filteredStaff.length > 0) {
             setSelectedStaffCode(filteredStaff[0].BookingParameterValueCode);
-            setSelectedStaffName(filteredStaff[0].BookingParamterValueDescription);
+            setSelectedStaffName(
+              filteredStaff[0].BookingParamterValueDescription,
+            );
           }
         } else {
           throw new Error("No staff values found");
@@ -236,14 +238,18 @@ export default function StaffTimeOffDialog({
 
   // Submit handler (create or update)
   const handleSubmit = async () => {
-    if (
-      !selectedStaffCode ||
-      !selectedStaffName ||
-      !startDate ||
-      !endDate ||
-      (!wholeDay && (!startTime || !endTime))
-    ) {
-      showErrorAlert("Validation Error", "Please fill in all required fields");
+    if (!selectedStaffCode && !selectedStaffName) {
+      showErrorAlert("Validation Error", "Please select a staff member");
+      return;
+    }
+
+    if (!startDate && !endDate) {
+      showErrorAlert("Validation Error", "Please select a date");
+      return;
+    }
+
+    if (!wholeDay && !startTime && !endTime) {
+      showErrorAlert("Validation Error", "Please select start and end times");
       return;
     }
 
@@ -257,7 +263,7 @@ export default function StaffTimeOffDialog({
           _BookingEntryNo: String(initialData.entryNo),
           _StaffCode: selectedStaffCode,
           _StaffName: selectedStaffName,
-          _TimeOffDate: format(startDate, "MM/dd/yyyy"),
+          _TimeOffDate: startDate ? format(startDate, "MM/dd/yyyy") : "",
           _TimeOffStartTime: wholeDay ? "" : startTime,
           _TimeOffEndTime: wholeDay ? "" : endTime,
           _WholeDay: String(wholeDay),
@@ -284,8 +290,8 @@ export default function StaffTimeOffDialog({
           _BookingSetupCode: bookingSetupCode,
           _StaffCode: selectedStaffCode,
           _StaffName: selectedStaffName,
-          _TimeOffStartDate: format(startDate, "MM/dd/yyyy"),
-          _TimeOffEndDate: format(endDate, "MM/dd/yyyy"),
+          _TimeOffStartDate: startDate ? format(startDate, "MM/dd/yyyy") : "",
+          _TimeOffEndDate: endDate ? format(endDate, "MM/dd/yyyy") : "",
           _TimeOffStartTime: wholeDay ? "" : startTime,
           _TimeOffEndTime: wholeDay ? "" : endTime,
           _WholeDay: String(wholeDay),
@@ -312,7 +318,6 @@ export default function StaffTimeOffDialog({
     } catch (err: any) {
       showErrorAlert("Error", err.message || "An error occurred");
 
-      // Keep dialog open on error for correction
     } finally {
       setSubmitting(false);
     }
