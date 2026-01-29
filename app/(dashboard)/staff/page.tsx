@@ -57,11 +57,6 @@ export default function StaffPage() {
   // -------------------------
   // Use parameter CRUD hook
   // -------------------------
-  const getItemType = () => {
-    if (isParamService === "true") return "service";
-    if (isParamStaff === "true") return "staff";
-    return "item";
-  };
 
   const crud = useParameterCRUD({
     code: _BookingSetupCode,
@@ -69,7 +64,7 @@ export default function StaffPage() {
     isParamStaff,
     isParamService,
     loadValues,
-    getItemType,
+    getItemType: () => "Staff",
   });
 
 
@@ -189,7 +184,6 @@ export default function StaffPage() {
         _BookingParameterValueId: String(colorStaff.BookingParameterValueId),
         _StaffColor: selectedColor,
       };
-
       const res = await fetch("/api/booking-staff-auth/update-booking-staff-auth-details", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -496,7 +490,7 @@ export default function StaffPage() {
               </div>
 
               <div>
-                <Label>Description</Label>
+                <Label>Name</Label>
                 <Input
                   value={crud.editItem.BookingParamterValueDescription}
                   onChange={(e) => crud.setEditItem({ ...crud.editItem, BookingParamterValueDescription: e.target.value })}
