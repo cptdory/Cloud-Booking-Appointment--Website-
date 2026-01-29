@@ -531,16 +531,6 @@ export default function StaffPage() {
               </div>
 
               <div>
-                <Label>Current Color</Label>
-                {currentColor && (
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="w-6 h-6 rounded-full border" style={{ backgroundColor: currentColor }} />
-                    <span className="capitalize">{colorOptions.find((c) => c.value === currentColor)?.label || "Custom"}</span>
-                  </div>
-                )}
-              </div>
-
-              <div>
                 <Label htmlFor="staffColorInput">Select New Color</Label>
                 <div className="flex items-center gap-4 mt-2">
                   <Input
