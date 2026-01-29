@@ -134,7 +134,7 @@ export default function BookingCalendar() {
         // Determine event title based on TimeOff flag
         let eventTitle = "";
         if (entry.TimeOff) {
-          eventTitle = "Time Off";
+          eventTitle = "Time Off - " + (entry.BookingNote || "No Reason Specified");
         } else {
           // Show service name and customer name
           const serviceName = entry.ServiceName || "-";
@@ -641,7 +641,7 @@ export default function BookingCalendar() {
               dayHeaderFormat={
                 calendarView === "dayGridMonth"
                   ? { weekday: "long" }
-                  : { weekday: "short", month: "numeric", day: "numeric" }
+                  : { weekday: "short", day: "numeric" }
               }
               slotMinTime="06:00:00"
               slotMaxTime="22:00:00"
