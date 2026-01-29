@@ -1515,7 +1515,7 @@ export default function BookingForm() {
                         <div className="space-y-4">
                           <div>
                             <Label htmlFor="customer-name" className="text-base font-semibold mb-2 block dark:text-slate-300">
-                              Full Name *
+                              Full Name <span className="text-red-600">*</span>
                             </Label>
                             <Input
                               id="customer-name"
@@ -1530,7 +1530,7 @@ export default function BookingForm() {
                           </div>
                           <div>
                             <Label htmlFor="customer-email" className="text-base font-semibold mb-2 block dark:text-slate-300">
-                              Email Address *
+                              Email Address 
                             </Label>
                             <Input
                               id="customer-email"

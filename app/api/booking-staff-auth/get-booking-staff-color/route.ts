@@ -6,11 +6,11 @@ let memoryCache: { access_token: string; expires_at: number } | null = null;
 async function getAccessToken() {
   const isVercel = !!process.env.VERCEL;
   if (isVercel && memoryCache && Date.now() < memoryCache.expires_at) {
-    console.log("🔑 Using cached access token");
+    // console.log("🔑 Using cached access token");
     return memoryCache.access_token;
   }
 
-  console.log("🔑 Fetching new access token...");
+  // console.log("🔑 Fetching new access token...");
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
   const tokenRes = await fetch(`${baseUrl}/api/auth/token`);
   if (!tokenRes.ok) {
@@ -20,14 +20,14 @@ async function getAccessToken() {
   }
 
   const data = await tokenRes.json();
-  console.log("✅ Access token obtained successfully");
+  // console.log("✅ Access token obtained successfully");
 
   if (isVercel && data.access_token) {
     memoryCache = {
       access_token: data.access_token,
       expires_at: Date.now() + 1000 * 60 * 30, // cache 30 min
     };
-    console.log("🔑 Token cached for 30 minutes");
+    // console.log("🔑 Token cached for 30 minutes");
   }
 
   return data.access_token;
@@ -64,8 +64,6 @@ export async function POST(req: Request) {
       console.error("❌ TENANT_ID environment variable not set");
       return NextResponse.json({ error: "TENANT_ID not set" }, { status: 500 });
     }
-
-    console.log("🔑 Getting access token...");
     const accessToken = await getAccessToken();
     const tenantId = process.env.TENANT_ID;
     const environment = process.env.ENVIRONMENT!;
@@ -90,11 +88,10 @@ export async function POST(req: Request) {
       });
     }
 
-    console.log(`🎨 Processing ${staffToProcess.length} staff members`);
 
     for (const staff of staffToProcess) {
       try {
-        console.log(`🎨 Fetching color for staff: ${staff.parameterValueId} with parameterId: ${staff.parameterId}`);
+        // console.log(`🎨 Fetching color for staff: ${staff.parameterValueId} with parameterId: ${staff.parameterId}`);
         
         const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_GetBookingStaffColor?Company=${encodeURIComponent(company)}`;
 
@@ -104,7 +101,7 @@ export async function POST(req: Request) {
           _BookingParameterValueId: staff.parameterValueId,
         };
 
-        console.log(`📤 Sending to Business Central for ${staff.parameterValueId}:`, JSON.stringify(bcRequestBody, null, 2));
+        // console.log(`📤 Sending to Business Central for ${staff.parameterValueId}:`, JSON.stringify(bcRequestBody, null, 2));
 
         const res = await fetch(url, {
           method: "POST",
@@ -115,16 +112,13 @@ export async function POST(req: Request) {
           body: JSON.stringify(bcRequestBody),
         });
 
-        console.log(`📥 Business Central response for ${staff.parameterValueId} - status:`, res.status);
-
         let data: any = null;
         const text = await res.text();
         
         try {
           data = text ? JSON.parse(text) : null;
-          console.log(`✅ Successfully parsed JSON response for ${staff.parameterValueId}:`, data);
         } catch (err) {
-          console.warn(`⚠️ Failed to parse BC response for ${staff.parameterValueId} as JSON:`, text);
+          // console.warn(`⚠️ Failed to parse BC response for ${staff.parameterValueId} as JSON:`, text);
           continue; // Skip this staff code and continue with others
         }
 
@@ -158,19 +152,19 @@ export async function POST(req: Request) {
               background: backgroundColor,
               text: textColor
             };
-            console.log(`✅ Found color for ${staff.parameterValueId}: ${backgroundColor}`);
+            // console.log(`✅ Found color for ${staff.parameterValueId}: ${backgroundColor}`);
           } else {
-            console.warn(`⚠️ No StaffColor found for staff ${staff.parameterValueId}`);
+            // console.warn(`⚠️ No StaffColor found for staff ${staff.parameterValueId}`);
           }
         }
 
       } catch (error) {
-        console.warn(`⚠️ Failed to get color for staff ${staff.parameterValueId}:`, error);
+        // console.warn(`⚠️ Failed to get color for staff ${staff.parameterValueId}:`, error);
         // Continue with other staff codes
       }
     }
     
-    console.log(`✅ Returning colors for ${Object.keys(staffColors).length} staff members`);
+    // console.log(`✅ Returning colors for ${Object.keys(staffColors).length} staff members`);
     return NextResponse.json({ staffColors });
   } catch (err: any) {
     console.error("❌ API route error:", err);

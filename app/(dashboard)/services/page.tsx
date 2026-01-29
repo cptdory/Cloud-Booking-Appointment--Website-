@@ -62,7 +62,7 @@ export default function StaffPage() {
     isParamStaff,
     isParamService,
     loadValues,
-    getItemType: () => "staff",
+    getItemType: () => "Service",
   });
 
   // Staff list (lookup) - fetch once from booking setup (parameter code "staff")

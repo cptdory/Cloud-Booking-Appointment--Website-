@@ -57,11 +57,6 @@ export default function StaffPage() {
   // -------------------------
   // Use parameter CRUD hook
   // -------------------------
-  const getItemType = () => {
-    if (isParamService === "true") return "service";
-    if (isParamStaff === "true") return "staff";
-    return "item";
-  };
 
   const crud = useParameterCRUD({
     code: _BookingSetupCode,
@@ -69,7 +64,7 @@ export default function StaffPage() {
     isParamStaff,
     isParamService,
     loadValues,
-    getItemType,
+    getItemType: () => "Staff",
   });
 
 
@@ -144,21 +139,19 @@ export default function StaffPage() {
     const color = staffColors[valueId];
     if (!color) {
       return (
-        <Badge variant="secondary" className="bg-gray-500 text-white">
-          Gray
+        <Badge variant="secondary" className="bg-gray-500 p-3 text-white">
         </Badge>
       );
     }
-    const colorName = colorOptions.find((opt) => opt.value === color.background)?.label || "Custom";
+
     return (
       <Badge
-        className="text-xs font-medium"
+        className="text-xs font-medium p-3"
         style={{
           backgroundColor: color.background,
           color: color.text,
         }}
       >
-        {colorName}
       </Badge>
     );
   };
@@ -189,7 +182,6 @@ export default function StaffPage() {
         _BookingParameterValueId: String(colorStaff.BookingParameterValueId),
         _StaffColor: selectedColor,
       };
-
       const res = await fetch("/api/booking-staff-auth/update-booking-staff-auth-details", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -496,7 +488,7 @@ export default function StaffPage() {
               </div>
 
               <div>
-                <Label>Description</Label>
+                <Label>Name</Label>
                 <Input
                   value={crud.editItem.BookingParamterValueDescription}
                   onChange={(e) => crud.setEditItem({ ...crud.editItem, BookingParamterValueDescription: e.target.value })}
@@ -536,16 +528,6 @@ export default function StaffPage() {
               <div>
                 <Label>Staff</Label>
                 <Input value={colorStaff.BookingParameterValueCode || colorStaff.BookingParameterValueId} disabled />
-              </div>
-
-              <div>
-                <Label>Current Color</Label>
-                {currentColor && (
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="w-6 h-6 rounded-full border" style={{ backgroundColor: currentColor }} />
-                    <span className="capitalize">{colorOptions.find((c) => c.value === currentColor)?.label || "Custom"}</span>
-                  </div>
-                )}
               </div>
 
               <div>

@@ -31,14 +31,13 @@ async function getAccessToken() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    console.log("Request body:", body);
 
     const {
       _BookingSetupCode,
       _BookingParameterId,
       _BookingParameterValueCode,
       _BookingParameterValueDesc,
-      _BookingParameterValueDuration,
+      _BookingParameterValueDuration,_BookingParameterValueStaff,_BookingParameterValueService
     } = body;
 
     if (!_BookingSetupCode || !_BookingParameterId || !_BookingParameterValueCode || !_BookingParameterValueDesc) {
@@ -48,7 +47,7 @@ export async function POST(req: Request) {
     if (!process.env.TENANT_ID) {
       return NextResponse.json({ error: "TENANT_ID not set" }, { status: 500 });
     }
-
+    console.log("Request body:", body);
     const accessToken = await getAccessToken();
     const tenantId = process.env.TENANT_ID;
     const environment = process.env.ENVIRONMENT!;
@@ -68,8 +67,8 @@ const res = await fetch(url, {
     _BookingParameterValueCode,
     _BookingParameterValueDesc,
     _BookingParameterValueDuration,
-    _BookingParameterValueStaff: "No",
-    _BookingParameterValueService: "Yes",
+    _BookingParameterValueStaff,
+    _BookingParameterValueService,
   }),
 });
 
