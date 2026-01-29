@@ -139,21 +139,19 @@ export default function StaffPage() {
     const color = staffColors[valueId];
     if (!color) {
       return (
-        <Badge variant="secondary" className="bg-gray-500 text-white">
-          Gray
+        <Badge variant="secondary" className="bg-gray-500 p-3 text-white">
         </Badge>
       );
     }
-    const colorName = colorOptions.find((opt) => opt.value === color.background)?.label || "Custom";
+
     return (
       <Badge
-        className="text-xs font-medium"
+        className="text-xs font-medium p-3"
         style={{
           backgroundColor: color.background,
           color: color.text,
         }}
       >
-        {colorName}
       </Badge>
     );
   };
