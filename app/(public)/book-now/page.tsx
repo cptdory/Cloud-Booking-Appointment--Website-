@@ -144,6 +144,7 @@ export default function PublicBooking() {
   });
 
   const [submitting, setSubmitting] = useState(false);
+  const [orgSetup, setOrgSetup] = useState<any>(null);
   
   // OTP Flow States
   const [showOTPDialog, setShowOTPDialog] = useState(false);
@@ -169,10 +170,13 @@ export default function PublicBooking() {
     const verifyPublicBookingEnabled = async () => {
       try {
         const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || "9903ED01-A73C-4874-8ABF-D2678E3AE23D";
-        const orgSetup = await fetchBookingOrganizationSetup(tenantId);
+        const setupData = await fetchBookingOrganizationSetup(tenantId);
         
-        if (orgSetup && !orgSetup.EnablePublicBooking) {
-          router.push("/unavailable");
+        if (setupData) {
+          setOrgSetup(setupData);
+          if (!setupData.EnablePublicBooking) {
+            router.push("/unavailable");
+          }
         }
       } catch (error) {
         console.error("Failed to verify booking status:", error);
@@ -891,7 +895,11 @@ const handleProceedWithBooking = (bookingData: any) => {
                   {staffLoading ? (
                     <div className="flex items-center justify-center py-4"><Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" /> <span className="text-slate-600 dark:text-slate-400">Loading staff...</span></div>
                   ) : staffAssignments.length === 0 ? (
-                    <p className="text-slate-500 dark:text-slate-400">No staff available for this service</p>
+                    <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <p className="text-amber-900 dark:text-amber-200 font-medium mb-2">No staff available for this service</p>
+                      <p className="text-amber-800 dark:text-amber-300 text-sm">Please contact {orgSetup?.Name || "our team"} for assistance</p>
+                      <p className="text-amber-800 dark:text-amber-300 text-sm font-semibold mt-1">📞 {orgSetup?.Phone || "+63 960 614 8364"}</p>
+                    </div>
                   ) : (
                     <RadioGroup value={formData.staff} onValueChange={(v) => handleInputChange("staff", v)}>
                       <div className="space-y-2">
