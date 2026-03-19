@@ -46,6 +46,7 @@ import { useTimeSlots } from "@/hooks/useTimeSlots";
 import { useModalAlert } from "@/hooks/useAlert";
 import { useToast } from "@/hooks/useToast";
 import { useBookingParams } from "@/hooks/useBookingParams";
+import { useBookingOrganizationSetup } from "@/hooks/useBookingOrganizationSetup";
 
 interface FormData {
 
@@ -134,10 +135,12 @@ export default function BookingForm() {
   const { showSuccess, showError, showInfo, showWarning } = useModalAlert();
 
   const { showSuccess: showToastSuccess } = useToast();
+  const { fetchBookingOrganizationSetup } = useBookingOrganizationSetup();
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [latestCompletedStep, setLatestCompletedStep] = useState<number>(1);
   const [modifiedSteps, setModifiedSteps] = useState<Set<number>>(new Set());
+  const [orgSetup, setOrgSetup] = useState<any>(null);
   
   const getTodayDate = () => {
     const today = new Date();
@@ -186,6 +189,22 @@ export default function BookingForm() {
     formData.branch,
     "dynamic-param-id"
   );
+
+  // Fetch organization setup on mount
+  useEffect(() => {
+    const fetchOrgSetup = async () => {
+      try {
+        const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || "9903ED01-A73C-4874-8ABF-D2678E3AE23D";
+        const setupData = await fetchBookingOrganizationSetup(tenantId);
+        if (setupData) {
+          setOrgSetup(setupData);
+        }
+      } catch (error) {
+        console.error("Failed to fetch organization setup:", error);
+      }
+    };
+    fetchOrgSetup();
+  }, [fetchBookingOrganizationSetup]);
 
   // Load reschedule data from URL if present
   useEffect(() => {
@@ -485,10 +504,27 @@ export default function BookingForm() {
 
       // Set staff info
       if (formData.staff) {
-        const selectedStaff = staffAssignments.find(
+        // Try to find in assigned staff first
+        let selectedStaff = staffAssignments.find(
           (s) => s.StaffId.toString() === formData.staff
         );
-        if (selectedStaff) {
+        
+        // If not found and user is not customer, try all available staff
+        if (!selectedStaff && userRole !== "customer" && staffAssignments.length === 0) {
+          const allStaff = getAllAvailableStaff();
+          const staffMatch = allStaff.find(
+            (s) => s.BookingParameterValueId.toString() === formData.staff
+          );
+          if (staffMatch) {
+            const staffParameter = getStaffParameter();
+            summary.staff = {
+              id: staffMatch.BookingParameterValueId.toString(),
+              name: staffMatch.BookingParamterValueDescription,
+              code: staffMatch.BookingParameterValueCode,
+              parameterId: staffParameter ? staffParameter.BookingParameterId.toString() : '',
+            };
+          }
+        } else if (selectedStaff) {
           const staffParameter = getStaffParameter();
           summary.staff = {
             id: selectedStaff.StaffId.toString(),
@@ -760,6 +796,12 @@ export default function BookingForm() {
     return bookingSetup.BookingParameter.filter(
       (param) => !param.BookingParameterService && !param.BookingParameterStaff
     ).sort((a, b) => a.BookingParameterSequence - b.BookingParameterSequence);
+  };
+
+  // Get all available staff from booking setup (not just assigned to service)
+  const getAllAvailableStaff = () => {
+    const staffParameter = getStaffParameter();
+    return staffParameter?.BookingParameterValue || [];
   };
 
   const handleSubmit = async (
@@ -1298,10 +1340,55 @@ export default function BookingForm() {
                   <h3 className="text-lg font-semibold mb-4 text-slate-700 dark:text-slate-300">Select Staff</h3>
                   {staffLoading ? (
                     <div className="flex items-center justify-center py-4"><Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" /> <span className="text-slate-600 dark:text-slate-400">Loading staff...</span></div>
+                  ) : staffAssignments.length === 0 && userRole !== "customer" ? (
+                    // Show all available staff if no assignments and user is admin/user
+                    getAllAvailableStaff().length > 0 ? (
+                      <>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">No staff assigned to this service. Showing all available staff:</p>
+                        <RadioGroup
+                          value={formData.staff}
+                          onValueChange={(value) =>
+                            handleInputChange("staff", value)
+                          }
+                        >
+                          <div className="space-y-2">
+                            {getAllAvailableStaff().map((staff) => (
+                              <Label
+                                key={staff.BookingParameterValueId}
+                                htmlFor={`staff-${staff.BookingParameterValueId}`}
+                                className={`flex items-center p-3 border rounded-xl cursor-pointer transition-all duration-300 ${formData.staff === staff.BookingParameterValueId.toString()
+                                    ? "border-blue-500 bg-blue-50 dark:bg-blue-950/50 dark:border-blue-800 shadow-inner"
+                                    : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-400 dark:hover:border-blue-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                  }`}
+                              >
+                                <RadioGroupItem
+                                  value={staff.BookingParameterValueId.toString()}
+                                  id={`staff-${staff.BookingParameterValueId}`}
+                                  className="text-blue-600"
+                                />
+                                <div className="ml-3">
+                                  <div className="font-medium text-slate-800 dark:text-slate-200">
+                                    {staff.BookingParamterValueDescription}
+                                  </div>
+                                </div>
+                              </Label>
+                            ))}
+                          </div>
+                        </RadioGroup>
+                      </>
+                    ) : (
+                      <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                        <p className="text-amber-900 dark:text-amber-200 font-medium mb-2">No staff available for this service</p>
+                        <p className="text-amber-800 dark:text-amber-300 text-sm">Please contact {orgSetup?.Name || "our team"} for assistance</p>
+                        <p className="text-amber-800 dark:text-amber-300 text-sm font-semibold mt-1">📞 +63 960 614 8364</p>
+                      </div>
+                    )
                   ) : staffAssignments.length === 0 ? (
-                    <p className="text-slate-500 dark:text-slate-400">
-                      No staff available for this service
-                    </p>
+                    <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <p className="text-amber-900 dark:text-amber-200 font-medium mb-2">No staff available for this service</p>
+                      <p className="text-amber-800 dark:text-amber-300 text-sm">Please contact {orgSetup?.Name || "our team"} for assistance</p>
+                      <p className="text-amber-800 dark:text-amber-300 text-sm font-semibold mt-1">📞 +63 960 614 8364</p>
+                    </div>
                   ) : (
                     <RadioGroup
                       value={formData.staff}
