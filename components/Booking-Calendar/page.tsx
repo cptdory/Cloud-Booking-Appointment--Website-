@@ -16,13 +16,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import {
   AlertCircle,
   Loader2,
   Smartphone,
   ChevronLeft,
-  ChevronRight,
+  ChevronRight,Filter
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BookingEntry } from "@/types/bookingEntry";
@@ -76,6 +78,12 @@ export default function BookingCalendar() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [isDeletingTimeOff, setIsDeletingTimeOff] = useState(false);
   const [showTimeOffDialog, setShowTimeOffDialog] = useState(false);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([
+    "Active",
+    "Cancelled",
+    "Finalized",
+  ]);
+  const [hideTimeOff, setHideTimeOff] = useState<boolean>(false);
   // Error state for SweetAlert at page level
   const [alertError, setAlertError] = useState<{ title: string; message: string } | null>(null);
 
@@ -160,6 +168,7 @@ export default function BookingCalendar() {
             status: entry.BookingStatus,
             branch: entry.BookingSetupCode,
             room: entry.Address2,
+            timeOff: entry.TimeOff,
             rawData: entry,
           },
         };
@@ -441,6 +450,27 @@ export default function BookingCalendar() {
     return isMobile ? "listWeek" : calendarView;
   }, [isMobile, calendarView]);
 
+  // Filter events based on selected statuses and TimeOff
+  const filteredEvents = useCallback(() => {
+    let filtered = events;
+
+    // Filter by TimeOff if hideTimeOff is checked
+    if (hideTimeOff) {
+      filtered = filtered.filter((event) => !event.extendedProps.timeOff);
+    }
+
+    // Filter by multiple statuses (select none = show nothing)
+    if (selectedStatuses.length > 0) {
+      filtered = filtered.filter((event) =>
+        selectedStatuses.includes(event.extendedProps.status)
+      );
+    } else {
+      filtered = [];
+    }
+
+    return filtered;
+  }, [events, selectedStatuses, hideTimeOff]);
+
   // Show loading while checking authentication or initial loading
   if (checkingAuth || initialLoading) {
     return (
@@ -512,8 +542,75 @@ export default function BookingCalendar() {
               </div>
 
               {/* View Controls + Time Off Button */}
-              <div className="flex items-center gap-3">
-                <StaffTimeOffDialog />
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <StaffTimeOffDialog
+                    onSuccess={() => {
+                      if (currentDateRange) {
+                        fetchBookingEntries(
+                          branchCode,
+                          currentDateRange.start,
+                          currentDateRange.end
+                        );
+                      }
+                    }}
+                  />
+
+                  {/* Status Filter Popover */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button size="sm" variant="outline" className="h-9 text-xs">
+                        <Filter /> Status Filter
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-52 p-3">
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                          Show statuses
+                        </p>
+                        {[
+                          { key: "Active", label: "Active" },
+                          { key: "Cancelled", label: "Cancelled" },
+                          { key: "Finalized", label: "Finalized" },
+                        ].map((status) => (
+                          <label
+                            key={status.key}
+                            className="flex items-center gap-2 text-xs font-medium dark:text-slate-200"
+                          >
+                            <Checkbox
+                              checked={selectedStatuses.includes(status.key)}
+                              onCheckedChange={(checked) => {
+                                setSelectedStatuses((current) => {
+                                  const checkedBool = checked as boolean;
+                                  if (checkedBool) {
+                                    return [...new Set([...current, status.key])];
+                                  }
+                                  return current.filter((item) => item !== status.key);
+                                });
+                              }}
+                            />
+                            {status.label}
+                          </label>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* Hide TimeOff Checkbox */}
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="hideTimeOff"
+                      checked={hideTimeOff}
+                      onCheckedChange={(checked) => setHideTimeOff(checked as boolean)}
+                    />
+                    <label
+                      htmlFor="hideTimeOff"
+                      className="text-xs font-medium cursor-pointer dark:text-slate-200"
+                    >
+                      Hide Time Off
+                    </label>
+                  </div>
+                </div>
 
                 <div className="hidden sm:flex rounded-lg p-1 bg-slate-100 dark:bg-slate-900 border dark:border-slate-800">
                   <Button
@@ -622,7 +719,7 @@ export default function BookingCalendar() {
               ]}
               headerToolbar={false}
               initialView={getInitialView()}
-              events={events}
+              events={filteredEvents()}
               eventClick={handleEventClick}
               datesSet={handleDatesSet}
               height="auto"

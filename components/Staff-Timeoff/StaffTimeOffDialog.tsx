@@ -326,7 +326,7 @@ export default function StaffTimeOffDialog({
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="h-9 gap-2">
+        <Button size="sm" variant="outline" className="h-9 text-xs">
           <Clock3 className="w-4 h-4" />
 
           <span className="hidden sm:inline">Add Time Off</span>

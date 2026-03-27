@@ -15,6 +15,7 @@ export type CalendarEvent = {
     status: string;
     branch: string;
     room: string;
+    timeOff: boolean;
     rawData?: BookingEntry;
   };
   color: string;
