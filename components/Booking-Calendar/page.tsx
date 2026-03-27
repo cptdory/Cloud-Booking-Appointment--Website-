@@ -79,11 +79,9 @@ export default function BookingCalendar() {
   const [isDeletingTimeOff, setIsDeletingTimeOff] = useState(false);
   const [showTimeOffDialog, setShowTimeOffDialog] = useState(false);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([
-    "Active",
-    "Cancelled",
-    "Finalized",
+    "Active"
   ]);
-  const [hideTimeOff, setHideTimeOff] = useState<boolean>(false);
+  const [hideTimeOff, setHideTimeOff] = useState<boolean>(true);
   // Error state for SweetAlert at page level
   const [alertError, setAlertError] = useState<{ title: string; message: string } | null>(null);
 
