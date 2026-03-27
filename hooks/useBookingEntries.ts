@@ -27,7 +27,7 @@ export function useBookingEntries() {
         _BookingSetupCode: branchCode,
         _DateFrom: formatDate(startDate),
         _DateTo: formatDate(endDate),
-        _Status: "Active"
+        _Status: ""
       };
 
       const response = await fetch("/api/booking-entry/get-booking-entries", {
