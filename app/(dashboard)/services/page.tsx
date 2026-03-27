@@ -325,7 +325,7 @@ export default function StaffPage() {
               </div>
 
               <div>
-                <Label>Description</Label>
+                <Label>Name</Label>
                 <Input
                   value={crud.editItem.BookingParamterValueDescription}
                   onChange={(e) => crud.setEditItem({ ...crud.editItem, BookingParamterValueDescription: e.target.value })}
