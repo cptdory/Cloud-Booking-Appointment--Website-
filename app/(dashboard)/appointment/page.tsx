@@ -86,6 +86,7 @@ export default function AppointmentPage() {
         status: entry.BookingStatus,
         branch: entry.BookingSetupCode || "MAIN",
         room: entry.Address2 || "-",
+        timeOff: entry.TimeOff ?? false,
         rawData: entry as any,
       },
     };
