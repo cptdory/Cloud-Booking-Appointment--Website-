@@ -39,13 +39,13 @@ async function getAvailableTimeSlots(
 
   const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_GetAvailableTimeSlot?Company=${company}`;
 
-  // Convert all values to strings to match Business Central expectations
   const requestBody = {
     _BookingSetupCode: String(body._BookingSetupCode || ''),
     _BookingDate: String(body._BookingDate || ''),
     _BookingParameterCount: String(body._BookingParameterCount || ''),
     _BookingParameterIDs: String(body._BookingParameterIDs || ''),
-    _BookingParameterValueIDs: String(body._BookingParameterValueIDs || '')
+    _BookingParameterValueIDs: String(body._BookingParameterValueIDs || ''),
+    _SkipTimeSlotAvailabilityCheck: String(body._SkipTimeSlotAvailabilityCheck || '')
   };
 
   console.log("Calling Business Central API for available time slots:", url);

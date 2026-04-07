@@ -80,6 +80,7 @@ async function bookTimeSlot(
     _CustomerBirthDate:'',
     _CustomerAddress1:String(body._CustomerAddress1 || ''),
     _CustomerAddress2:String(body._CustomerAddress2 || ''),
+    _SkipTimeSlotAvailabilityCheck: String(body._SkipTimeSlotAvailabilityCheck || '')
 
   };
 

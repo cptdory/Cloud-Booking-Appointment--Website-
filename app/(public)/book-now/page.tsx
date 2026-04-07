@@ -445,6 +445,7 @@ export default function PublicBooking() {
           formData.date,
           formData.service,
           formData.staff,
+          "false",
           dynamicParamsData
         ).catch((error) => {
           showError(error, "Failed to load time slots");
@@ -489,7 +490,7 @@ export default function PublicBooking() {
     setProcessingBooking(true);
     
     try {
-      console.log("📤 Creating booking with data:", bookingData);
+      // console.log("📤 Creating booking with data:", bookingData);
 
       const response = await fetch(
         "/api/available-timeslot/book-available-timeslot",
@@ -508,7 +509,7 @@ export default function PublicBooking() {
       }
 
       const result = await response.json();
-      console.log("✅ Booking created successfully:", result);
+      // console.log("✅ Booking created successfully:", result);
 
       showSuccessAlert("Your appointment has been successfully scheduled!", "Booking Confirmed!");
 
@@ -634,6 +635,7 @@ export default function PublicBooking() {
         _CustomerPhoneNo: formData._CustomerPhoneNo || '',
         _CustomerAddress1: formData._CustomerAddress1 || '',
         _CustomerAddress2: formData._CustomerAddress2 || '',
+        _SkipTimeSlotAvailabilityCheck: "false",
       };
 
       console.log("📤 Booking data prepared:", bodyToSend);

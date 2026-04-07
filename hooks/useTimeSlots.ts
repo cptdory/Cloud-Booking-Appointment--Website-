@@ -16,6 +16,7 @@ export function useTimeSlots() {
     date: string,
     serviceId: string,
     staffId: string,
+    skipTimeslotAvailabilityCheck: string,
     dynamicParameters: { id: string; value: string }[]
   ) => {
     if (!branchCode || !serviceId || !staffId || !date) {
@@ -51,6 +52,7 @@ export function useTimeSlots() {
             _BookingParameterCount: (2 + dynamicParameters.length).toString(),
             _BookingParameterIDs: parameterIds,
             _BookingParameterValueIDs: parameterValues,
+            _SkipTimeSlotAvailabilityCheck: skipTimeslotAvailabilityCheck
           }),
         }
       );
