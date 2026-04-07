@@ -183,6 +183,7 @@ export default function BookingForm() {
   const [isLoadingRescheduleData, setIsLoadingRescheduleData] = useState(false);
   const [readOnlyFields, setReadOnlyFields] = useState<Set<string>>(new Set());
   const [isNewCustomer, setIsNewCustomer] = useState(false);
+  const [skipTimeslotAvailabilityCheck, setSkipTimeslotAvailabilityCheck] = useState(false);
 
   // Use booking params hook for dynamic parameters
   const dynamicParametersData = useBookingParams(
@@ -261,18 +262,18 @@ export default function BookingForm() {
         throw new Error("Invalid booking entry response format");
       }
 
-      console.log("📦 Parsed Data:", data);
+      // console.log("📦 Parsed Data:", data);
 
       if (!data || !Array.isArray(data) || data.length === 0) {
         throw new Error("No booking entry found");
       }
 
       const entry = data[0];
-      console.log("📋 Entry Details:", entry);
-      console.log("📋 Entry Keys:", Object.keys(entry));
-      console.log("📋 Customer Name Field:", entry.Name);
-      console.log("📋 Customer Email Field:", entry.EMail || entry.Email);
-      console.log("📋 Customer No Field:", entry.CustomerNo);
+      // console.log("📋 Entry Details:", entry);
+      // console.log("📋 Entry Keys:", Object.keys(entry));
+      // console.log("📋 Customer Name Field:", entry.Name);
+      // console.log("📋 Customer Email Field:", entry.EMail || entry.Email);
+      // console.log("📋 Customer No Field:", entry.CustomerNo);
 
       // Build the form data from the fetched entry
       const newFormData: FormData = {
@@ -291,7 +292,7 @@ export default function BookingForm() {
         _BookingEntryNo: entryNo,
       };
 
-      console.log("📋 Form Data After Mapping:", newFormData);
+      // console.log("📋 Form Data After Mapping:", newFormData);
 
       // Map booking parameters to form data
       // Store parameter value IDs (numeric) for form fields
@@ -315,7 +316,7 @@ export default function BookingForm() {
       // If customer name is not in the entry, fetch customer details separately
       if (!newFormData.customerName && newFormData.customerNo) {
         try {
-          console.log("Fetching customer details for:", newFormData.customerNo);
+          // console.log("Fetching customer details for:", newFormData.customerNo);
           const customerRes = await fetch("/api/customer/get-customer", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -324,7 +325,7 @@ export default function BookingForm() {
 
           if (customerRes.ok) {
             const customerData = await customerRes.json();
-            console.log("📧 Customer Data:", customerData);
+            // console.log("📧 Customer Data:", customerData);
             
             if (customerData && customerData.data) {
               let customerInfo = customerData.data;
@@ -347,7 +348,7 @@ export default function BookingForm() {
               newFormData.customerName = customerInfo.Name || customerInfo.DisplayName || newFormData.customerName;
               newFormData.customerEmail = customerInfo.EMail || customerInfo.Email || newFormData.customerEmail;
               
-              console.log("📧 Updated Form Data with Customer Details:", newFormData);
+              // console.log("📧 Updated Form Data with Customer Details:", newFormData);
               setFormData(newFormData);
             }
           }
@@ -358,7 +359,7 @@ export default function BookingForm() {
 
       // Fetch booking setup for the loaded branch
       try {
-        console.log("Fetching booking setup for branch:", entry.BookingSetupCode);
+        // console.log("Fetching booking setup for branch:", entry.BookingSetupCode);
         await fetchBookingSetup(entry.BookingSetupCode);
       } catch (error: any) {
         console.error("Error fetching booking setup:", error);
@@ -418,12 +419,12 @@ export default function BookingForm() {
       formData.service &&
       bookingSetup
     ) {
-      console.log(
-        "Fetching staff assignments for reschedule - Branch:",
-        formData.branch,
-        "Service:",
-        formData.service
-      );
+      // console.log(
+      //   "Fetching staff assignments for reschedule - Branch:",
+      //   formData.branch,
+      //   "Service:",
+      //   formData.service
+      // );
       fetchStaffAssignments(formData.branch, formData.service).catch(
         (error) => {
           console.error("Error fetching staff assignments:", error);
@@ -756,6 +757,7 @@ export default function BookingForm() {
           formData.date,
           formData.service,
           formData.staff,
+          skipTimeslotAvailabilityCheck ? "true" : "false",
           dynamicParamsData
         ).catch((error) => {
           showError(
@@ -765,7 +767,7 @@ export default function BookingForm() {
         });
       }
     }
-  }, [formData.date, currentStep]);
+  }, [formData.date, currentStep, skipTimeslotAvailabilityCheck]);
 
   // Get service parameter (the one with BookingParameterService: true)
   const getServiceParameter = (): BookingParameter | undefined => {
@@ -893,6 +895,7 @@ export default function BookingForm() {
         _CustomerNoOrEmailAdd: isNewCustomerAdmin ? formData.customerEmail : formData.customerNo,
         _BookingNote: formData.bookingNote || "",
         _BookingEntryNo: isReschedule ? formData._BookingEntryNo : "",
+        _SkipTimeSlotAvailabilityCheck: skipTimeslotAvailabilityCheck ? "true" : "false",
       };
 
       // Add customer name for new customer bookings by admin or for non-admin users
@@ -905,7 +908,7 @@ export default function BookingForm() {
         bodyToSend._CustomerName = formData.customerName;
       }
 
-      console.log("📤 Sent Body:", bodyToSend);
+      // console.log("📤 Sent Body:", bodyToSend);
 
       const response = await fetch(
         "/api/available-timeslot/book-available-timeslot",
@@ -1495,6 +1498,7 @@ export default function BookingForm() {
               <CardContent className="pt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div className="space-y-4">
+                    
                     <div>
                       <Label htmlFor="booking-date" className="text-base font-semibold mb-2 block text-slate-700 dark:text-slate-300">Select Date</Label>
                       <div className="border border-slate-300 dark:border-slate-700 rounded-lg p-3 bg-white dark:bg-slate-800 w-fit [&_[data-selected-single=true]]:bg-blue-600 [&_[data-selected-single=true]]:text-white">
@@ -1526,7 +1530,26 @@ export default function BookingForm() {
                   <div className="space-y-4">
                     {formData.date ? (
                       <>
-                          <Label className="text-base font-semibold block text-slate-700 dark:text-slate-300">Available Time Slots</Label>
+                          <div className="flex items-center justify-between mb-3">
+                            <Label className="text-base font-semibold text-slate-700 dark:text-slate-300">Available Time Slots</Label>
+                            {(userRole === "admin" || userRole === "user") && (
+                              <div className="flex items-center space-x-2 p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+                                <Checkbox
+                                  id="skip-timeslot-availability"
+                                  checked={skipTimeslotAvailabilityCheck}
+                                  onCheckedChange={(checked) => {
+                                    setSkipTimeslotAvailabilityCheck(!!checked);
+                                  }}
+                                />
+                                <label
+                                  htmlFor="skip-timeslot-availability"
+                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-amber-900 dark:text-amber-100"
+                                >
+                                  Book Anyway
+                                </label>
+                              </div>
+                            )}
+                          </div>
                           {timeSlotsLoading ? (
                               <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin mr-2 text-blue-600" /> <span className="text-slate-600 dark:text-slate-400">Finding available slots...</span></div>
                           ) : availableTimeSlots.length > 0 ? (
