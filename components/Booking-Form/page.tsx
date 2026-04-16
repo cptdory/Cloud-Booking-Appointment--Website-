@@ -184,6 +184,7 @@ export default function BookingForm() {
   const [readOnlyFields, setReadOnlyFields] = useState<Set<string>>(new Set());
   const [isNewCustomer, setIsNewCustomer] = useState(false);
   const [skipTimeslotAvailabilityCheck, setSkipTimeslotAvailabilityCheck] = useState(false);
+  const [previousDateCheck, setPreviousDateCheck] = useState(false);
 
   // Use booking params hook for dynamic parameters
   const dynamicParametersData = useBookingParams(
@@ -262,18 +263,18 @@ export default function BookingForm() {
         throw new Error("Invalid booking entry response format");
       }
 
-      // console.log("📦 Parsed Data:", data);
+      // console.log(" Parsed Data:", data);
 
       if (!data || !Array.isArray(data) || data.length === 0) {
         throw new Error("No booking entry found");
       }
 
       const entry = data[0];
-      // console.log("📋 Entry Details:", entry);
-      // console.log("📋 Entry Keys:", Object.keys(entry));
-      // console.log("📋 Customer Name Field:", entry.Name);
-      // console.log("📋 Customer Email Field:", entry.EMail || entry.Email);
-      // console.log("📋 Customer No Field:", entry.CustomerNo);
+      // console.log("Entry Details:", entry);
+      // console.log(" Entry Keys:", Object.keys(entry));
+      // console.log(" Customer Name Field:", entry.Name);
+      // console.log(" Customer Email Field:", entry.EMail || entry.Email);
+      // console.log(" Customer No Field:", entry.CustomerNo);
 
       // Build the form data from the fetched entry
       const newFormData: FormData = {
@@ -292,7 +293,7 @@ export default function BookingForm() {
         _BookingEntryNo: entryNo,
       };
 
-      // console.log("📋 Form Data After Mapping:", newFormData);
+      // console.log(" Form Data After Mapping:", newFormData);
 
       // Map booking parameters to form data
       // Store parameter value IDs (numeric) for form fields
@@ -325,7 +326,7 @@ export default function BookingForm() {
 
           if (customerRes.ok) {
             const customerData = await customerRes.json();
-            // console.log("📧 Customer Data:", customerData);
+            // console.log(" Customer Data:", customerData);
             
             if (customerData && customerData.data) {
               let customerInfo = customerData.data;
@@ -348,7 +349,7 @@ export default function BookingForm() {
               newFormData.customerName = customerInfo.Name || customerInfo.DisplayName || newFormData.customerName;
               newFormData.customerEmail = customerInfo.EMail || customerInfo.Email || newFormData.customerEmail;
               
-              // console.log("📧 Updated Form Data with Customer Details:", newFormData);
+              // console.log(" Updated Form Data with Customer Details:", newFormData);
               setFormData(newFormData);
             }
           }
@@ -1500,8 +1501,28 @@ export default function BookingForm() {
                   <div className="space-y-4">
                     
                     <div>
-                      <Label htmlFor="booking-date" className="text-base font-semibold mb-2 block text-slate-700 dark:text-slate-300">Select Date</Label>
-                      <div className="border border-slate-300 dark:border-slate-700 rounded-lg p-3 bg-white dark:bg-slate-800 w-fit [&_[data-selected-single=true]]:bg-blue-600 [&_[data-selected-single=true]]:text-white">
+                      <div className="flex items-center justify-between mb-4">
+                        <Label htmlFor="booking-date" className="text-base font-semibold text-slate-700 dark:text-slate-300">Select Date</Label>
+                        {(userRole === "admin" || userRole === "user") && (
+                          <div className="flex items-center space-x-2 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors duration-200">
+                            <Checkbox
+                              id="previous-date-check"
+                              checked={previousDateCheck}
+                              onCheckedChange={(checked) => {
+                                setPreviousDateCheck(!!checked);
+                              }}
+                              className="cursor-pointer"
+                            />
+                            <label
+                              htmlFor="previous-date-check"
+                              className="text-sm font-medium text-blue-700 dark:text-blue-300 cursor-pointer flex-1 whitespace-nowrap"
+                            >
+                              Allow Previous Dates
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                      <div className="border border-slate-300 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-800 w-fit shadow-sm hover:shadow-md transition-shadow duration-200 [&_[data-selected-single=true]]:bg-blue-600 [&_[data-selected-single=true]]:text-white">
                         <CalendarComponent
                           mode="single"
                           selected={formData.date ? new Date(formData.date) : undefined}
@@ -1514,7 +1535,7 @@ export default function BookingForm() {
                               handleInputChange("date", dateString);
                             }
                           }}
-                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                          disabled={previousDateCheck ? false : (date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                         />
                       </div>
                     </div>
