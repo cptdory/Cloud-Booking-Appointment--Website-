@@ -37,7 +37,7 @@ export async function POST(req: Request) {
       _BookingParameterId,
       _BookingParameterValueCode,
       _BookingParameterValueDesc,
-      _BookingParameterValueDuration,_BookingParameterValueStaff,_BookingParameterValueService
+      _BookingParameterValueDuration,_BookingParameterValueStaff,_BookingParameterValueService,_BookingParameterValueServiceSequence
     } = body;
 
     if (!_BookingSetupCode || !_BookingParameterId || !_BookingParameterValueCode || !_BookingParameterValueDesc) {
@@ -69,6 +69,7 @@ const res = await fetch(url, {
     _BookingParameterValueDuration,
     _BookingParameterValueStaff,
     _BookingParameterValueService,
+    _BookingParameterValueServiceSequence
   }),
 });
 

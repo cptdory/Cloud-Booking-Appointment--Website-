@@ -789,7 +789,11 @@ export default function BookingForm() {
   // Get services from booking setup
   const getServices = () => {
     const serviceParameter = getServiceParameter();
-    return serviceParameter?.BookingParameterValue || [];
+    return [...(serviceParameter?.BookingParameterValue || [])].sort(
+      (a, b) =>
+        a.BookingParameterValueServiceSequence -
+        b.BookingParameterValueServiceSequence
+    );
   };
 
   // Get dynamic parameters (all parameters except service and staff)

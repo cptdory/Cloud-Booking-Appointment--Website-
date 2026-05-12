@@ -11,5 +11,6 @@ export type BookingParameter = {
     BookingParameterValueCode: string;
     BookingParamterValueDescription: string;
     BookingParameterValueDuration: number;
+    BookingParameterValueServiceSequence: number;
   }[];
 }

@@ -61,6 +61,7 @@ export async function POST(req: Request) {
         _BookingParameterValueDuration: String(body._BookingParameterValueDuration),
         _BookingParameterValueStaff: body._BookingParameterValueStaff ?? "No",
         _BookingParameterValueService: body._BookingParameterValueService ?? "Yes",
+        _BookingParameterValueServiceSequence: String(body._BookingParameterValueServiceSequence) ?? "0",
       }),
     });
 

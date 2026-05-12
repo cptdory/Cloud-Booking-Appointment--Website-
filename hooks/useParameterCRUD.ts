@@ -1,5 +1,4 @@
 "use client";
-import React from "react";
 
 import { useState } from "react";
 import { useToast } from "@/hooks/useToast";
@@ -28,6 +27,7 @@ export function useParameterCRUD({
     BookingParameterValueCode: "",
     BookingParamterValueDescription: "",
     BookingParameterValueDuration: 60,
+    BookingParameterValueServiceSequence: 0,
   });
 
   // Delete
@@ -41,6 +41,8 @@ export function useParameterCRUD({
       BookingParameterValueCode: item.BookingParameterValueCode,
       BookingParamterValueDescription: item.BookingParamterValueDescription,
       BookingParameterValueDuration: item.BookingParameterValueDuration,
+      BookingParameterValueServiceSequence:
+        item.BookingParameterValueServiceSequence ?? 0,
     });
     setEditing(true);
   };
@@ -60,9 +62,11 @@ export function useParameterCRUD({
         _BookingParameterValueDuration: String(
           editItem.BookingParameterValueDuration
         ),
-
         _BookingParameterValueStaff: isParamStaff,
         _BookingParameterValueService: isParamService,
+        _BookingParameterValueServiceSequence: String(
+          editItem.BookingParameterValueServiceSequence ?? 0
+        ),
       };
 
       const res = await fetch(
@@ -102,9 +106,11 @@ export function useParameterCRUD({
         _BookingParameterValueDuration: String(
           newItem.BookingParameterValueDuration
         ),
-
         _BookingParameterValueStaff: isParamStaff,
         _BookingParameterValueService: isParamService,
+        _BookingParameterValueServiceSequence: String(
+          newItem.BookingParameterValueServiceSequence ?? 0
+        ),
       };
 
       const res = await fetch(
@@ -125,6 +131,7 @@ export function useParameterCRUD({
         BookingParameterValueCode: "",
         BookingParamterValueDescription: "",
         BookingParameterValueDuration: 60,
+        BookingParameterValueServiceSequence: 0,
       });
 
       showSuccess(`${getItemType()} created successfully!`);

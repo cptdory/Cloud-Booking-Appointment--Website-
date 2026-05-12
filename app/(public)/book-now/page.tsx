@@ -62,6 +62,7 @@ interface BookingSummary {
     duration: number;
     code: string;
     parameterId: string;
+    sequence: number;
   } | null;
   staff: {
     id: string;
@@ -218,6 +219,7 @@ export default function PublicBooking() {
             name: selectedService.BookingParamterValueDescription,
             duration: selectedService.BookingParameterValueDuration,
             code: selectedService.BookingParameterValueCode,
+            sequence: selectedService.BookingParameterValueServiceSequence,
             parameterId: serviceParameter ? serviceParameter.BookingParameterId.toString() : '',
           };
         }
@@ -473,7 +475,11 @@ export default function PublicBooking() {
   // Get services from booking setup
   const getServices = () => {
     const serviceParameter = getServiceParameter();
-    return serviceParameter?.BookingParameterValue || [];
+    return [...(serviceParameter?.BookingParameterValue || [])].sort(
+      (a, b) =>
+        a.BookingParameterValueServiceSequence -
+        b.BookingParameterValueServiceSequence
+    );
   };
 
   // Get dynamic parameters (all parameters except service and staff)

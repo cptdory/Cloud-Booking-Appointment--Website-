@@ -47,11 +47,9 @@ export default function StaffPage() {
   const {
     values,
     loading,
-    error,
     parameterName,
     isParamStaff,
     isParamService,
-    checkDuration,
     loadValues,
   } = useBookingParams(code, parameterId);
 
@@ -95,7 +93,33 @@ export default function StaffPage() {
   const [assigning, setAssigning] = useState(false);
 
   // Helpers
-  const pageTitle = useMemo(() => parameterName || "Staff", [parameterName]);
+  const pageTitle = useMemo(() => parameterName || "Service", [parameterName]);
+  const sortedValues = useMemo(
+    () =>
+      [...values].sort(
+        (a: any, b: any) =>
+          Number(a.BookingParameterValueServiceSequence ?? 0) -
+          Number(b.BookingParameterValueServiceSequence ?? 0)
+      ),
+    [values]
+  );
+
+  const openCreateDialog = () => {
+    const nextSequence =
+      sortedValues.reduce(
+        (max: number, item: any) =>
+          Math.max(max, Number(item.BookingParameterValueServiceSequence ?? 0)),
+        0
+      ) + 1;
+
+    crud.setNewItem({
+      BookingParameterValueCode: "",
+      BookingParamterValueDescription: "",
+      BookingParameterValueDuration: 60,
+      BookingParameterValueServiceSequence: nextSequence,
+    });
+    crud.setCreating(true);
+  };
 
   // load staff lookup + values
   useEffect(() => {
@@ -203,7 +227,7 @@ export default function StaffPage() {
           <div className="flex items-center gap-2">
             {/* Only show New button for admin */}
             {canEdit && (
-              <Button size="sm" variant="outline" onClick={() => crud.setCreating(true)}>
+              <Button size="sm" variant="outline" onClick={openCreateDialog}>
                 <Plus className="w-4 h-4 mr-2" /> New Service
               </Button>
             )}
@@ -218,6 +242,7 @@ export default function StaffPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-24">Sequence</TableHead>
                     <TableHead>Code</TableHead>
                     <TableHead>Name</TableHead>
                     {/* Only show Actions header for admin */}
@@ -225,8 +250,9 @@ export default function StaffPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {values.map((v: any) => (
+                  {sortedValues.map((v: any) => (
                     <TableRow key={v.BookingParameterValueId} className="hover:bg-muted/50">
+                      <TableCell>{v.BookingParameterValueServiceSequence ?? 0}</TableCell>
                       <TableCell className="font-medium">{v.BookingParameterValueCode}</TableCell>
                       <TableCell>{v.BookingParamterValueDescription}</TableCell>
 
@@ -255,8 +281,8 @@ export default function StaffPage() {
                   {values.length === 0 && (
                     <TableRow>
                       {/* Adjust colspan to visible columns */}
-                      <TableCell colSpan={canEdit ? 3 : 2} className="text-center py-6 text-muted-foreground">
-                        No staff found
+                      <TableCell colSpan={canEdit ? 4 : 3} className="text-center py-6 text-muted-foreground">
+                        No services found
                       </TableCell>
                     </TableRow>
                   )}
@@ -273,10 +299,26 @@ export default function StaffPage() {
       <Dialog open={crud.creating} onOpenChange={(open) => !open && crud.setCreating(false)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Staff</DialogTitle>
+            <DialogTitle>Create Service</DialogTitle>
           </DialogHeader>
 
           <div className="grid gap-4">
+            <div>
+              <Label>Sequence</Label>
+              <Input
+                type="number"
+                min={0}
+                value={crud.newItem.BookingParameterValueServiceSequence ?? 0}
+                onChange={(e) =>
+                  crud.setNewItem({
+                    ...crud.newItem,
+                    BookingParameterValueServiceSequence:
+                      parseInt(e.target.value, 10) || 0,
+                  })
+                }
+              />
+            </div>
+
             <div>
               <Label>Code</Label>
               <Input
@@ -311,11 +353,27 @@ export default function StaffPage() {
       <Dialog open={crud.editing} onOpenChange={(open) => { if (!open) { crud.setEditing(false); crud.setEditItem(null); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Staff</DialogTitle>
+            <DialogTitle>Edit Service</DialogTitle>
           </DialogHeader>
 
           {crud.editItem && (
             <div className="grid gap-4">
+              <div>
+                <Label>Sequence</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={crud.editItem.BookingParameterValueServiceSequence ?? 0}
+                  onChange={(e) =>
+                    crud.setEditItem({
+                      ...crud.editItem,
+                      BookingParameterValueServiceSequence:
+                        parseInt(e.target.value, 10) || 0,
+                    })
+                  }
+                />
+              </div>
+
               <div>
                 <Label>Code</Label>
                 <Input
@@ -356,7 +414,7 @@ export default function StaffPage() {
 
           <div>
             <p>
-              Are you sure you want to delete staff <strong>{crud.deleteItem?.BookingParameterValueCode}</strong> (ID: {crud.deleteItem?.BookingParameterValueId})?
+              Are you sure you want to delete service <strong>{crud.deleteItem?.BookingParameterValueCode}</strong> (ID: {crud.deleteItem?.BookingParameterValueId})?
             </p>
           </div>
 
