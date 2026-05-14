@@ -216,7 +216,7 @@ export default function PublicBooking() {
           const serviceParameter = getServiceParameter();
           summary.service = {
             id: selectedService.BookingParameterValueId.toString(),
-            name: selectedService.BookingParamterValueDescription,
+            name: selectedService.BookingParameterValueDescription,
             duration: selectedService.BookingParameterValueDuration,
             code: selectedService.BookingParameterValueCode,
             sequence: selectedService.BookingParameterValueServiceSequence,
@@ -253,7 +253,7 @@ export default function PublicBooking() {
             summary.dynamicParameters.push({
               parameterId: param.BookingParameterId.toString(),
               parameterName: param.BookingParameterCode,
-              valueName: selectedValue.BookingParamterValueDescription,
+              valueName: selectedValue.BookingParameterValueDescription,
             });
           }
         }
@@ -879,7 +879,7 @@ const handleProceedWithBooking = (bookingData: any) => {
                         <Label key={service.BookingParameterValueId} htmlFor={`service-${service.BookingParameterValueId}`} className={`flex items-center p-3 border rounded-xl cursor-pointer transition-all duration-300 ${formData.service === service.BookingParameterValueId.toString() ? "border-blue-500 bg-blue-50 dark:bg-blue-950/50 dark:border-blue-800 shadow-inner" : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-400 dark:hover:border-blue-700 hover:bg-slate-50 dark:hover:bg-slate-800"}`}>
                           <RadioGroupItem value={service.BookingParameterValueId.toString()} id={`service-${service.BookingParameterValueId}`} className="text-blue-600" />
                           <div className="ml-3">
-                            <div className="font-medium text-slate-800 dark:text-slate-200">{service.BookingParamterValueDescription}</div>
+                            <div className="font-medium text-slate-800 dark:text-slate-200">{service.BookingParameterValueDescription}</div>
                             <div className="text-sm text-slate-500 dark:text-slate-400">{service.BookingParameterValueDuration} mins</div>
                           </div>
                         </Label>
@@ -934,7 +934,7 @@ const handleProceedWithBooking = (bookingData: any) => {
                               {parameter.BookingParameterValue.map((value) => (
                                 <Label key={value.BookingParameterValueId} htmlFor={`param-${parameter.BookingParameterId}-${value.BookingParameterValueId}`} className={`flex items-center p-3 border rounded-xl cursor-pointer transition-all duration-300 ${formData[parameter.BookingParameterId.toString()] === value.BookingParameterValueId.toString() ? "border-blue-500 bg-blue-50 dark:bg-blue-950/50 dark:border-blue-800 shadow-inner" : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-400 dark:hover:border-blue-700 hover:bg-slate-50 dark:hover:bg-slate-800"}`}>
                                   <RadioGroupItem value={value.BookingParameterValueId.toString()} id={`param-${parameter.BookingParameterId}-${value.BookingParameterValueId}`} className="text-blue-600" />
-                                  <div className="ml-3"><div className="font-medium text-slate-800 dark:text-slate-200">{value.BookingParamterValueDescription}</div></div>
+                                  <div className="ml-3"><div className="font-medium text-slate-800 dark:text-slate-200">{value.BookingParameterValueDescription}</div></div>
                                 </Label>
                               ))}
                             </div>

@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     const environment = process.env.ENVIRONMENT!;
     const company = process.env.COMPANY!;
 
-    const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_CreateBookingStaffTimeOff?Company=${encodeURIComponent(company)}`;
+    const url = `https://api.businesscentral.dynamics.com/v2.0/${tenantId}/${environment}/ODataV4/BookingAppointment_CreateBookingEntryStaffTimeOff?Company=${encodeURIComponent(company)}`;
 
 const res = await fetch(url, {
   method: "POST",

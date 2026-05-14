@@ -496,7 +496,7 @@ export default function BookingForm() {
           const serviceParameter = getServiceParameter();
           summary.service = {
             id: selectedService.BookingParameterValueId.toString(),
-            name: selectedService.BookingParamterValueDescription,
+            name: selectedService.BookingParameterValueDescription,
             duration: selectedService.BookingParameterValueDuration,
             code: selectedService.BookingParameterValueCode,
             parameterId: serviceParameter ? serviceParameter.BookingParameterId.toString() : '',
@@ -521,7 +521,7 @@ export default function BookingForm() {
             const staffParameter = getStaffParameter();
             summary.staff = {
               id: staffMatch.BookingParameterValueId.toString(),
-              name: staffMatch.BookingParamterValueDescription,
+              name: staffMatch.BookingParameterValueDescription,
               code: staffMatch.BookingParameterValueCode,
               parameterId: staffParameter ? staffParameter.BookingParameterId.toString() : '',
             };
@@ -549,7 +549,7 @@ export default function BookingForm() {
             summary.dynamicParameters.push({
               parameterId: param.BookingParameterId.toString(),
               parameterName: param.BookingParameterCode,
-              valueName: selectedValue.BookingParamterValueDescription,
+              valueName: selectedValue.BookingParameterValueDescription,
             });
           }
         }
@@ -1321,7 +1321,7 @@ export default function BookingForm() {
                           />
                           <div className="ml-3">
                             <div className="font-medium text-slate-800 dark:text-slate-200">
-                              {service.BookingParamterValueDescription}
+                              {service.BookingParameterValueDescription}
                             </div>
                             <div className="text-sm text-slate-500 dark:text-slate-400">
                               {service.BookingParameterValueDuration} mins
@@ -1376,7 +1376,7 @@ export default function BookingForm() {
                                 />
                                 <div className="ml-3">
                                   <div className="font-medium text-slate-800 dark:text-slate-200">
-                                    {staff.BookingParamterValueDescription}
+                                    {staff.BookingParameterValueDescription}
                                   </div>
                                 </div>
                               </Label>
@@ -1477,7 +1477,7 @@ export default function BookingForm() {
                                       <div className="ml-3">
                                         <div className="font-medium text-slate-800 dark:text-slate-200">
                                           {
-                                            value.BookingParamterValueDescription
+                                            value.BookingParameterValueDescription
                                           }
                                         </div>
                                       </div>

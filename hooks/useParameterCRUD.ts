@@ -25,7 +25,7 @@ export function useParameterCRUD({
   const [creatingSaving, setCreatingSaving] = useState(false);
   const [newItem, setNewItem] = useState({
     BookingParameterValueCode: "",
-    BookingParamterValueDescription: "",
+    BookingParameterValueDescription: "",
     BookingParameterValueDuration: 60,
     BookingParameterValueServiceSequence: 0,
   });
@@ -39,7 +39,7 @@ export function useParameterCRUD({
     setEditItem({
       BookingParameterValueId: item.BookingParameterValueId,
       BookingParameterValueCode: item.BookingParameterValueCode,
-      BookingParamterValueDescription: item.BookingParamterValueDescription,
+      BookingParameterValueDescription: item.BookingParameterValueDescription,
       BookingParameterValueDuration: item.BookingParameterValueDuration,
       BookingParameterValueServiceSequence:
         item.BookingParameterValueServiceSequence ?? 0,
@@ -58,7 +58,7 @@ export function useParameterCRUD({
         _BookingParameterId: parameterId,
         _BookingParameterValueId: String(editItem.BookingParameterValueId),
         _BookingParameterValueCode: editItem.BookingParameterValueCode,
-        _BookingParamenterValueDesc: editItem.BookingParamterValueDescription,
+        _BookingParamenterValueDesc: editItem.BookingParameterValueDescription,
         _BookingParameterValueDuration: String(
           editItem.BookingParameterValueDuration
         ),
@@ -102,7 +102,7 @@ export function useParameterCRUD({
         _BookingSetupCode: code,
         _BookingParameterId: parameterId,
         _BookingParameterValueCode: newItem.BookingParameterValueCode,
-        _BookingParameterValueDesc: newItem.BookingParamterValueDescription,
+        _BookingParameterValueDesc: newItem.BookingParameterValueDescription,
         _BookingParameterValueDuration: String(
           newItem.BookingParameterValueDuration
         ),
@@ -129,7 +129,7 @@ export function useParameterCRUD({
       setCreating(false);
       setNewItem({
         BookingParameterValueCode: "",
-        BookingParamterValueDescription: "",
+        BookingParameterValueDescription: "",
         BookingParameterValueDuration: 60,
         BookingParameterValueServiceSequence: 0,
       });

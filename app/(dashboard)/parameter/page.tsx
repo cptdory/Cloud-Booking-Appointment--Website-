@@ -90,7 +90,7 @@ export default function ParameterPage() {
                   {values.map((v) => (
                     <TableRow key={v.BookingParameterValueId}>
                       <TableCell>{v.BookingParameterValueCode}</TableCell>
-                      <TableCell>{v.BookingParamterValueDescription}</TableCell>
+                      <TableCell>{v.BookingParameterValueDescription}</TableCell>
                       {checkDuration === "true" && (
                         <TableCell>{v.BookingParameterValueDuration}</TableCell>
                       )}
@@ -143,11 +143,11 @@ export default function ParameterPage() {
               <Input
                 id="create-name"
                 placeholder="Name"
-                value={crud.newItem.BookingParamterValueDescription}
+                value={crud.newItem.BookingParameterValueDescription}
                 onChange={(e) =>
                   crud.setNewItem({
                     ...crud.newItem,
-                    BookingParamterValueDescription: e.target.value,
+                    BookingParameterValueDescription: e.target.value,
                   })
                 }
               />
@@ -208,11 +208,11 @@ export default function ParameterPage() {
                 <Input
                   id="edit-name"
                   placeholder="Name"
-                  value={crud.editItem.BookingParamterValueDescription}
+                  value={crud.editItem.BookingParameterValueDescription}
                   onChange={(e) =>
                     crud.setEditItem({
                       ...crud.editItem,
-                      BookingParamterValueDescription: e.target.value,
+                      BookingParameterValueDescription: e.target.value,
                     })
                   }
                 />
@@ -256,7 +256,7 @@ export default function ParameterPage() {
           {crud.deleteItem && (
             <div className="space-y-4">
               <p>
-                Are you sure you want to delete <strong>{crud.deleteItem.BookingParamterValueDescription}</strong>?
+                Are you sure you want to delete <strong>{crud.deleteItem.BookingParameterValueDescription}</strong>?
               </p>
               <p className="text-sm text-slate-500">This action cannot be undone.</p>
               <div className="flex justify-end gap-2">

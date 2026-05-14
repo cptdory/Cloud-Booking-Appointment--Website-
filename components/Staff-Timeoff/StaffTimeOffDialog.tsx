@@ -176,7 +176,7 @@ export default function StaffTimeOffDialog({
           if (userRole === "user" && filteredStaff.length > 0) {
             setSelectedStaffCode(filteredStaff[0].BookingParameterValueCode);
             setSelectedStaffName(
-              filteredStaff[0].BookingParamterValueDescription,
+              filteredStaff[0].BookingParameterValueDescription,
             );
           }
         } else {
@@ -389,7 +389,7 @@ export default function StaffTimeOffDialog({
                         key={staff.BookingParameterValueId}
                         value={staff.BookingParameterValueCode}
                       >
-                        {staff.BookingParamterValueDescription}
+                        {staff.BookingParameterValueDescription}
                       </SelectItem>
                     ))}
                   </SelectContent>

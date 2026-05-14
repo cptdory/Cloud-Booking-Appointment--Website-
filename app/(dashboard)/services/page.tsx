@@ -114,7 +114,7 @@ export default function StaffPage() {
 
     crud.setNewItem({
       BookingParameterValueCode: "",
-      BookingParamterValueDescription: "",
+      BookingParameterValueDescription: "",
       BookingParameterValueDuration: 60,
       BookingParameterValueServiceSequence: nextSequence,
     });
@@ -254,7 +254,7 @@ export default function StaffPage() {
                     <TableRow key={v.BookingParameterValueId} className="hover:bg-muted/50">
                       <TableCell>{v.BookingParameterValueServiceSequence ?? 0}</TableCell>
                       <TableCell className="font-medium">{v.BookingParameterValueCode}</TableCell>
-                      <TableCell>{v.BookingParamterValueDescription}</TableCell>
+                      <TableCell>{v.BookingParameterValueDescription}</TableCell>
 
                       {/* Only render action buttons when allowed */}
                       {canEdit && (
@@ -330,8 +330,8 @@ export default function StaffPage() {
             <div>
               <Label>Description</Label>
               <Input
-                value={crud.newItem.BookingParamterValueDescription}
-                onChange={(e) => crud.setNewItem({ ...crud.newItem, BookingParamterValueDescription: e.target.value })}
+                value={crud.newItem.BookingParameterValueDescription}
+                onChange={(e) => crud.setNewItem({ ...crud.newItem, BookingParameterValueDescription: e.target.value })}
               />
             </div>
 
@@ -385,8 +385,8 @@ export default function StaffPage() {
               <div>
                 <Label>Name</Label>
                 <Input
-                  value={crud.editItem.BookingParamterValueDescription}
-                  onChange={(e) => crud.setEditItem({ ...crud.editItem, BookingParamterValueDescription: e.target.value })}
+                  value={crud.editItem.BookingParameterValueDescription}
+                  onChange={(e) => crud.setEditItem({ ...crud.editItem, BookingParameterValueDescription: e.target.value })}
                 />
               </div>
 
@@ -453,7 +453,7 @@ export default function StaffPage() {
                 <SelectContent>
                   {staffList.map((s) => (
                     <SelectItem key={s.BookingParameterValueId} value={String(s.BookingParameterValueId)}>
-                      {s.BookingParameterValueCode} - {s.BookingParamterValueDescription}
+                      {s.BookingParameterValueCode} - {s.BookingParameterValueDescription}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -509,7 +509,7 @@ export default function StaffPage() {
                         <TableRow key={`${assignment.ServiceId}-${assignment.StaffId}`}>
                           <TableCell>{assignment.StaffId}</TableCell>
                           <TableCell className="font-medium">{assignment.StaffCode}</TableCell>
-                          <TableCell>{assignment.StaffName || staff?.BookingParamterValueDescription || "—"}</TableCell>
+                          <TableCell>{assignment.StaffName || staff?.BookingParameterValueDescription || "—"}</TableCell>
                           {/* Only render delete action when allowed */}
                           {canEdit && (
                             <TableCell className="text-right">

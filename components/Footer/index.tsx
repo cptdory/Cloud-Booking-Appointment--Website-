@@ -12,7 +12,7 @@ export default function Footer() {
   const logo = orgSetup?.Logo;
   const orgName = orgSetup?.Name;
   const FacebookLink = orgSetup?.FacebookLink;
-  const TweeterLink = orgSetup?.TweeterLink;
+  const TwitterLink = orgSetup?.TwitterLink;
   const YoutubeLink = orgSetup?.YoutubeLink;
   const LinkedinLink = orgSetup?.LinkedinLink;
   return (
@@ -82,8 +82,8 @@ export default function Footer() {
                 <Youtube size={20} />
               </Link>
             )}
-            {TweeterLink && TweeterLink.trim() !== "" && (
-              <Link target="_blank" href={TweeterLink} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            {TwitterLink && TwitterLink.trim() !== "" && (
+              <Link target="_blank" href={TwitterLink} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                 <Twitter size={20} />
               </Link>
             )}

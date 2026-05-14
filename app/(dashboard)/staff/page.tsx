@@ -382,7 +382,7 @@ export default function StaffPage() {
                   {values.map((v: any) => (
                     <TableRow key={v.BookingParameterValueId} className="hover:bg-muted/50">
                       <TableCell className="font-medium">{v.BookingParameterValueCode}</TableCell>
-                      <TableCell>{v.BookingParamterValueDescription}</TableCell>
+                      <TableCell>{v.BookingParameterValueDescription}</TableCell>
                       <TableCell>{getColorBadge(String(v.BookingParameterValueId))}</TableCell>
 
                       {/* Only render action buttons when allowed */}
@@ -443,8 +443,8 @@ export default function StaffPage() {
             <div>
               <Label>Name</Label>
               <Input
-                value={crud.newItem.BookingParamterValueDescription}
-                onChange={(e) => crud.setNewItem({ ...crud.newItem, BookingParamterValueDescription: e.target.value })}
+                value={crud.newItem.BookingParameterValueDescription}
+                onChange={(e) => crud.setNewItem({ ...crud.newItem, BookingParameterValueDescription: e.target.value })}
               />
             </div>
 
@@ -490,8 +490,8 @@ export default function StaffPage() {
               <div>
                 <Label>Name</Label>
                 <Input
-                  value={crud.editItem.BookingParamterValueDescription}
-                  onChange={(e) => crud.setEditItem({ ...crud.editItem, BookingParamterValueDescription: e.target.value })}
+                  value={crud.editItem.BookingParameterValueDescription}
+                  onChange={(e) => crud.setEditItem({ ...crud.editItem, BookingParameterValueDescription: e.target.value })}
                 />
               </div>
 
