@@ -57,7 +57,7 @@ export async function POST(req: Request) {
         _BookingParameterId: String(body._BookingParameterId),
         _BookingParameterValueId: String(body._BookingParameterValueId),
         _BookingParameterValueCode: String(body._BookingParameterValueCode),
-        _BookingParamenterValueDesc: body._BookingParamenterValueDesc,
+        _BookingParameterValueDesc: body._BookingParameterValueDesc,
         _BookingParameterValueDuration: String(body._BookingParameterValueDuration),
         _BookingParameterValueStaff: body._BookingParameterValueStaff ?? "No",
         _BookingParameterValueService: body._BookingParameterValueService ?? "Yes",

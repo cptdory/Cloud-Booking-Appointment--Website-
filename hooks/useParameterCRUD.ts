@@ -58,7 +58,7 @@ export function useParameterCRUD({
         _BookingParameterId: parameterId,
         _BookingParameterValueId: String(editItem.BookingParameterValueId),
         _BookingParameterValueCode: editItem.BookingParameterValueCode,
-        _BookingParamenterValueDesc: editItem.BookingParameterValueDescription,
+        _BookingParameterValueDesc: editItem.BookingParameterValueDescription,
         _BookingParameterValueDuration: String(
           editItem.BookingParameterValueDuration
         ),
