@@ -47,8 +47,8 @@
           return <BriefcaseBusiness />;
         case "STAFF":
           return <UserRound />;
-        case "ROOM":
-          return <DoorOpen />;
+        // case "ROOM":
+        //   return <DoorOpen />;
         default:
           return <HelpCircle />;
       }
@@ -67,12 +67,14 @@
         { name: "Book Now", url: "/book-now", icon: <ListCheckIcon /> },
       ];
 
-    const bookingParams =
-      bookingParameters?.[0]?.BookingParameter?.map((p) => ({
-        name: p.BookingParameterCode,
-        url: `/booking-parameter/${p.BookingParameterId}`,
-        icon: getBookingParameterIcon(p.BookingParameterCode),
-      })) ?? [];
+const bookingParams =
+  bookingParameters?.[0]?.BookingParameter
+    ?.slice(0, 2)
+    .map((p) => ({
+      name: p.BookingParameterCode,
+      url: `/booking-parameter/${p.BookingParameterId}`,
+      icon: getBookingParameterIcon(p.BookingParameterCode),
+    })) ?? [];
 
   const visibleBookingParams = isCustomerRole ? [] : bookingParams;
 

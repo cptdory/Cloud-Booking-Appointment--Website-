@@ -2,36 +2,49 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNextStep } from "nextstepjs";
-import { CheckCircle2, MapPin, Briefcase, Users, Calendar, User, Clock, Phone, Mail, FileText, RefreshCw, ChevronLeft, ChevronRight, X, ShieldCheck, Stethoscope, ArrowRight, Sparkles, Clock10Icon } from "lucide-react";
+import {
+  CheckCircle2, MapPin, Briefcase, Users, Calendar, User,
+  Clock, Phone, Mail, Home, FileText, RefreshCw,
+  ChevronDown, ChevronLeft, ChevronRight, X, ShieldCheck,
+  Stethoscope, ArrowRight, Sparkles, Clock10Icon
+} from "lucide-react";
 import { sileo } from "sileo";
 import { usePathname } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 // ─── Utilities ─────────────────────────────────────────────────────────────────
+
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60).toString().padStart(2, "0");
   const s = (seconds % 60).toString().padStart(2, "0");
   return `${m}:${s}`;
 }
+
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const DAY_LABELS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+
 const formatDurationLabel = (minutes: number) => {
   if (!minutes) return "";
   if (minutes < 60) return `${minutes} min`;
   if (minutes % 60 === 0) return `${minutes / 60} hr`;
   return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 };
+
 const formatPriceLabel = (value: number | string) => {
   const price = Number(value);
   if (Number.isNaN(price)) return "₱0.00";
   return `₱${price.toFixed(2)}`;
 };
+
 const Spinner = ({ size = 16 }: { size?: number }) => (
   <svg style={{ width: size, height: size }} className="animate-spin" viewBox="0 0 24 24" fill="none">
     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
   </svg>
 );
+
 // ─── Reusable form primitives ──────────────────────────────────────────────────
+
 const FieldInput = ({ icon: Icon, className = "", ...props }: { icon?: React.ComponentType<any>; className?: string;[key: string]: any }) => (
   <div className="relative">
     {Icon && <Icon size={14} strokeWidth={2} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />}
@@ -44,6 +57,7 @@ const FieldInput = ({ icon: Icon, className = "", ...props }: { icon?: React.Com
     />
   </div>
 );
+
 const FieldTextarea = ({ className = "", ...props }: { className?: string;[key: string]: any }) => (
   <textarea
     className={`w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white
@@ -53,10 +67,13 @@ const FieldTextarea = ({ className = "", ...props }: { className?: string;[key: 
     {...props}
   />
 );
+
 const FieldLabel = ({ children }: { children: React.ReactNode }) => (
   <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">{children}</label>
 );
+
 // ─── Step badge ────────────────────────────────────────────────────────────────
+
 function StepBadge({ number, done, active }: { number: number; done: boolean; active: boolean }) {
   if (done) return (
     <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
@@ -70,7 +87,9 @@ function StepBadge({ number, done, active }: { number: number; done: boolean; ac
     </div>
   );
 }
+
 // ─── Horizontal Setup Card (one of four across the top) ───────────────────────
+
 function HorizontalSetupCard({ step, currentStep, title, icon: Icon, children, id }: {
   step: number; currentStep: number; title: string; icon: React.ComponentType<any>; children: React.ReactNode; id?: string;
 }) {
@@ -95,18 +114,24 @@ function HorizontalSetupCard({ step, currentStep, title, icon: Icon, children, i
     </div>
   );
 }
+
 // ─── OTP Dialog ────────────────────────────────────────────────────────────────
+
 function OtpDialog({ open, email, loading, timeRemaining, otpValidityPeriod, canResend, onVerify, onResend, onClose }: { open: boolean; email: string; loading: boolean; timeRemaining: number; otpValidityPeriod: number; canResend: boolean; onVerify: (otp: string) => void; onResend: () => void; onClose: () => void }) {
   const [otp, setOtp] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (open) { setOtp(""); setTimeout(() => inputRef.current?.focus(), 80); }
   }, [open]);
+
   if (!open) return null;
+
   const totalSec = otpValidityPeriod * 60;
   const progress = totalSec > 0 ? (timeRemaining / totalSec) * 100 : 0;
   const isExpired = timeRemaining === 0;
   const isUrgent = timeRemaining <= 30 && !isExpired;
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm px-0 sm:px-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -157,7 +182,9 @@ function OtpDialog({ open, email, loading, timeRemaining, otpValidityPeriod, can
     </div>
   );
 }
+
 // ─── Confirm Dialog ────────────────────────────────────────────────────────────
+
 function ConfirmDialog({ open, onClose, onConfirm, loading, data }: { open: boolean; onClose: () => void; onConfirm: () => void; loading: boolean; data: any }) {
   if (!open) return null;
   const { branch, service, staff, date, time, name, email, phone, notes } = data;
@@ -168,6 +195,7 @@ function ConfirmDialog({ open, onClose, onConfirm, loading, data }: { open: bool
     { icon: Phone, label: "Phone", value: phone },
     { icon: FileText, label: "Notes", value: notes },
   ].filter((r) => Boolean(r.value));
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm px-0 sm:px-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -228,7 +256,8 @@ function ConfirmDialog({ open, onClose, onConfirm, loading, data }: { open: bool
               className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-sm font-bold rounded-2xl
                 transition-all shadow-lg shadow-blue-200 disabled:opacity-50 flex items-center justify-center gap-2">
               {loading
-                ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Booking…</> : <><CheckCircle2 size={15} strokeWidth={2.5} /> Confirm</>}
+                ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Booking…</>
+                : <><CheckCircle2 size={15} strokeWidth={2.5} /> Confirm</>}
             </button>
           </div>
         </div>
@@ -236,14 +265,16 @@ function ConfirmDialog({ open, onClose, onConfirm, loading, data }: { open: bool
     </div>
   );
 }
+
 // ─── Mobile progress ───────────────────────────────────────────────────────────
+
 function MobileProgress({ currentStep }: { currentStep: number }) {
-  const steps = ["Location", "Service", "Staff", "Date", "Time", "Details"];
+  const steps = ["Location", "Service", "Staff", "Room", "Date", "Time", "Details"];
   return (
     <div className="md:hidden bg-white border-b border-slate-100 px-4 py-3">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-bold text-slate-500">Step {Math.min(currentStep, 6)} of 6</span>
-        <span className="text-xs font-semibold text-blue-600">{steps[Math.min(currentStep, 6) - 1]}</span>
+        <span className="text-xs font-bold text-slate-500">Step {Math.min(currentStep, 7)} of 7</span>
+        <span className="text-xs font-semibold text-blue-600">{steps[Math.min(currentStep, 7) - 1]}</span>
       </div>
       <div className="flex gap-1">
         {steps.map((_, i) => (
@@ -253,23 +284,28 @@ function MobileProgress({ currentStep }: { currentStep: number }) {
     </div>
   );
 }
+
 // ─── Inline Timeslot Panel ─────────────────────────────────────────────────────
+
 function TimeslotPanel({ selectedDate, timeslots, loading, selectedTime, onSelectTime, currentStep }: {
   selectedDate: any; timeslots: any[]; loading: boolean; selectedTime: string; onSelectTime: (time: string) => void; currentStep: number;
 }) {
-  const slots = timeslots || [];
-  const selectedSlot = slots.find((ts: any) => ts.time === selectedTime) ?? null;
-  const selectedSlotWarning = Boolean(selectedSlot?.availability && !selectedSlot?.allowBooking);
+  const dateLabel = selectedDate
+    ? `${MONTH_NAMES[selectedDate.month]} ${selectedDate.day}, ${selectedDate.year}`
+    : null;
+  const availableSlots = (timeslots || []).filter((ts: any) => ts.availability === "Yes");
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
-        <StepBadge number={5} done={currentStep > 5} active={currentStep === 5} />
-        <Clock10Icon size={13} strokeWidth={2} className={currentStep >= 5 ? "text-blue-600" : "text-slate-400"} />
-        <span className={`text-[11px] font-bold uppercase tracking-wider ${currentStep >= 5 ? "text-blue-700" : "text-slate-400"}`}>Pick a Time</span>
-        {currentStep === 5 && <span className="ml-auto text-[9px] font-bold bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">Select</span>}
-        {currentStep > 5 && <CheckCircle2 size={11} className="ml-auto text-blue-500" strokeWidth={2.5} />}
+        <StepBadge number={6} done={currentStep > 6} active={currentStep === 6} />
+        <Clock10Icon size={13} strokeWidth={2} className={currentStep >= 6 ? "text-blue-600" : "text-slate-400"} />
+        <span className={`text-[11px] font-bold uppercase tracking-wider ${currentStep >= 6 ? "text-blue-700" : "text-slate-400"}`}>Pick a Time</span>
+        {currentStep === 6 && <span className="ml-auto text-[9px] font-bold bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">Select</span>}
+        {currentStep > 6 && <CheckCircle2 size={11} className="ml-auto text-blue-500" strokeWidth={2.5} />}
       </div>
+
       {/* Body */}
       <div className="flex-1 overflow-y-auto p-4">
         {!selectedDate ? (
@@ -287,35 +323,25 @@ function TimeslotPanel({ selectedDate, timeslots, loading, selectedTime, onSelec
               ))}
             </div>
           </div>
-        ) : timeslots.length === 0 ? (
+        ) : timeslots.length === 0 || availableSlots.length === 0 ? (
           <div className="flex flex-col items-center py-10 text-slate-400">
             <RefreshCw size={24} strokeWidth={1.5} className="mb-3 text-slate-300" />
             <p className="text-sm font-bold text-slate-500">No slots available</p>
-            <p className="text-[11px] text-slate-300 mt-1">No time slots were returned for this date.</p>
+            <p className="text-[11px] text-slate-300 mt-1">No available time slots for this date.</p>
           </div>
         ) : (
           <>
             <div className="grid grid-cols-4 gap-2">
-              {slots.map((ts: any) => {
+              {availableSlots.map((ts: any) => {
                 const isSelected = selectedTime === ts.time;
-                const isWarning = ts.availability === true && ts.allowBooking === false;
-                const isDisabled = ts.availability === false && ts.allowBooking === false;
                 return (
                   <button
                     key={ts.id}
-                    type="button"
-                    onClick={() => !isDisabled && onSelectTime(ts.time)}
-                    disabled={isDisabled}
+                    onClick={() => onSelectTime(ts.time)}
                     className={`py-3 px-2 rounded-xl text-xs font-bold text-center transition-all border
                       ${isSelected
-                        ? isWarning
-                          ? "bg-amber-400 border-amber-500 text-amber-950 shadow-md shadow-amber-200 scale-[1.02]"
-                          : "bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-200 scale-[1.02]"
-                        : isDisabled
-                          ? "bg-slate-100 border-slate-200 text-slate-300 cursor-not-allowed"
-                          : isWarning
-                            ? "bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100"
-                            : "bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50"
+                        ? "bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-200 scale-[1.02]"
+                        : "bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50"
                       }`}
                   >
                     {ts.time}
@@ -323,9 +349,11 @@ function TimeslotPanel({ selectedDate, timeslots, loading, selectedTime, onSelec
                 );
               })}
             </div>
-            {selectedSlotWarning && (
-              <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold">
-                The selected time slot does not have enough available time to accommodate the full duration of the selected service.
+
+            {selectedTime && (
+              <div className="mt-4 p-3 rounded-xl bg-blue-50 border border-blue-100 flex items-center gap-2">
+                <CheckCircle2 size={13} className="text-blue-600 shrink-0" strokeWidth={2.5} />
+                <span className="text-xs font-bold text-blue-700">{selectedTime} selected</span>
               </div>
             )}
           </>
@@ -334,36 +362,44 @@ function TimeslotPanel({ selectedDate, timeslots, loading, selectedTime, onSelec
     </div>
   );
 }
+
 // ─── Main ──────────────────────────────────────────────────────────────────────
+
 export default function App() {
   const tenantId = "9903ED01-A73C-4874-8ABF-D2678E3AE23D";
   const { startNextStep, setCurrentStep, closeNextStep, currentStep: tourStep, isNextStepVisible } = useNextStep();
+
   const [orgName, setOrgName] = useState<string>("");
-    const [headline, setHeadline] = useState("");
-  const [logo, setLogo] = useState<string>("");
   const [orgSetupLoading, setOrgSetupLoading] = useState<boolean>(true);
   const [otpValidityPeriod, setOtpValidityPeriod] = useState<number>(5);
+
   const [loadingBranches, setLoadingBranches] = useState<boolean>(false);
   const [loadingServices, setLoadingServices] = useState<boolean>(false);
   const [loadingStaff, setLoadingStaff] = useState<boolean>(false);
+  const [loadingRooms, setLoadingRooms] = useState<boolean>(false);
   const [loadingTimeslots, setLoadingTimeslots] = useState<boolean>(false);
   const [isBookingLoading, setIsBookingLoading] = useState<boolean>(false);
+
   const [branches, setBranches] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [assignedStaff, setAssignedStaff] = useState<any[]>([]);
+  const [rooms, setRooms] = useState<any[]>([]);
   const [timeslots, setTimeslots] = useState<any[]>([]);
+
   const [selectedBranch, setSelectedBranch] = useState<string>("");
   const [selectedService, setSelectedService] = useState<string>("");
   const [selectedStaff, setSelectedStaff] = useState<string>("");
-  const [noPreferenceStaff, setNoPreferenceStaff] = useState<boolean>(false);
+  const [selectedRoom, setSelectedRoom] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<any>(null);
   const [selectedTime, setSelectedTime] = useState<string>("");
+
   const [customerName, setCustomerName] = useState<string>("");
   const [customerEmail, setCustomerEmail] = useState<string>("");
   const [customerPhone, setCustomerPhone] = useState<string>("");
   const [customerAddress1, setCustomerAddress1] = useState<string>("");
   const [customerAddress2, setCustomerAddress2] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+
   const [otpDialogOpen, setOtpDialogOpen] = useState<boolean>(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState<boolean>(false);
   const [otpSendLoading, setOtpSendLoading] = useState<boolean>(false);
@@ -371,29 +407,33 @@ export default function App() {
   const [requestId, setRequestId] = useState<string>("");
   const [otpTimeRemaining, setOtpTimeRemaining] = useState<number>(0);
   const [canResend, setCanResend] = useState<boolean>(false);
+
   // Mobile tab state
   const [mobilePanel, setMobilePanel] = useState<string>("select");
+
   const [calendarDate, setCalendarDate] = useState<Date>(new Date());
   const today = new Date();
   const year = calendarDate.getFullYear();
   const month = calendarDate.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDay = new Date(year, month, 1).getDay();
+
   const selectedServiceObj = services.find((s) => s.id === selectedService) ?? null;
   const selectedStaffObj = assignedStaff.find((s) => s.staffId === selectedStaff) ?? null;
   const selectedBranchObj = branches.find((b) => b.code === selectedBranch) ?? null;
-  const selectedTimeslot = (timeslots || []).find((ts: any) => ts.time === selectedTime) ?? null;
-  const selectedTimeWarning = Boolean(selectedTimeslot?.availability && !selectedTimeslot?.allowBooking);
-  const isFormValid = customerName !== "" && customerEmail !== "" && selectedTime !== "" && !selectedTimeWarning;
+  const selectedRoomObj = rooms.find((r) => r.id === selectedRoom) ?? null;
+  const isFormValid = customerName !== "" && customerEmail !== "" && selectedTime !== "";
+
   const currentStep = !selectedBranch ? 1
     : !selectedService ? 2
-      : !selectedStaff && !noPreferenceStaff ? 3
-        : !selectedDate ? 4
-          : !selectedTime ? 5
-            : selectedTimeWarning ? 5 : 6;
+      : !selectedStaff ? 3
+        : !selectedRoom ? 4
+          : !selectedDate ? 5
+            : !selectedTime ? 6 : 7;
+
   useEffect(() => {
-    if (currentStep >= 4) setMobilePanel("schedule");
-    if (currentStep >= 6) setMobilePanel("details");
+    if (currentStep >= 5) setMobilePanel("schedule");
+    if (currentStep >= 7) setMobilePanel("details");
   }, [currentStep]);
   // ── Auto-start tour on page load ──────────────────────────────────────────
   useEffect(() => {
@@ -412,18 +452,18 @@ export default function App() {
     }, 1000);
     return () => clearInterval(iv);
   }, [otpDialogOpen, otpTimeRemaining]);
+
   // ── Fetchers ───────────────────────────────────────────────────────────────
   const fetchOrgSetup = async () => {
     try {
       const res = await fetch(`/api/booking-organization-setup?tenantId=${tenantId}`);
       const d = await res.json();
       setOrgName(d?.Name ?? "");
-      setLogo(d?.Logo ?? "");
       setOtpValidityPeriod(d?.OTPValidityPeriod ?? 5);
-      setHeadline(d?.Headline ?? "");
     } catch (_) { }
     finally { setOrgSetupLoading(false); }
   };
+
   const fetchBranches = async () => {
     try {
       setLoadingBranches(true);
@@ -433,6 +473,7 @@ export default function App() {
     } catch (_) { }
     finally { setLoadingBranches(false); }
   };
+
   const fetchServices = useCallback(async () => {
     if (!selectedBranch) return;
     try {
@@ -474,34 +515,52 @@ export default function App() {
     } catch (_) { }
     finally { setLoadingStaff(false); }
   }, [selectedBranch, selectedService]);
+
+  const fetchRooms = useCallback(async () => {
+    if (!selectedBranch) return;
+    try {
+      setLoadingRooms(true);
+      const res = await fetch(`/api/booking-branch-setup/get-booking-setup?code=${selectedBranch}`);
+      const d = await res.json();
+      const list = Array.isArray(d) ? d : [];
+      const p = list[0]?.BookingParameter?.find((x: any) => x.BookingParameterId === 3);
+      setRooms((p?.BookingParameterValue ?? []).map((r: any) => ({
+        id: String(r.BookingParameterValueId ?? ""),
+        code: String(r.BookingParameterValueCode ?? ""),
+        name: String(r.BookingParameterValueDescription ?? ""),
+      })));
+    } catch (_) { }
+    finally { setLoadingRooms(false); }
+  }, [selectedBranch]);
+
   const fetchTimeslots = useCallback(async () => {
     if (!selectedDate || !selectedBranch) return;
     try {
       setLoadingTimeslots(true);
-      const fullYear =
-        String(selectedDate.year).length === 2 ? `20${selectedDate.year}` : selectedDate.year;
-      const fmt = `${String(selectedDate.month + 1).padStart(2, "0")}/${String(selectedDate.day).padStart(2, "0")}/${fullYear}`;
-      const res = await fetch("/api/available-timeslot-v2/get-available-timeslot-v2", {
+      const fmt = `${String(selectedDate.month + 1).padStart(2, "0")}/${String(selectedDate.day).padStart(2, "0")}/${String(selectedDate.year).slice(-2)}`;
+      const res = await fetch("/api/available-timeslot/get-available-timeslot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          branchCode: selectedBranch,
+          bookingSetupCode: selectedBranch,
           bookingDate: fmt,
-          serviceId: selectedService,
-          staffId: noPreferenceStaff ? "" : selectedStaff,
+          bookingParameterCount: "3",
+          bookingParameterIDs: "1|2|3",
+          bookingParameterValueIDs: `${selectedStaff}|${selectedService}|${selectedRoom}`,
+          skipTimeSlotAvailabilityCheck: "false",
         }),
       });
       const d = await res.json();
-      console.log(d);
       setTimeslots((Array.isArray(d) ? d : []).map((sl: any) => ({
         id: String(sl.Id ?? ""),
         time: new Date(`1970-01-01T${sl.Time}`).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }),
-        availability: Boolean(sl.IsAvailable),
+        availability: String(sl.IsAvailable ?? "No"),
         allowBooking: Boolean(sl.AllowBooking),
       })));
     } catch (_) { }
     finally { setLoadingTimeslots(false); }
-  }, [selectedDate, selectedBranch, selectedStaff, selectedService, noPreferenceStaff]);
+  }, [selectedDate, selectedBranch, selectedStaff, selectedService, selectedRoom]);
+
   // ── OTP handlers ──────────────────────────────────────────────────────────
   const handleRequestOtp = async () => {
     if (!customerEmail) { sileo.error({ title: "Email is required", fill: "#171717" }); return; }
@@ -522,6 +581,7 @@ export default function App() {
       sileo.error({ title: e instanceof Error ? e.message : "Failed to send OTP", fill: "#171717" });
     } finally { setOtpSendLoading(false); }
   };
+
   const handleResendOtp = async () => {
     setCanResend(false);
     try {
@@ -540,6 +600,7 @@ export default function App() {
       setCanResend(true);
     }
   };
+
   const handleVerifyOtp = async (otp: string) => {
     if (!otp) { sileo.error({ title: "Please enter the OTP", fill: "#171717" }); return; }
     setVerifyLoading(true);
@@ -556,26 +617,27 @@ export default function App() {
       sileo.error({ title: e instanceof Error ? e.message : "OTP verification failed", fill: "#171717" });
     } finally { setVerifyLoading(false); }
   };
+
   const handleBooking = async () => {
-    if (!selectedDate || !selectedTime || selectedTimeWarning || !customerName || !customerEmail) return;
+    if (!selectedDate || !selectedTime || !customerName || !customerEmail) return;
     setIsBookingLoading(true);
     try {
       const fmt = `${String(selectedDate.month + 1).padStart(2, "0")}/${String(selectedDate.day).padStart(2, "0")}/${selectedDate.year}`;
-      const res = await fetch("/api/available-timeslot-v2/book-available-timeslot-v2", {
+      const res = await fetch("/api/available-timeslot/book-available-timeslot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          branchCode: selectedBranch,
+          bookingSetupCode: selectedBranch,
           bookingDate: fmt,
-          startTime: selectedTime,
-          serviceId: selectedService,
-          staffid: noPreferenceStaff ? "" : selectedStaff,
+          bookingStartTime: selectedTime,
+          bookingParameterCount: "3",
+          bookingParameterIDs: "1|2|3",
+          bookingParameterValueIDs: `${selectedStaff}|${selectedService}|${selectedRoom}`,
           bookingNote: notes,
           bookingEntryNo: "",
           customerNoOrEmailAdd: customerEmail,
           customerName,
           customerPhoneNo: customerPhone,
-          customerBirthDate: "",
           customerAddress1,
           customerAddress2,
           skipTimeSlotAvailabilityCheck: "false",
@@ -584,26 +646,33 @@ export default function App() {
       if (!res.ok) throw new Error("Booking failed");
       setConfirmDialogOpen(false);
       sileo.success({ title: "Booking confirmed successfully!", fill: "#171717" });
-      setSelectedBranch(""); setSelectedService(""); setSelectedStaff("");
+      setSelectedBranch(""); setSelectedService(""); setSelectedStaff(""); setSelectedRoom("");
       setSelectedDate(null); setSelectedTime("");
       setCustomerName(""); setCustomerEmail(""); setCustomerPhone("");
       setCustomerAddress1(""); setCustomerAddress2(""); setNotes("");
-      setNoPreferenceStaff(false); setRequestId(""); setMobilePanel("select");
+      setRequestId(""); setMobilePanel("select");
     } catch (e) {
       sileo.error({ title: e instanceof Error ? e.message : "Booking failed. Please try again.", fill: "#171717" });
     } finally { setIsBookingLoading(false); }
   };
+
   // ── Selection helpers ──────────────────────────────────────────────────────
   const sel = {
-    branch: (v: string) => { setSelectedBranch(v); setSelectedService(""); setSelectedStaff(""); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); setNoPreferenceStaff(false); },
-    service: (v: string) => { setSelectedService(v); setSelectedStaff(""); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); setNoPreferenceStaff(false); },
+    branch: (v: string) => { setSelectedBranch(v); setSelectedService(""); setSelectedStaff(""); setSelectedRoom(""); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); },
+    service: (v: string) => { setSelectedService(v); setSelectedStaff(""); setSelectedRoom(""); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); },
     staff: (v: string) => {
       setSelectedStaff(v);
-      setNoPreferenceStaff(false);
       setSelectedTime("");
       setTimeslots([]);
       // If user is already at/after date selection, keep the selected date and let the effect re-fetch timeslots.
-      if (currentStep < 4) setSelectedDate(null);
+      if (currentStep < 5) setSelectedDate(null);
+    },
+    room: (v: string) => {
+      setSelectedRoom(v);
+      setSelectedTime("");
+      setTimeslots([]);
+      // If user is already at/after date selection, keep the selected date and let the effect re-fetch timeslots.
+      if (currentStep < 5) setSelectedDate(null);
     },
     date: async (d: any) => {
       setSelectedDate(d);
@@ -616,18 +685,21 @@ export default function App() {
   useEffect(() => { fetchOrgSetup(); fetchBranches(); }, [pathname]);
   useEffect(() => { if (selectedBranch) fetchServices(); }, [selectedBranch, fetchServices]);
   useEffect(() => { if (selectedService && selectedBranch) fetchStaff(); }, [selectedService, selectedBranch, fetchStaff]);
+  useEffect(() => { if (selectedBranch) fetchRooms(); }, [selectedBranch, fetchRooms]);
   useEffect(() => {
-    if (selectedDate && selectedBranch && selectedService && (selectedStaff || noPreferenceStaff)) {
+    if (selectedDate && selectedBranch && selectedService && selectedStaff && selectedRoom) {
       fetchTimeslots();
     }
-  }, [selectedDate, selectedBranch, selectedStaff, selectedService, noPreferenceStaff, fetchTimeslots]);
-  // Auto-select today's date when user reaches the date step (4) and all other selections exist.
+  }, [selectedDate, selectedBranch, selectedStaff, selectedService, selectedRoom, fetchTimeslots]);
+
+  // Auto-select today's date when user reaches the date step (5) and all other selections exist.
   useEffect(() => {
-    if (currentStep >= 4 && !selectedDate && selectedBranch && selectedService && (selectedStaff || noPreferenceStaff)) {
+    if (currentStep >= 5 && !selectedDate && selectedBranch && selectedService && selectedStaff && selectedRoom) {
       const d = new Date();
       setSelectedDate({ day: d.getDate(), month: d.getMonth(), year: d.getFullYear() });
     }
-  }, [currentStep, selectedBranch, selectedService, selectedStaff, noPreferenceStaff, selectedDate]);
+  }, [currentStep, selectedBranch, selectedService, selectedStaff, selectedRoom, selectedDate]);
+
   // ── Auto-advance tour steps ────────────────────────────────────────────────
   useEffect(() => {
     if (!isNextStepVisible) return;
@@ -635,29 +707,33 @@ export default function App() {
       setCurrentStep(1);
     }
   }, [selectedBranch, tourStep, setCurrentStep, isNextStepVisible]);
+
   useEffect(() => {
     if (!isNextStepVisible) return;
     if (tourStep === 1 && selectedService) {
       setCurrentStep(2);
     }
   }, [selectedService, tourStep, setCurrentStep, isNextStepVisible]);
+
   useEffect(() => {
     if (!isNextStepVisible) return;
-    if (tourStep === 2 && (selectedStaff || noPreferenceStaff)) {
+    if (tourStep === 2 && selectedStaff) {
       setCurrentStep(3);
     }
-  }, [selectedStaff, noPreferenceStaff, tourStep, setCurrentStep, isNextStepVisible]);
+  }, [selectedStaff, tourStep, setCurrentStep, isNextStepVisible]);
+
   // ── Auto-close tour when all steps are completed ────────────────────────
   useEffect(() => {
     if (!isNextStepVisible) return;
-    if (tourStep === 3 && selectedDate) {
+    if (tourStep === 3 && selectedRoom) {
       // Close tour after a brief delay to show the final step
       const timer = setTimeout(() => {
         closeNextStep();
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [selectedDate, tourStep, closeNextStep, isNextStepVisible]);
+  }, [selectedRoom, tourStep, closeNextStep, isNextStepVisible]);
+
   const confirmData = {
     branch: selectedBranchObj?.description ?? selectedBranch,
     service: selectedServiceObj?.name ?? "",
@@ -669,198 +745,209 @@ export default function App() {
     phone: customerPhone,
     notes,
   };
-  const toImageSrc = (base64?: string) => {
-  if (!base64) return "";
-  if (base64.startsWith("data:image")) return base64;
-  return `data:image/png;base64,${base64}`;
-};
+
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-<header className="bg-white border-b border-slate-100 sticky top-0 z-40">
-  <div className="max-w-screen-xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-
-    {/* LEFT: Brand */}
-    <div className="flex items-center gap-3">
-
-      {/* Logo */}
-      <div className="shrink-0">
-        {logo ? (
-          <img
-            src={toImageSrc(logo)}
-            alt={orgName}
-            className="h-10 w-28 rounded-lg object-contain bg-primary-foreground/10 px-1"
-          />
-        ) : (
-          <div className="flex h-10 w-28 items-center justify-center rounded-lg bg-primary-foreground/20 text-primary-foreground font-bold text-lg">
-            {orgName?.[0] ?? ""}
+      <header className="bg-white border-b border-slate-100 sticky top-0 z-40">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+          {/* Left: Logo + org name */}
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-200">
+              <Stethoscope size={16} className="text-white" strokeWidth={2} />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-slate-800 leading-none">
+                {orgSetupLoading ? "Loading…" : orgName || "Bookufy"}
+              </div>
+              <div className="text-[10px] text-slate-400 font-medium">Online Booking</div>
+            </div>
           </div>
-        )}
-      </div>
-
-      {/* Text block */}
-      <div className="flex flex-col leading-tight">
-        {headline && (
-          <div className="text-[10px] sm:text-xs text-slate-400 truncate max-w-[180px] sm:max-w-none">
-            {headline}
+          <div>
+            {/* Desktop Tour */}
+            <button
+              onClick={() => startNextStep("bookingTour")}
+              className="hidden md:inline-flex px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors flex items-center gap-1.5"
+            >
+              <Sparkles size={12} strokeWidth={2} />
+              Tour
+            </button>
+            {/* Mobile Tour */}
+            <button
+              onClick={() => startNextStep("bookingTourMobile")}
+              className="inline-flex md:hidden px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors flex items-center gap-1.5"
+            >
+              <Sparkles size={12} strokeWidth={2} />
+              Tour
+            </button>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      </header>
 
-    {/* RIGHT: Actions */}
-    <div className="flex items-center gap-2">
-
-      {/* Desktop Tour */}
-      <button
-        onClick={() => startNextStep("bookingTour")}
-        className="hidden md:inline-flex px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors items-center gap-1.5"
-      >
-        <Sparkles size={12} strokeWidth={2} />
-        Tour
-      </button>
-
-      {/* Mobile Tour */}
-      <button
-        onClick={() => startNextStep("bookingTourMobile")}
-        className="inline-flex md:hidden px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors items-center gap-1.5"
-      >
-        <Sparkles size={12} strokeWidth={2} />
-        Tour
-      </button>
-    </div>
-  </div>
-</header>
       <MobileProgress currentStep={currentStep} />
+
       {/* ── DESKTOP LAYOUT ─────────────────────────────────────────────────── */}
       <div className="hidden md:flex flex-1 flex-col max-w-screen-xl mx-auto w-full px-6 py-6 gap-5">
+
         {/* ── Row 1: Horizontal setup cards (4 columns) ── */}
         <div>
           <div className="flex gap-4">
             {/* Location */}
             <HorizontalSetupCard id="location-card" step={1} currentStep={currentStep} title="Location" icon={MapPin}>
-              <div className="space-y-3">
-                <div className="relative">
-                  <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                    <MapPin size={14} strokeWidth={2} />
-                  </div>
-                  <Select value={selectedBranch || null} onValueChange={(value) => sel.branch(value ?? "")}>
-                    <SelectTrigger className="w-full pl-11" disabled={loadingBranches}>
-                      <SelectValue>
-                        {branches.find((b: any) => b.code === selectedBranch)?.description || (loadingBranches ? "Loading…" : "Choose branch")}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branches.map((branch: any) => (
-                        <SelectItem className="pl-11" key={branch.code} value={branch.code}>
-                          {branch.description}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className="relative">
+                <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                  <MapPin size={14} strokeWidth={2} />
                 </div>
-                {/* Address Placeholder */}
-                <div className="flex items-center justify-between px-3 py-2">
-                  <div className="text-xs text-slate-600 font-medium text-right">
-                    {selectedBranch ? "Address not available yet" : "Select a branch"}
-                  </div>
-                </div>
+                <Select value={selectedBranch || null} onValueChange={(value) => sel.branch(value ?? "")}>
+                  <SelectTrigger className="w-full pl-11" disabled={loadingBranches}>
+                    <SelectValue>
+                      {branches.find((b: any) => b.code === selectedBranch)?.description ||
+                        (loadingBranches ? "Loading…" : "Choose branch")}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((branch: any) => (
+                      <SelectItem className="pl-11" key={branch.code} value={branch.code}>
+                        {branch.description}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </HorizontalSetupCard>
+
             {/* Service */}
             <HorizontalSetupCard id="service-card" step={2} currentStep={currentStep} title="Service" icon={Briefcase}>
-              <div className="space-y-3">
-                <div className="relative">
-                  <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                    <Briefcase size={14} strokeWidth={2} />
-                  </div>
-                  <Select value={selectedService || null} onValueChange={(value) => sel.service(value ?? "")}>
-                    <SelectTrigger className="w-full pl-11" disabled={!selectedBranch || loadingServices} >
-                      <SelectValue>{services.find((s: any) => s.id === (selectedService ?? ""))?.name || (loadingServices ? "Loading…" : "Choose service")}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent id="service-viewport">
-                      {services.map((service: any) => (
-                        <SelectItem className="pl-11" key={service.id} value={service.id}>
-                          <div className="flex flex-col">
-                            <span className="text-sm">{service.name}</span>
+              <div className="relative">
+                <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                  <Briefcase size={14} strokeWidth={2} />
+                </div>
+                <Select
+                  value={selectedService || null}
+                  onValueChange={(value) => sel.service(value ?? "")}
+                >
+                  <SelectTrigger
+                    className="w-full pl-11"
+                    disabled={!selectedBranch || loadingServices}
+                  >
+                    <SelectValue>
+                      {(() => {
+                        const service = services.find(
+                          (s: any) => s.id === (selectedService ?? "")
+                        );
 
-                            <span className="text-[11px] text-slate-500">
-                              {service.duration} · {service.price}
+                        if (!service) {
+                          return loadingServices
+                            ? "Loading…"
+                            : "Choose service";
+                        }
+
+                        return (
+                          <div className="flex flex-col items-start text-left">
+                            <span>{service.name}</span>
+
+                            <span className="text-[10px] text-slate-500">
+                              {service.duration}
+
+                              {service.duration && service.price
+                                ? ` · ${service.price}`
+                                : service.price}
                             </span>
                           </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {/* Service Details */}
-                {selectedService && (() => {
-                  const service = services.find((s: any) => s.id === selectedService);
-                  if (!service) return null;
-                  return (
-                    <div className="flex items-center justify-between px-3 py-2">
-                      <div className="text-xs text-slate-600 font-medium">
-                        {service.duration} · {service.price}
-                      </div>
-                    </div>
-                  );
-                })()}
+                        );
+                      })()}
+                    </SelectValue>
+                  </SelectTrigger>
+
+                  <SelectContent id="service-viewport">
+                    {services.map((service: any) => (
+                      <SelectItem
+                        className="pl-11"
+                        key={service.id}
+                        value={service.id}
+                      >
+                        <div className="flex flex-col gap-0.5">
+                          <span>{service.name}</span>
+
+                          <span className="text-xs text-slate-500">
+                            {service.duration}
+
+                            {service.duration && service.price
+                              ? ` · ${service.price}`
+                              : service.price}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </HorizontalSetupCard>
+
             {/* Professional */}
             <HorizontalSetupCard id="professional-card" step={3} currentStep={currentStep} title="Professional" icon={Users}>
-              <div className="space-y-3">
-                <div className="relative">
-                  <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                    <User size={14} strokeWidth={2} />
-                  </div>
-                  <Select value={selectedStaff || null} onValueChange={(value) => sel.staff(value ?? "")}>
-                    <SelectTrigger className="w-full pl-11" disabled={!selectedService || loadingStaff}>
-                      <SelectValue>
-                        {assignedStaff.find((s: any) => s.staffId === selectedStaff)?.staffName ||
-                          (loadingStaff ? "Loading…" : "Choose staff")}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {assignedStaff.map((staff: any) => (
-                        <SelectItem className="pl-11" key={staff.staffId} value={staff.staffId}>
-                          {staff.staffName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className="relative">
+                <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                  <User size={14} strokeWidth={2} />
                 </div>
-                <label className="flex items-center justify-between px-3 py-2 cursor-pointer">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={noPreferenceStaff}
-                      onChange={(e) => {
-                        setNoPreferenceStaff(e.target.checked);
-                        if (e.target.checked) setSelectedStaff("");
-                      }}
-                      disabled={!selectedService}
-                      className="w-4 h-4 accent-blue-600 cursor-pointer"
-                    />
-                    <span className="text-xs text-slate-600">No Preference</span>
-                  </div>
-                </label>
+                <Select value={selectedStaff || null} onValueChange={(value) => sel.staff(value ?? "")}>
+                  <SelectTrigger className="w-full pl-11" disabled={!selectedService || loadingStaff}>
+                    <SelectValue>
+                      {assignedStaff.find((s: any) => s.staffId === selectedStaff)?.staffName ||
+                        (loadingStaff ? "Loading…" : "Choose staff")}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assignedStaff.map((staff: any) => (
+                      <SelectItem className="pl-11" key={staff.staffId} value={staff.staffId}>
+                        {staff.staffName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </HorizontalSetupCard>
+
+            {/* Room */}
+            <HorizontalSetupCard id="room-card" step={4} currentStep={currentStep} title="Room / Facility" icon={Home}>
+              <div className="relative">
+                <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                  <Home size={14} strokeWidth={2} />
+                </div>
+                <Select value={selectedRoom || null} onValueChange={(value) => sel.room(value ?? "")}>
+                  <SelectTrigger className="w-full pl-11" disabled={!selectedStaff || loadingRooms}>
+                    <SelectValue>
+                      {rooms.find((r: any) => r.id === selectedRoom)?.name ||
+                        (loadingRooms ? "Loading…" : "Choose room")}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rooms.map((room: any) => (
+                      <SelectItem className="pl-11" key={room.id} value={room.id}>
+                        {room.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </HorizontalSetupCard>
           </div>
         </div>
+
         {/* ── Row 2: Calendar + Timeslots | Details ── */}
         <div className="flex gap-5 flex-1 min-h-0">
+
           {/* Left: Calendar + Timeslots side by side */}
           <div className="flex-1 flex gap-4 min-h-0 items-stretch">
+
             {/* Calendar */}
-            <div className={`flex-1 min-h-[32rem] max-h-[32rem] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-opacity ${!selectedStaff && !noPreferenceStaff ? "opacity-40 pointer-events-none" : ""}`}>
+            <div className={`flex-1 min-h-[32rem] max-h-[32rem] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-opacity ${!selectedRoom ? "opacity-40 pointer-events-none" : ""}`}>
               <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
-                <StepBadge number={4} done={currentStep > 4} active={currentStep === 4} />
-                <Calendar size={13} strokeWidth={2} className={currentStep >= 4 ? "text-blue-600" : "text-slate-400"} />
-                <span className={`text-[11px] font-bold uppercase tracking-wider ${currentStep >= 4 ? "text-blue-700" : "text-slate-400"}`}>
+                <StepBadge number={5} done={currentStep > 5} active={currentStep === 5} />
+                <Calendar size={13} strokeWidth={2} className={currentStep >= 5 ? "text-blue-600" : "text-slate-400"} />
+                <span className={`text-[11px] font-bold uppercase tracking-wider ${currentStep >= 5 ? "text-blue-700" : "text-slate-400"}`}>
                   Pick a Date
                 </span>
                 {currentStep === 5 && <span className="ml-auto text-[9px] font-bold bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">Select</span>}
@@ -895,7 +982,7 @@ export default function App() {
                     return (
                       <button
                         key={day}
-                        disabled={isPast || (!selectedStaff && !noPreferenceStaff)}
+                        disabled={isPast || !selectedRoom}
                         onClick={() => sel.date({ day, month, year })}
                         className={`aspect-square flex items-center justify-center text-xs rounded-xl transition-all relative
                           ${isPast ? "text-slate-200 cursor-not-allowed" : "hover:bg-blue-50 hover:text-blue-600"}
@@ -909,10 +996,13 @@ export default function App() {
                     );
                   })}
                 </div>
+
+
               </div>
             </div>
+
             {/* Timeslots Panel — inline beside calendar */}
-            <div className={`flex-1 min-h-[32rem] max-h-[32rem] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-opacity ${!selectedStaff && !noPreferenceStaff ? "opacity-40 pointer-events-none" : ""}`}>
+            <div className={`flex-1 min-h-[32rem] max-h-[32rem] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-opacity ${!selectedRoom ? "opacity-40 pointer-events-none" : ""}`}>
               <TimeslotPanel
                 selectedDate={selectedDate}
                 timeslots={timeslots}
@@ -927,10 +1017,10 @@ export default function App() {
           {/* Right: Your Details */}
           <div className="w-80 shrink-0 flex flex-col gap-4 overflow-y-auto pb-2">
 
-            <div className={`transition-opacity ${(!selectedTime || selectedTimeWarning) ? "opacity-40 pointer-events-none" : ""}`}>
+            <div className={`transition-opacity ${!selectedTime ? "opacity-40 pointer-events-none" : ""}`}>
               <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
-                  <StepBadge number={6} done={false} active={currentStep === 6} />
+                  <StepBadge number={7} done={false} active={currentStep === 7} />
                   <User size={13} strokeWidth={2} className="text-blue-600" />
                   <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Personal Details</span>
                 </div>
@@ -974,20 +1064,18 @@ export default function App() {
 
               {!isFormValid && (
                 <p className="text-[11px] text-slate-400 text-center mt-2">
-                  {!selectedTime
-                    ? "Select a date and time slot to continue"
-                    : selectedTimeWarning
-                      ? "Selected slot cannot be booked. Choose another time."
-                      : "Full name and email are required"
-                  }
+                  {!selectedTime ? "Select a date and time slot to continue" : "Full name and email are required"}
                 </p>
               )}
             </div>
           </div>
         </div>
       </div>
+
       {/* ── MOBILE LAYOUT ──────────────────────────────────────────────────── */}
       <div className="md:hidden flex-1 flex flex-col">
+
+
         <div className="flex border-b border-slate-100 bg-white top-[104px] z-30">
           {[
             { id: "select", label: "Setup", done: currentStep > 4 },
@@ -1003,6 +1091,7 @@ export default function App() {
             </button>
           ))}
         </div>
+
         <div className="flex-1 overflow-y-auto px-4 py-5 pb-8">
           {/* Mobile: Setup tab — vertical cards */}
           {mobilePanel === "select" && (
@@ -1045,10 +1134,13 @@ export default function App() {
                               const service = services.find(
                                 (s: any) => s.id === (selectedService ?? "")
                               );
+
                               if (!service) {
                                 return loadingServices
-                                  ? "Loading…" : "Choose service";
+                                  ? "Loading…"
+                                  : "Choose service";
                               }
+
                               return (
                                 <div className="flex flex-col items-start text-left">
                                   <span>{service.name}</span>
@@ -1057,7 +1149,8 @@ export default function App() {
                                     {service.duration}
 
                                     {service.duration && service.price
-                                      ? ` · ${service.price}` : service.price}
+                                      ? ` · ${service.price}`
+                                      : service.price}
                                   </span>
                                 </div>
                               );
@@ -1082,40 +1175,49 @@ export default function App() {
                 },
                 {
                   step: 3, title: "Professional", icon: Users, cardId: "mobile-professional-card", content: (
-                    <div className="space-y-3">
-                      <div className="relative">
-                        <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                          <User size={14} strokeWidth={2} />
-                        </div>
-                        <Select value={selectedStaff || null} onValueChange={(value) => sel.staff(value ?? "")}>
-                          <SelectTrigger className="w-full pl-11" disabled={!selectedService || loadingStaff}>
-                            <SelectValue>
-                              {assignedStaff.find((s: any) => s.staffId === selectedStaff)?.staffName ||
-                                (loadingStaff ? "Loading…" : "Choose staff")}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {assignedStaff.map((staff: any) => (
-                              <SelectItem className="pl-11" key={staff.staffId} value={staff.staffId}>
-                                {staff.staffName}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                    <div className="relative">
+                      <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                        <User size={14} strokeWidth={2} />
                       </div>
-                      <label className="flex items-center gap-2.5 cursor-pointer px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={noPreferenceStaff}
-                          onChange={(e) => {
-                            setNoPreferenceStaff(e.target.checked);
-                            if (e.target.checked) setSelectedStaff("");
-                          }}
-                          disabled={!selectedService}
-                          className="w-4 h-4 rounded border-slate-300 cursor-pointer"
-                        />
-                        <span className="text-sm font-medium text-slate-700">No Preference</span>
-                      </label>
+                      <Select value={selectedStaff || null} onValueChange={(value) => sel.staff(value ?? "")}>
+                        <SelectTrigger className="w-full pl-11" disabled={!selectedService || loadingStaff}>
+                          <SelectValue>
+                            {assignedStaff.find((s: any) => s.staffId === selectedStaff)?.staffName ||
+                              (loadingStaff ? "Loading…" : "Choose staff")}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {assignedStaff.map((staff: any) => (
+                            <SelectItem className="pl-11" key={staff.staffId} value={staff.staffId}>
+                              {staff.staffName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )
+                },
+                {
+                  step: 4, title: "Room / Facility", icon: Home, cardId: "mobile-room-card", content: (
+                    <div className="relative">
+                      <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                        <Home size={14} strokeWidth={2} />
+                      </div>
+                      <Select value={selectedRoom || null} onValueChange={(value) => sel.room(value ?? "")}>
+                        <SelectTrigger className="w-full pl-11" disabled={!selectedStaff || loadingRooms}>
+                          <SelectValue>
+                            {rooms.find((r: any) => r.id === selectedRoom)?.name ||
+                              (loadingRooms ? "Loading…" : "Choose room")}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {rooms.map((room: any) => (
+                            <SelectItem className="pl-11" key={room.id} value={room.id}>
+                              {room.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   )
                 },
@@ -1126,13 +1228,14 @@ export default function App() {
               ))}
             </div>
           )}
+
           {/* Mobile: Schedule tab — calendar + timeslots stacked */}
           {mobilePanel === "schedule" && (
-            <div className={`space-y-4 ${!selectedStaff && !noPreferenceStaff ? "opacity-40 pointer-events-none" : ""}`}>
+            <div className={`space-y-4 ${!selectedRoom ? "opacity-40 pointer-events-none" : ""}`}>
               {/* Calendar */}
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
-                  <StepBadge number={4} done={currentStep > 4} active={currentStep === 4} />
+                  <StepBadge number={5} done={currentStep > 5} active={currentStep === 5} />
                   <Calendar size={13} strokeWidth={2} className="text-blue-600" />
                   <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Pick a Date</span>
                 </div>
@@ -1153,7 +1256,7 @@ export default function App() {
                       const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
                       const isSel = selectedDate?.day === day && selectedDate?.month === month && selectedDate?.year === year;
                       return (
-                        <button key={day} disabled={isPast || (!selectedStaff && !noPreferenceStaff)} onClick={() => sel.date({ day, month, year })}
+                        <button key={day} disabled={isPast || !selectedRoom} onClick={() => sel.date({ day, month, year })}
                           className={`aspect-square flex items-center justify-center text-xs rounded-xl transition-all
                             ${isPast ? "text-slate-200 cursor-not-allowed" : "hover:bg-blue-50 hover:text-blue-600"}
                             ${isSel ? "!bg-blue-600 !text-white font-bold shadow-md shadow-blue-200" : ""}
@@ -1165,6 +1268,7 @@ export default function App() {
                   </div>
                 </div>
               </div>
+
               {/* Timeslots panel on mobile — full width below calendar */}
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden min-h-[200px] flex flex-col">
                 <TimeslotPanel
@@ -1178,31 +1282,42 @@ export default function App() {
               </div>
             </div>
           )}
+
           {/* Mobile: Details tab */}
           {mobilePanel === "details" && (
-            <div className={`space-y-4 ${(!selectedTime || selectedTimeWarning) ? "opacity-40 pointer-events-none" : ""}`}>
+            <div className={`space-y-4 ${!selectedTime ? "opacity-40 pointer-events-none" : ""}`}>
               {(selectedTime && selectedDate) && (
                 <div className="rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 p-4 text-white">
+
                   <div className="flex items-center gap-1.5 text-blue-200 text-[10px] font-bold uppercase tracking-wider mb-2">
                     <Sparkles size={10} /> Booking Summary
                   </div>
+
                   <div className="flex flex-wrap gap-2">
                     <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1.5 rounded-lg text-sm font-bold">
                       <MapPin size={13} strokeWidth={2} />
                       {selectedBranchObj?.description ?? selectedBranch ?? "—"}
                     </div>
+
                     <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1.5 rounded-lg text-sm font-bold">
                       <Briefcase size={13} strokeWidth={2} />
                       {selectedServiceObj?.name ?? "—"}
                     </div>
+
                     <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1.5 rounded-lg text-sm font-bold">
                       <User size={13} strokeWidth={2} />
                       {selectedStaffObj?.staffName ?? selectedStaffObj?.staffCode ?? selectedStaff ?? "—"}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1.5 rounded-lg text-sm font-bold">
+                      <Home size={13} strokeWidth={2} />
+                      {selectedRoomObj?.name ?? selectedRoom ?? "—"}
                     </div>
                     <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1.5 rounded-lg text-sm font-bold">
                       <Calendar size={13} strokeWidth={2} />
                       {MONTH_NAMES[selectedDate.month]} {selectedDate.day}, {selectedDate.year}
                     </div>
+
                     <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1.5 rounded-lg text-sm font-bold">
                       <Clock size={13} strokeWidth={2} />
                       {selectedTime}
@@ -1212,7 +1327,7 @@ export default function App() {
               )}
               <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
-                  <StepBadge number={6} done={false} active={currentStep === 6} />
+                  <StepBadge number={7} done={false} active={currentStep === 7} />
                   <User size={13} strokeWidth={2} className="text-blue-600" />
                   <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Personal Details</span>
                 </div>
@@ -1228,10 +1343,11 @@ export default function App() {
                   transition-all shadow-xl shadow-blue-200 disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-2.5">
                 {otpSendLoading ? <><Spinner size={18} /> Sending code…</> : <><ShieldCheck size={18} strokeWidth={2.5} /> Book Appointment</>}
               </button>
-              {!isFormValid && <p className="text-[11px] text-slate-400 text-center">{!selectedTime ? "Select a date and time slot to continue" : selectedTimeWarning ? "Selected slot cannot be booked. Choose another time." : "Full name and email are required"}</p>}
+              {!isFormValid && <p className="text-[11px] text-slate-400 text-center">{!selectedTime ? "Select a date and time slot to continue" : "Full name and email are required"}</p>}
             </div>
           )}
         </div>
+
         {/* Mobile bottom CTA */}
         {mobilePanel !== "details" && currentStep > 1 && (
           <div className="sticky bottom-0 bg-white border-t border-slate-100 px-4 py-3">
@@ -1241,7 +1357,7 @@ export default function App() {
                 Choose Date & Time <ArrowRight size={15} />
               </button>
             )}
-            {mobilePanel === "schedule" && currentStep >= 6 && (
+            {mobilePanel === "schedule" && currentStep >= 7 && (
               <button onClick={() => setMobilePanel("details")}
                 className="w-full py-3 bg-blue-600 text-white font-bold text-sm rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-blue-200">
                 Fill in Details <ArrowRight size={15} />
@@ -1250,9 +1366,11 @@ export default function App() {
           </div>
         )}
       </div>
+
       {/* ── OTP Dialog ──────────────────────────────────────────────────────── */}
       <OtpDialog open={otpDialogOpen} email={customerEmail} loading={verifyLoading} timeRemaining={otpTimeRemaining}
         otpValidityPeriod={otpValidityPeriod} canResend={canResend} onVerify={handleVerifyOtp} onResend={handleResendOtp} onClose={() => setOtpDialogOpen(false)} />
+
       {/* ── Confirm Dialog ──────────────────────────────────────────────────── */}
       <ConfirmDialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)} onConfirm={handleBooking} loading={isBookingLoading} data={confirmData} />
     </div>
