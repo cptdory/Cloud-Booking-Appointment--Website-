@@ -543,7 +543,7 @@ export default function CalendarPage() {
                             type="checkbox"
                             checked={selectedStatuses.includes(s)}
                             onChange={() => handleStatusToggle(s)}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            className="rounded border-gray-300 accent-blue-600 cursor-pointer focus:ring-blue-500"
                           />
                           {s}
                         </label>
@@ -559,7 +559,7 @@ export default function CalendarPage() {
                   type="checkbox"
                   checked={hideTimeOff}
                   onChange={(e) => setHideTimeOff(e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                  className="rounded border-gray-300 accent-blue-600 cursor-pointer focus:ring-2 focus:ring-blue-500"
                 />
                 Hide Time Off
               </label>
@@ -875,7 +875,7 @@ export default function CalendarPage() {
                   checked={timeOffForm.singleDay}
                   disabled={isEditMode}
                   onChange={(e) => !isEditMode && handleTimeOffFormChange("singleDay", e.target.checked)}
-                  className={`rounded border-blue-200 focus:ring-2 focus:ring-blue-500 ${isEditMode ? "opacity-50 cursor-not-allowed" : ""
+                  className={`rounded accent-blue-600 cursor-pointer ${isEditMode ? "opacity-50 cursor-not-allowed" : ""
                     }`}
                 />
                 Single Day
@@ -885,7 +885,7 @@ export default function CalendarPage() {
                   type="checkbox"
                   checked={timeOffForm.wholeDay}
                   onChange={(e) => handleTimeOffFormChange("wholeDay", e.target.checked)}
-                  className="rounded border-blue-200 focus:ring-2 focus:ring-blue-500"
+                  className="rounded accent-blue-600 cursor-pointer"
                 />
                 Whole Day
               </label>

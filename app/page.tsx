@@ -2,10 +2,17 @@
 
 import Link from "next/link";
 import { ArrowRight, Clock, Sparkles } from "lucide-react";
-
-const BUSINESS_ID = "9903ED01-A73C-4874-8ABF-D2678E3AE23D";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Welcome() {
+    const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/login");
+  }, [router]);
+
+  return null;
   return (
     <main className="relative min-h-screen overflow-hidden"
       style={{
@@ -13,7 +20,6 @@ export default function Welcome() {
         color: "var(--text)",
       }}
     >
-
       {/* Background blobs */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div
