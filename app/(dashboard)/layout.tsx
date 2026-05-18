@@ -1,0 +1,59 @@
+import { AppSidebar } from "@/components/app-sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { cookies } from "next/headers";
+
+async function getBookingParameters() {
+  try {
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore.toString();
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/booking-branch-setup/get-booking-setup`,
+      { cache: "force-cache", headers: { Cookie: cookieHeader } }
+    );
+    if (!res.ok) return [];
+    return res.json();
+  } catch (err) {
+    console.error("Failed to fetch booking parameters:", err);
+    return [];
+  }
+}
+
+async function getSession() {
+  try {
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore.toString();
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/me`,
+      { cache: "no-store", headers: { Cookie: cookieHeader } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.user ?? null;
+  } catch (err) {
+    console.error("Failed to fetch session:", err);
+    return null;
+  }
+}
+
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [bookingParameters, sessionUser] = await Promise.all([
+    getBookingParameters(),
+    getSession(),
+  ]);
+
+  return (
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full">
+        <AppSidebar
+          bookingParameters={bookingParameters}
+          sessionUser={sessionUser}
+        />
+        <div className="flex-1">{children}</div>
+      </div>
+    </SidebarProvider>
+  );
+}
