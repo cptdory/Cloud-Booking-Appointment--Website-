@@ -371,6 +371,7 @@ export default function BookNowPage() {
   const [loadingServices, setLoadingServices] = useState(false);
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [loadingTimeslots, setLoadingTimeslots] = useState(false);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
 
   // ── Data ───────────────────────────────────────────────────────────────────
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -378,7 +379,6 @@ export default function BookNowPage() {
   const [assignedStaff, setAssignedStaff] = useState<Staff[]>([]);
   const [timeslots, setTimeslots] = useState<Timeslot[]>([]);
   const [customerList, setCustomerList] = useState<CustomerData[]>([]);
-  const [customerSearch, setCustomerSearch] = useState("");
 
   // ── Selections ─────────────────────────────────────────────────────────────
   const [selectedBranch, setSelectedBranch] = useState("");
@@ -448,11 +448,6 @@ export default function BookNowPage() {
       : !isCustomerRole
         ? (isNewCustomer ? true : selectedCustomer !== null)
         : true);
-  // Filtered customer list
-  const filteredCustomers = customerList.filter(c =>
-    c.Name.toLowerCase().includes(customerSearch.toLowerCase()) ||
-    (c.EMail ?? "").toLowerCase().includes(customerSearch.toLowerCase())
-  );
 
   const pathname = usePathname();
 
@@ -580,13 +575,14 @@ export default function BookNowPage() {
   const fetchCustomers = async () => {
     if (isCustomerRole) return;
     try {
+      setLoadingCustomers(true);
       const res = await fetch("/api/customer/get-customers");
       const d = await res.json();
       setCustomerList((Array.isArray(d) ? d : []).map((c: any) => ({
         CustomerNo: c.CustomerNo, Name: c.Name, Name2: c.Name2,
         PhoneNo: c.PhoneNo, EMail: c.EMail, Address: c.Address, Address2: c.Address2,
       })));
-    } catch (_) { }
+    } catch (_) { } finally { setLoadingCustomers(false); }
   };
 
   const loadRescheduleData = async (entryNo: string) => {
@@ -806,19 +802,23 @@ export default function BookNowPage() {
           </label>
           {!isNewCustomer ? (
             <div className="space-y-2">
-              <FieldInput icon={undefined}
-                placeholder="Search customer…"
-                value={customerSearch}
-                onChange={(e: any) => setCustomerSearch(e.target.value)} />
-              <div className="max-h-44 overflow-y-auto space-y-1.5 pr-0.5">
-                {loadingBranches ? (
-                  [1, 2, 3].map(i => <Skeleton key={i} className="h-12 rounded-xl" />)
-                ) : filteredCustomers.length === 0 ? (
-                  <p className="text-xs text-slate-400 text-center py-4">No customers found</p>
-                ) : filteredCustomers.map(c => (
-                  <CustomerCard key={c.CustomerNo} selected={selectedCustomer?.CustomerNo === c.CustomerNo} onClick={() => setSelectedCustomer(c)} customer={c} />
+              <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">Select customer</label>
+              <select
+                value={selectedCustomer?.CustomerNo ?? ""}
+                onChange={(e) => {
+                  const customer = customerList.find((c) => c.CustomerNo === e.target.value) || null;
+                  setSelectedCustomer(customer);
+                }}
+                disabled={customerList.length === 0 && !loadingCustomers}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-100"
+              >
+                <option value="">{loadingCustomers ? "Loading…" : "Choose an existing customer"}</option>
+                {customerList.map((c) => (
+                  <option key={c.CustomerNo} value={c.CustomerNo}>
+                    {c.Name}{c.EMail ? ` — ${c.EMail}` : c.PhoneNo ? ` — ${c.PhoneNo}` : ""}
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
           ) : (
             <div className="space-y-2.5">
