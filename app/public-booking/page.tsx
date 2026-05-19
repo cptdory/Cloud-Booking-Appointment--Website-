@@ -338,7 +338,7 @@ export default function App() {
   const tenantId = "9903ED01-A73C-4874-8ABF-D2678E3AE23D";
   const { startNextStep, setCurrentStep, closeNextStep, currentStep: tourStep, isNextStepVisible } = useNextStep();
   const [orgName, setOrgName] = useState<string>("");
-    const [headline, setHeadline] = useState("");
+  const [headline, setHeadline] = useState("");
   const [logo, setLogo] = useState<string>("");
   const [orgSetupLoading, setOrgSetupLoading] = useState<boolean>(true);
   const [otpValidityPeriod, setOtpValidityPeriod] = useState<number>(5);
@@ -428,10 +428,13 @@ export default function App() {
       setLoadingBranches(true);
       const res = await fetch("/api/booking-branch-setup/get-booking-setup-list");
       const d = await res.json();
-      setBranches((Array.isArray(d) ? d : []).map((b) => ({ code: String(b.Code ?? ""), description: String(b.Description ?? "") })));
+      setBranches((Array.isArray(d) ? d : []).map((b) => ({ code: String(b.Code ?? ""), description: String(b.Description ?? ""), address: String(b.Address ?? "") })));
     } catch (_) { }
     finally { setLoadingBranches(false); }
   };
+  const selectedBranchData = branches.find(
+    (b: any) => b.code === selectedBranch
+  );
   const fetchServices = useCallback(async () => {
     if (!selectedBranch) return;
     try {
@@ -677,51 +680,51 @@ export default function App() {
     notes,
   };
   const toImageSrc = (base64?: string) => {
-  if (!base64) return "";
-  if (base64.startsWith("data:image")) return base64;
-  return `data:image/png;base64,${base64}`;
-};
+    if (!base64) return "";
+    if (base64.startsWith("data:image")) return base64;
+    return `data:image/png;base64,${base64}`;
+  };
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-<header className="bg-white border-b border-slate-100 sticky top-0 z-40">
-  <div className="max-w-screen-xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+      <header className="bg-white border-b border-slate-100 sticky top-0 z-40">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
 
-    {/* LEFT: Brand */}
-    <div className="flex items-center gap-3">
+          {/* LEFT: Brand */}
+          <div className="flex items-center gap-3">
 
-      {/* Logo */}
-      <div className="shrink-0">
-        {logo ? (
-          <img
-            src={toImageSrc(logo)}
-            alt={orgName}
-            className="h-10 w-28 rounded-lg object-contain bg-primary-foreground/10 px-1"
-          />
-        ) : (
-          <div className="flex h-10 w-28 items-center justify-center rounded-lg bg-primary-foreground/20 text-primary-foreground font-bold text-lg">
-            {orgName?.[0] ?? ""}
+            {/* Logo */}
+            <div className="shrink-0">
+              {logo ? (
+                <img
+                  src={toImageSrc(logo)}
+                  alt={orgName}
+                  className="h-10 w-28 rounded-lg object-contain bg-primary-foreground/10 px-1"
+                />
+              ) : (
+                <div className="flex h-10 w-28 items-center justify-center rounded-lg bg-primary-foreground/20 text-primary-foreground font-bold text-lg">
+                  {orgName?.[0] ?? ""}
+                </div>
+              )}
+            </div>
+
+            {/* Text block */}
+            <div className="flex flex-col leading-tight">
+              {headline && (
+                <div className="text-[10px] sm:text-xs text-slate-400 truncate max-w-[180px] sm:max-w-none">
+                  {headline}
+                </div>
+              )}
+            </div>
           </div>
-        )}
-      </div>
 
-      {/* Text block */}
-      <div className="flex flex-col leading-tight">
-        {headline && (
-          <div className="text-[10px] sm:text-xs text-slate-400 truncate max-w-[180px] sm:max-w-none">
-            {headline}
-          </div>
-        )}
-      </div>
-    </div>
+          {/* RIGHT: Actions */}
+          <div className="flex items-center gap-2">
 
-    {/* RIGHT: Actions */}
-    <div className="flex items-center gap-2">
-
-      {/* Desktop Tour */}
-      {/* <button
+            {/* Desktop Tour */}
+            {/* <button
         onClick={() => startNextStep("bookingTour")}
         className="hidden md:inline-flex px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors items-center gap-1.5"
       >
@@ -729,17 +732,17 @@ export default function App() {
         Tour
       </button> */}
 
-      {/* Mobile Tour */}
-      {/* <button
+            {/* Mobile Tour */}
+            {/* <button
         onClick={() => startNextStep("bookingTourMobile")}
         className="inline-flex md:hidden px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors items-center gap-1.5"
       >
         <Sparkles size={12} strokeWidth={2} />
         Tour
       </button> */}
-    </div>
-  </div>
-</header>
+          </div>
+        </div>
+      </header>
       <MobileProgress currentStep={currentStep} />
       {/* ── DESKTOP LAYOUT ─────────────────────────────────────────────────── */}
       <div className="hidden md:flex flex-1 flex-col max-w-screen-xl mx-auto w-full px-6 py-6 gap-5">
@@ -761,7 +764,9 @@ export default function App() {
                 {/* Address Placeholder */}
                 <div className="flex items-center justify-between px-3 py-2">
                   <div className="text-xs text-slate-600 font-medium text-right">
-                    {selectedBranch ? "Address not available yet" : "Select a branch"}
+                    {selectedBranch
+                      ? selectedBranchData?.address || "Address not available"
+                      : "Select a branch"}
                   </div>
                 </div>
               </div>

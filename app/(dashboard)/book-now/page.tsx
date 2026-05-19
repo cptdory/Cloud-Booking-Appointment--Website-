@@ -36,7 +36,7 @@ interface CustomerData {
   Address?: string;
   Address2?: string;
 }
-interface Branch { code: string; description: string }
+interface Branch { code: string; description: string, address:string }
 interface Service { id: string; code: string; name: string; duration: string; price: string }
 interface Staff { staffId: string; staffCode: string; staffName: string }
 interface Timeslot { id: string; time: string; availability: boolean; allowBooking: boolean }
@@ -513,10 +513,12 @@ export default function BookNowPage() {
       setLoadingBranches(true);
       const res = await fetch("/api/booking-branch-setup/get-booking-setup-list");
       const d = await res.json();
-      setBranches((Array.isArray(d) ? d : []).map((b: any) => ({ code: String(b.Code ?? ""), description: String(b.Description ?? "") })));
+      setBranches((Array.isArray(d) ? d : []).map((b: any) => ({ code: String(b.Code ?? ""), description: String(b.Description ?? ""), address: String(b.Address ?? "") })));
     } catch (_) { } finally { setLoadingBranches(false); setOrgSetupLoading(false); }
   };
-
+  const selectedBranchData = branches.find(
+    (b: any) => b.code === selectedBranch
+  );
   const fetchServices = useCallback(async () => {
     if (!selectedBranch) return;
     try {
@@ -909,7 +911,9 @@ export default function BookNowPage() {
                   {branches.map(b => <option key={b.code} value={b.code}>{b.description}</option>)}
                 </select>
               </div>
-              <div className="px-1 text-xs text-slate-400">{selectedBranch ? "Address not available" : "Select a branch"}</div>
+              <div className="px-1 text-xs text-slate-400">{selectedBranch
+                      ? selectedBranchData?.address || "Address not available"
+                      : "Select a branch"}</div>
             </div>
           </HorizontalSetupCard>
 
