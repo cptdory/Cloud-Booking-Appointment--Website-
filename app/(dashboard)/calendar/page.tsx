@@ -646,15 +646,19 @@ export default function CalendarPage() {
 
           {/* Calendar — fills remaining vertical space, no scroll */}
           <div className="relative flex-1 min-h-0 compact-calendar">
-              {/* Loading overlay */}
-  {loadingCalendar && (
-    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70 backdrop-blur-[2px]">
-      <div className="flex flex-col items-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
-        <span className="text-sm font-medium text-slate-500">Loading appointments…</span>
-      </div>
-    </div>
-  )}
+              <style>{`
+    .compact-calendar .rbc-timeslot-group { min-height: 70px; }
+    .compact-calendar .rbc-time-slot { min-height: 40px; }
+  `}</style>
+            {/* Loading overlay */}
+            {loadingCalendar && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70 backdrop-blur-[2px]">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
+                  <span className="text-sm font-medium text-slate-500">Loading appointments…</span>
+                </div>
+              </div>
+            )}
             <Calendar
               key={currentView}
               localizer={localizer}
@@ -719,7 +723,7 @@ export default function CalendarPage() {
                           <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
                         ) : null}
 
-                        <span className="block truncate">
+                        <span className="block truncate text-[13px]">
                           {event.title}
                         </span>
                       </div>
