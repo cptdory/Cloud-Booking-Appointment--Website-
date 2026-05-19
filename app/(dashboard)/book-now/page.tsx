@@ -126,8 +126,8 @@ function HorizontalSetupCard({ step, currentStep, title, icon: Icon, children, i
       </div>
       <div className="px-3 py-2.5">
         {disabled && readonlyValue ? (
-          <div className="flex flex-col gap-0.5 px-1 py-1">
-            <span className="text-sm font-semibold text-slate-600">{readonlyValue}</span>
+          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white">
+            <span className="text-sm text-slate-600 flex-1">{readonlyValue}</span>
             {readonlySub && <span className="text-xs text-slate-400">{readonlySub}</span>}
           </div>
         ) : children}
@@ -458,26 +458,26 @@ export default function BookNowPage() {
           : (!selectedDate || !selectedTime || selectedTimeWarning) ? 4
             : 5;
 
-const isFormValid =
-  effectiveName !== "" &&
-  (isRescheduling ? true : effectiveEmail !== "") &&  // ← email not required for reschedule
-  selectedTime !== "" &&
-  !selectedTimeWarning &&
-  (isRescheduling
-    ? true
-    : !isCustomerRole
-      ? (isNewCustomer ? true : selectedCustomer !== null)
-      : true);
-console.log("isFormValid check:", {
-  effectiveName,
-  effectiveEmail,
-  selectedTime,
-  selectedTimeWarning,
-  isCustomerRole,
-  isNewCustomer,
-  selectedCustomer,
-  isRescheduling,
-});
+  const isFormValid =
+    effectiveName !== "" &&
+    (isRescheduling ? true : effectiveEmail !== "") &&  // ← email not required for reschedule
+    selectedTime !== "" &&
+    !selectedTimeWarning &&
+    (isRescheduling
+      ? true
+      : !isCustomerRole
+        ? (isNewCustomer ? true : selectedCustomer !== null)
+        : true);
+  console.log("isFormValid check:", {
+    effectiveName,
+    effectiveEmail,
+    selectedTime,
+    selectedTimeWarning,
+    isCustomerRole,
+    isNewCustomer,
+    selectedCustomer,
+    isRescheduling,
+  });
   // Filtered customer list
   const filteredCustomers = customerList.filter(c =>
     c.Name.toLowerCase().includes(customerSearch.toLowerCase()) ||
@@ -924,71 +924,71 @@ console.log("isFormValid check:", {
         )}
         {/* Row 1: Horizontal cards — hidden/locked when rescheduling */}
 
-          <div className="flex gap-4">
-            {/* Location */}
-              <HorizontalSetupCard
-    id="location-card" step={1} currentStep={currentStep} title="Location" icon={MapPin}
-    disabled={isRescheduling}
-    readonlyValue={rescheduleData?.BookingSetupCode ?? selectedBranch}
-  >
-              <div className="space-y-2">
-                <div className="relative">
-                  <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><MapPin size={14} strokeWidth={2} /></div>
-                  <Select value={selectedBranch || undefined} onValueChange={v => sel.branch(v ?? "")}>
-                    <SelectTrigger className="w-full pl-11" disabled={loadingBranches}>
-                      <SelectValue>{branches.find(b => b.code === selectedBranch)?.description || (loadingBranches ? "Loading…" : "Choose branch")}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branches.map(b => <SelectItem className="pl-11" key={b.code} value={b.code}>{b.description}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="px-1 text-xs text-slate-400">{selectedBranch ? "Address not available" : "Select a branch"}</div>
+        <div className="flex gap-4">
+          {/* Location */}
+<HorizontalSetupCard
+  id="location-card" step={1} currentStep={currentStep} title="Location" icon={MapPin}
+  disabled={isRescheduling}
+  readonlyValue={selectedBranchObj?.description ?? rescheduleData?.BookingSetupCode}
+>
+            <div className="space-y-2">
+              <div className="relative">
+                <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><MapPin size={14} strokeWidth={2} /></div>
+                <Select value={selectedBranch || undefined} onValueChange={v => sel.branch(v ?? "")}>
+                  <SelectTrigger className="w-full pl-11" disabled={loadingBranches}>
+                    <SelectValue>{branches.find(b => b.code === selectedBranch)?.description || (loadingBranches ? "Loading…" : "Choose branch")}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map(b => <SelectItem className="pl-11" key={b.code} value={b.code}>{b.description}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
-            </HorizontalSetupCard>
+              <div className="px-1 text-xs text-slate-400">{selectedBranch ? "Address not available" : "Select a branch"}</div>
+            </div>
+          </HorizontalSetupCard>
 
-            {/* Service */}
-              <HorizontalSetupCard
-    id="service-card" step={2} currentStep={currentStep} title="Service" icon={Briefcase}
-    disabled={isRescheduling}
-    readonlyValue={rescheduleData?.ServiceName ?? selectedServiceObj?.name}
-    readonlySub={selectedServiceObj?.duration}
-  >
-              <div className="space-y-2">
-                <div className="relative">
-                  <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><Briefcase size={14} strokeWidth={2} /></div>
-                  <Select value={selectedService || undefined} onValueChange={v => sel.service(v ?? "")}>
-                    <SelectTrigger className="w-full pl-11" disabled={!selectedBranch || loadingServices}>
-                      <SelectValue>{services.find(s => s.id === selectedService)?.name || (loadingServices ? "Loading…" : "Choose service")}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent id="service-viewport">
-                      {services.map((service: any) => (
-                        <SelectItem className="pl-11" key={service.id} value={service.id}>
-                          <div className="flex flex-col">
-                            <span className="text-sm">{service.name}</span>
+          {/* Service */}
+<HorizontalSetupCard
+  id="service-card" step={2} currentStep={currentStep} title="Service" icon={Briefcase}
+  disabled={isRescheduling}
+  readonlyValue={selectedServiceObj?.name ?? rescheduleData?.ServiceName}
+  readonlySub={selectedServiceObj?.duration}
+>
+            <div className="space-y-2">
+              <div className="relative">
+                <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><Briefcase size={14} strokeWidth={2} /></div>
+                <Select value={selectedService || undefined} onValueChange={v => sel.service(v ?? "")}>
+                  <SelectTrigger className="w-full pl-11" disabled={!selectedBranch || loadingServices}>
+                    <SelectValue>{services.find(s => s.id === selectedService)?.name || (loadingServices ? "Loading…" : "Choose service")}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent id="service-viewport">
+                    {services.map((service: any) => (
+                      <SelectItem className="pl-11" key={service.id} value={service.id}>
+                        <div className="flex flex-col">
+                          <span className="text-sm">{service.name}</span>
 
-                            <span className="text-[11px] text-slate-500">
-                              {service.duration} · {service.price}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {selectedService && (() => { const sv = services.find(s => s.id === selectedService); return sv ? <div className="px-1 text-xs text-slate-500">{sv.duration} · {sv.price}</div> : null; })()}
+                          <span className="text-[11px] text-slate-500">
+                            {service.duration} · {service.price}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </HorizontalSetupCard>
+              {selectedService && (() => { const sv = services.find(s => s.id === selectedService); return sv ? <div className="px-1 text-xs text-slate-500">{sv.duration} · {sv.price}</div> : null; })()}
+            </div>
+          </HorizontalSetupCard>
 
-            {/* Professional */}
-  <HorizontalSetupCard
-    id="professional-card" step={3} currentStep={currentStep} title="Professional" icon={Users}
-    disabled={isRescheduling}
-    readonlyValue={rescheduleData?.StaffName ?? selectedStaffObj?.staffName}
-  >
-    {staffPanelContent}
-  </HorizontalSetupCard>
-          </div>
+          {/* Professional */}
+<HorizontalSetupCard
+  id="professional-card" step={3} currentStep={currentStep} title="Professional" icon={Users}
+  disabled={isRescheduling}
+  readonlyValue={selectedStaffObj?.staffName ?? rescheduleData?.StaffName}
+>
+            {staffPanelContent}
+          </HorizontalSetupCard>
+        </div>
 
         {/* Row 2: Calendar + Timeslots | Right panel */}
         <div className="flex gap-5 flex-1 min-h-0">
