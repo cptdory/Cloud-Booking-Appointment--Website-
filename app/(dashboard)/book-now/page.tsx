@@ -243,9 +243,9 @@ function MobileProgress({ currentStep, totalSteps }: { currentStep: number; tota
 }
 
 // ─── Timeslot Panel ───────────────────────────────────────────────────────────
-function TimeslotPanel({ selectedDate, timeslots, loading, selectedTime, onSelectTime, stepNumber, currentStep, skipAvailabilityCheck }: {
+function TimeslotPanel({ selectedDate, timeslots, loading, selectedTime, onSelectTime, stepNumber, currentStep, skipAvailabilityCheck, onSkipAvailabilityCheckChange, isCustomerRole }: {
   selectedDate: DateObj | null; timeslots: Timeslot[]; loading: boolean; selectedTime: string;
-  onSelectTime: (t: string) => void; stepNumber: number; currentStep: number; skipAvailabilityCheck: string;
+  onSelectTime: (t: string) => void; stepNumber: number; currentStep: number; skipAvailabilityCheck: string; onSkipAvailabilityCheckChange?: (checked: boolean) => void; isCustomerRole?: boolean;
 }) {
   const slots = timeslots || [];
   const selectedSlot = slots.find((ts) => ts.time === selectedTime) ?? null;
@@ -308,6 +308,16 @@ function TimeslotPanel({ selectedDate, timeslots, loading, selectedTime, onSelec
             {selectedSlotWarning && (
               <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold">
                 The selected time slot does not have enough available time to accommodate the full duration of the selected service.
+              </div>
+            )}
+            {!isCustomerRole && onSkipAvailabilityCheckChange && (
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                <label className="flex items-center gap-2 text-xs text-slate-500 font-medium cursor-pointer">
+                  <input type="checkbox" checked={skipAvailabilityCheck === "true"}
+                    onChange={e => onSkipAvailabilityCheckChange(e.target.checked)}
+                    className="w-3.5 h-3.5 accent-blue-600 cursor-pointer" />
+                  Book Anyway
+                </label>
               </div>
             )}
           </>
@@ -776,15 +786,9 @@ export default function BookNowPage() {
     </div>
   );
 
-  // ── Admin-only controls (skip, allow prev date) ────────────────────────────
-  const adminControls = !isCustomerRole ? (
+  // ── Admin-only controls (allow prev date only — Book Anyway moved to TimeslotPanel) ────────────────────────────
+  const adminControlsCalendar = !isCustomerRole ? (
     <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-slate-100">
-      <label className="flex items-center gap-2 text-xs text-slate-500 font-medium cursor-pointer">
-        <input type="checkbox" checked={skipAvailabilityCheck === "true"}
-          onChange={e => setSkipAvailabilityCheck(e.target.checked ? "true" : "false")}
-          className="w-3.5 h-3.5 accent-blue-600 cursor-pointer" />
-        Book Anyway
-      </label>
       <label className="flex items-center gap-2 text-xs text-slate-500 font-medium cursor-pointer">
         <input type="checkbox" checked={allowPreviousDate}
           onChange={e => setAllowPreviousDate(e.target.checked)}
@@ -1030,7 +1034,7 @@ export default function BookNowPage() {
                   {Array.from({ length: daysInMonth }).map((_, i) => renderCalendarDay(i + 1))}
                 </div>
                 {/* Admin controls inside calendar card */}
-                {adminControls}
+                {adminControlsCalendar}
               </div>
             </div>
 
@@ -1038,7 +1042,7 @@ export default function BookNowPage() {
             <div className={`flex-1 min-h-[32rem] max-h-[32rem] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-opacity
               ${(!selectedStaff && !noPreferenceStaff && !isRescheduling) ? "opacity-40 pointer-events-none" : ""}`}>
               <TimeslotPanel selectedDate={selectedDate} timeslots={timeslots} loading={loadingTimeslots}
-                selectedTime={selectedTime} onSelectTime={t => setSelectedTime(t)} stepNumber={4} currentStep={currentStep} skipAvailabilityCheck={skipAvailabilityCheck} />
+                selectedTime={selectedTime} onSelectTime={t => setSelectedTime(t)} stepNumber={4} currentStep={currentStep} skipAvailabilityCheck={skipAvailabilityCheck} onSkipAvailabilityCheckChange={checked => setSkipAvailabilityCheck(checked ? "true" : "false")} isCustomerRole={isCustomerRole} />
             </div>
           </div>
 
@@ -1188,12 +1192,12 @@ export default function BookNowPage() {
                     {Array.from({ length: (firstDay + 6) % 7 }).map((_, i) => <div key={`e${i}`} />)}
                     {Array.from({ length: daysInMonth }).map((_, i) => renderCalendarDay(i + 1))}
                   </div>
-                  {adminControls}
+                  {adminControlsCalendar}
                 </div>
               </div>
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden min-h-[200px] flex flex-col">
                 <TimeslotPanel selectedDate={selectedDate} timeslots={timeslots} loading={loadingTimeslots}
-                  selectedTime={selectedTime} onSelectTime={t => setSelectedTime(t)} stepNumber={4} currentStep={currentStep} skipAvailabilityCheck={skipAvailabilityCheck} />
+                  selectedTime={selectedTime} onSelectTime={t => setSelectedTime(t)} stepNumber={4} currentStep={currentStep} skipAvailabilityCheck={skipAvailabilityCheck} onSkipAvailabilityCheckChange={checked => setSkipAvailabilityCheck(checked ? "true" : "false")} isCustomerRole={isCustomerRole} />
               </div>
             </div>
           )}
