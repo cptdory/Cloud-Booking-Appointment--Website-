@@ -209,10 +209,7 @@ export default function SettingsPage() {
       setSelectedTeamDescription(selected?.BookingSetupDescription || selected?.Description || bookingSetupCode);
       setBranchDescription(selected?.BookingSetupDescription || selected?.Description || "");
       setAddress(
-        selected?.BookingSetupAddress ||
-        selected?.BookingSetupLocationCode ||
-        selected?.Location ||
-        ""
+        selected?.BookingSetupAddress
       );
       setTimeSlotBookableCount(
         String(
