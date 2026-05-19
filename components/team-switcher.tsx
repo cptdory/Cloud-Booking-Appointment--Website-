@@ -94,7 +94,7 @@ export function TeamSwitcher({
           >
             <DropdownMenuGroup>
               <DropdownMenuLabel className="text-xs text-muted-foreground">
-                Tenant
+                Branches
               </DropdownMenuLabel>
               {teams.map((team) => (
                 <DropdownMenuItem
@@ -113,6 +113,15 @@ export function TeamSwitcher({
                   </DropdownMenuShortcut>
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuItem
+                onClick={() => alert("Creating new branch is under development")}
+                className="gap-2 p-2 text-slate-500 italic"
+              >
+                <div className="flex size-6 items-center justify-center rounded-md border text-slate-300">
+                  +
+                </div>
+                Create new branch
+              </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
