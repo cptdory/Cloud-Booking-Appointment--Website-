@@ -533,9 +533,9 @@ export default function CalendarPage() {
       const data = await res.json();
       if (!res.ok) throw new Error();
       const min = parseTime(data["Earliest Start Time"]);
-      min.setHours(min.getHours() - 1);
+      min.setHours(min.getHours() - 3);
       const max = parseTime(data["Latest End Time"]);
-      max.setHours(max.getHours() + 2);
+      max.setHours(max.getHours() + 3);
       setBusinessHours({ min, max, });
     } catch {
       sileo.error({
