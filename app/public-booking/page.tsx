@@ -395,10 +395,10 @@ export default function App() {
     if (currentStep >= 6) setMobilePanel("details");
   }, [currentStep]);
   // ── Auto-start tour on page load ──────────────────────────────────────────
-  useEffect(() => {
-    const isMobile = window.innerWidth < 768; // Tailwind md breakpoint
-    startNextStep(isMobile ? "bookingTourMobile" : "bookingTour");
-  }, []);
+  // useEffect(() => {
+  //   const isMobile = window.innerWidth < 768; // Tailwind md breakpoint
+  //   startNextStep(isMobile ? "bookingTourMobile" : "bookingTour");
+  // }, []);
   // ── OTP countdown ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (!otpDialogOpen || otpTimeRemaining <= 0) return;
@@ -721,22 +721,22 @@ export default function App() {
     <div className="flex items-center gap-2">
 
       {/* Desktop Tour */}
-      <button
+      {/* <button
         onClick={() => startNextStep("bookingTour")}
         className="hidden md:inline-flex px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors items-center gap-1.5"
       >
         <Sparkles size={12} strokeWidth={2} />
         Tour
-      </button>
+      </button> */}
 
       {/* Mobile Tour */}
-      <button
+      {/* <button
         onClick={() => startNextStep("bookingTourMobile")}
         className="inline-flex md:hidden px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors items-center gap-1.5"
       >
         <Sparkles size={12} strokeWidth={2} />
         Tour
-      </button>
+      </button> */}
     </div>
   </div>
 </header>

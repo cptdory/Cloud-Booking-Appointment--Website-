@@ -326,38 +326,6 @@ function TimeslotPanel({ selectedDate, timeslots, loading, selectedTime, onSelec
   );
 }
 
-// ─── Booking Summary Sidebar ──────────────────────────────────────────────────
-function BookingSummary({ items }: { items: { icon: React.ComponentType<any>; label: string; value?: string; sub?: string }[] }) {
-  return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
-        <div className="w-7 h-7 rounded-xl bg-blue-600 flex items-center justify-center">
-          <CheckCircle2 size={14} className="text-white" strokeWidth={2.5} />
-        </div>
-        <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Booking Summary</span>
-      </div>
-      <div className="p-4 space-y-3">
-        {items.map((item, i) => (
-          <div key={i} className="flex items-start gap-3">
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-px ${item.value ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-300"}`}>
-              <item.icon size={13} strokeWidth={2} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{item.label}</div>
-              {item.value
-                ? <>
-                  <div className="text-sm font-semibold text-slate-700 truncate">{item.value}</div>
-                  {item.sub && <div className="text-xs text-slate-400 truncate">{item.sub}</div>}
-                </>
-                : <div className="text-xs text-slate-300 italic">Not selected</div>}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ─── Customer Option Card ─────────────────────────────────────────────────────
 function CustomerCard({ selected, onClick, customer }: { selected: boolean; onClick: () => void; customer: CustomerData }) {
   return (
@@ -480,16 +448,6 @@ export default function BookNowPage() {
       : !isCustomerRole
         ? (isNewCustomer ? true : selectedCustomer !== null)
         : true);
-  console.log("isFormValid check:", {
-    effectiveName,
-    effectiveEmail,
-    selectedTime,
-    selectedTimeWarning,
-    isCustomerRole,
-    isNewCustomer,
-    selectedCustomer,
-    isRescheduling,
-  });
   // Filtered customer list
   const filteredCustomers = customerList.filter(c =>
     c.Name.toLowerCase().includes(customerSearch.toLowerCase()) ||
@@ -511,10 +469,10 @@ export default function BookNowPage() {
   }, [currentStep]);
 
   // ── Auto-start tour ────────────────────────────────────────────────────────
-  useEffect(() => {
-    const isMobile = window.innerWidth < 768;
-    if (!isRescheduling) startNextStep(isMobile ? "bookingTourMobile" : "bookingTour");
-  }, []);
+  // useEffect(() => {
+  //   const isMobile = window.innerWidth < 768;
+  //   if (!isRescheduling) startNextStep(isMobile ? "bookingTourMobile" : "bookingTour");
+  // }, []);
 
   // ── Tour auto-advance ──────────────────────────────────────────────────────
   useEffect(() => { if (!isNextStepVisible || tourStep !== 0) return; if (selectedBranch) setTourStep(1); }, [selectedBranch, tourStep, isNextStepVisible]);
@@ -900,22 +858,22 @@ export default function BookNowPage() {
           {!isRescheduling && (
             <>
               {/* Desktop Tour */}
-              <button
+              {/* <button
                 onClick={() => startNextStep("bookingTour")}
                 className="hidden md:inline-flex px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors items-center gap-1.5"
               >
                 <Sparkles size={12} strokeWidth={2} />
                 Tour
-              </button>
+              </button> */}
 
               {/* Mobile Tour */}
-              <button
+              {/* <button
                 onClick={() => startNextStep("bookingTourMobile")}
                 className="inline-flex md:hidden px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors items-center gap-1.5"
               >
                 <Sparkles size={12} strokeWidth={2} />
                 Tour
-              </button>
+              </button> */}
             </>
           )}
 
