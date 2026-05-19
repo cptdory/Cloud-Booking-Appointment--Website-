@@ -91,7 +91,6 @@ const SILEO_FILL = "#171717";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// FIX: handles both string "true" and real boolean true from the API
 const isTimeOff = (entry?: BookingEntriesData | null) =>
   String(entry?.TimeOff) === "true";
 
@@ -197,6 +196,8 @@ export default function CalendarPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editEntryNo, setEditEntryNo] = useState<string>("");
 
+  const [businessHours, setBusinessHours] = useState({ min: new Date(), max: new Date(), });
+
   // ── Session ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     fetch("/api/me")
@@ -204,7 +205,10 @@ export default function CalendarPage() {
       .then((data) => setSessionUser(data.user ?? null))
       .catch(console.error);
   }, []);
-
+useEffect(() => {
+  if (!sessionUser?.booking_setup_code) return;  // Wait for session user
+  handleGetBusinessStartTime();
+}, [sessionUser]);
   // ── Staff list ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!sessionUser?.booking_setup_code) return;
@@ -473,6 +477,39 @@ export default function CalendarPage() {
       setIsSubmittingTimeOff(false);
     }
   };
+  // ── Get Business Hours ──────────────────────────────────────────────────────────
+  const parseTime = (time: string) => {
+    const [hours, minutes] = time.split(":").map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    return date;
+  };
+  const handleGetBusinessStartTime = async () => {
+    try {
+      const res = await fetch(
+        "/api/business-hours/get-booking-earliest-business-start-time",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            branchCode: sessionUser?.booking_setup_code,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error();
+      const min = parseTime(data["Earliest Start Time"]);
+      min.setHours(min.getHours() - 1);
+      const max = parseTime(data["Latest End Time"]);
+      max.setHours(max.getHours() + 2);
+      setBusinessHours({ min, max,});
+    } catch {
+      sileo.error({
+        title: "Failed to get business hours.",
+        fill: SILEO_FILL,
+      });
+    }
+  };
 
   // ── Derived ──────────────────────────────────────────────────────────────────
   const canManageTimeOff =
@@ -581,6 +618,8 @@ export default function CalendarPage() {
               events={filteredEvents}
               startAccessor="start"
               endAccessor="end"
+              min={businessHours.min}
+              max={businessHours.max}
               popup
               style={{ height: "100%", minHeight: 500 }}
               onRangeChange={handleRangeChange}
@@ -680,7 +719,7 @@ export default function CalendarPage() {
               )}
               <DetailRow
                 label="Date & Time"
-                value={`${moment(selectedEvent.BookingStartDate).format("MMM DD, YYYY")} ${selectedEvent.BookingStartTime} - ${selectedEvent.BookingEndTime}`}
+                value={`${moment(selectedEvent.BookingStartDate).format("MMM DD, YYYY")} ${moment(selectedEvent.BookingStartTime, "HH:mm:ss").format("hh:mm A")} - ${moment(selectedEvent.BookingEndTime, "HH:mm:ss").format("hh:mm A")}`}
               />
               <DetailRow label="Status" value={selectedEvent.BookingStatus} />
               {String(selectedEvent.Rescheduled).toLowerCase() === "true" && (
@@ -856,8 +895,8 @@ export default function CalendarPage() {
                       !timeOffForm.singleDay && handleTimeOffFormChange("endDate", e.target.value)
                     }
                     className={`w-full rounded-2xl border px-3 py-2 text-sm text-slate-900 focus:outline-none ${timeOffForm.singleDay
-                        ? "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
-                        : "border-blue-200 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                      ? "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
+                      : "border-blue-200 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                       }`}
                   />
                 )}

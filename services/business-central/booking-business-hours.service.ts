@@ -61,6 +61,16 @@ class BookingBusinessHoursService {
       }
     );
   }
+  async GetBookingEarliestBusinessStartTime(
+    branchCode: string
+  ) {
+    return bcClient.post<{ value: string }>(
+      "BookingAppointment_GetBookingEarliestBusinessStartTime",
+      {
+        _BranchCode: branchCode
+      }
+    );
+  }
 }
 
 export const bookingBusinessHoursService = new BookingBusinessHoursService();
