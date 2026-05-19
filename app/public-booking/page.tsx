@@ -5,7 +5,6 @@ import { useNextStep } from "nextstepjs";
 import { CheckCircle2, MapPin, Briefcase, Users, Calendar, User, Clock, Phone, Mail, FileText, RefreshCw, ChevronLeft, ChevronRight, X, ShieldCheck, Stethoscope, ArrowRight, Sparkles, Clock10Icon } from "lucide-react";
 import { sileo } from "sileo";
 import { usePathname } from "next/navigation";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 // ─── Utilities ─────────────────────────────────────────────────────────────────
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60).toString().padStart(2, "0");
@@ -355,7 +354,7 @@ export default function App() {
   const [selectedBranch, setSelectedBranch] = useState<string>("");
   const [selectedService, setSelectedService] = useState<string>("");
   const [selectedStaff, setSelectedStaff] = useState<string>("");
-  const [noPreferenceStaff, setNoPreferenceStaff] = useState<boolean>(false);
+  const [noPreferenceStaff, setNoPreferenceStaff] = useState<boolean>(true);
   const [selectedDate, setSelectedDate] = useState<any>(null);
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [customerName, setCustomerName] = useState<string>("");
@@ -595,8 +594,8 @@ export default function App() {
   };
   // ── Selection helpers ──────────────────────────────────────────────────────
   const sel = {
-    branch: (v: string) => { setSelectedBranch(v); setSelectedService(""); setSelectedStaff(""); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); setNoPreferenceStaff(false); },
-    service: (v: string) => { setSelectedService(v); setSelectedStaff(""); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); setNoPreferenceStaff(false); },
+    branch: (v: string) => { setSelectedBranch(v); setSelectedService(""); setSelectedStaff(""); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); setNoPreferenceStaff(true); },
+    service: (v: string) => { setSelectedService(v); setSelectedStaff(""); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); setNoPreferenceStaff(true); },
     staff: (v: string) => {
       setSelectedStaff(v);
       setNoPreferenceStaff(false);
@@ -628,6 +627,22 @@ export default function App() {
       setSelectedDate({ day: d.getDate(), month: d.getMonth(), year: d.getFullYear() });
     }
   }, [currentStep, selectedBranch, selectedService, selectedStaff, noPreferenceStaff, selectedDate]);
+
+  // ── Auto-select today when service selected with no preference ────────────
+  useEffect(() => {
+    if (selectedService && noPreferenceStaff && !selectedDate && selectedBranch) {
+      const d = new Date();
+      setSelectedDate({ day: d.getDate(), month: d.getMonth(), year: d.getFullYear() });
+    }
+  }, [selectedService, noPreferenceStaff, selectedBranch, selectedDate]);
+
+  // ── Auto-select today when service selected with no preference ────────────
+  useEffect(() => {
+    if (selectedService && noPreferenceStaff && !selectedDate && selectedBranch) {
+      const d = new Date();
+      setSelectedDate({ day: d.getDate(), month: d.getMonth(), year: d.getFullYear() });
+    }
+  }, [selectedService, noPreferenceStaff, selectedBranch, selectedDate]);
   // ── Auto-advance tour steps ────────────────────────────────────────────────
   useEffect(() => {
     if (!isNextStepVisible) return;
@@ -738,20 +753,10 @@ export default function App() {
                   <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
                     <MapPin size={14} strokeWidth={2} />
                   </div>
-                  <Select value={selectedBranch || null} onValueChange={(value) => sel.branch(value ?? "")}>
-                    <SelectTrigger className="w-full pl-11" disabled={loadingBranches}>
-                      <SelectValue>
-                        {branches.find((b: any) => b.code === selectedBranch)?.description || (loadingBranches ? "Loading…" : "Choose branch")}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branches.map((branch: any) => (
-                        <SelectItem className="pl-11" key={branch.code} value={branch.code}>
-                          {branch.description}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select value={selectedBranch || ""} onChange={e => sel.branch(e.target.value)} disabled={loadingBranches} className="w-full pl-11 pr-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 text-sm appearance-none cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <option value="">{loadingBranches ? "Loading…" : "Choose branch"}</option>
+                    {branches.map((branch: any) => <option key={branch.code} value={branch.code}>{branch.description}</option>)}
+                  </select>
                 </div>
                 {/* Address Placeholder */}
                 <div className="flex items-center justify-between px-3 py-2">
@@ -768,24 +773,10 @@ export default function App() {
                   <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
                     <Briefcase size={14} strokeWidth={2} />
                   </div>
-                  <Select value={selectedService || null} onValueChange={(value) => sel.service(value ?? "")}>
-                    <SelectTrigger className="w-full pl-11" disabled={!selectedBranch || loadingServices} >
-                      <SelectValue>{services.find((s: any) => s.id === (selectedService ?? ""))?.name || (loadingServices ? "Loading…" : "Choose service")}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent id="service-viewport">
-                      {services.map((service: any) => (
-                        <SelectItem className="pl-11" key={service.id} value={service.id}>
-                          <div className="flex flex-col">
-                            <span className="text-sm">{service.name}</span>
-
-                            <span className="text-[11px] text-slate-500">
-                              {service.duration} · {service.price}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select value={selectedService || ""} onChange={e => sel.service(e.target.value)} disabled={!selectedBranch || loadingServices} className="w-full pl-11 pr-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 text-sm appearance-none cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <option value="">{loadingServices ? "Loading…" : "Choose service"}</option>
+                    {services.map((service: any) => <option key={service.id} value={service.id}>{service.name} - {service.duration}  ({service.price})</option>)}
+                  </select>
                 </div>
                 {/* Service Details */}
                 {selectedService && (() => {
@@ -808,21 +799,10 @@ export default function App() {
                   <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
                     <User size={14} strokeWidth={2} />
                   </div>
-                  <Select value={selectedStaff || null} onValueChange={(value) => sel.staff(value ?? "")}>
-                    <SelectTrigger className="w-full pl-11" disabled={!selectedService || loadingStaff}>
-                      <SelectValue>
-                        {assignedStaff.find((s: any) => s.staffId === selectedStaff)?.staffName ||
-                          (loadingStaff ? "Loading…" : "Choose staff")}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {assignedStaff.map((staff: any) => (
-                        <SelectItem className="pl-11" key={staff.staffId} value={staff.staffId}>
-                          {staff.staffName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select value={selectedStaff || ""} onChange={e => sel.staff(e.target.value)} disabled={!selectedService || loadingStaff} className="w-full pl-11 pr-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 text-sm appearance-none cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <option value="">{loadingStaff ? "Loading…" : "Choose staff"}</option>
+                    {assignedStaff.map((staff: any) => <option key={staff.staffId} value={staff.staffId}>{staff.staffName}</option>)}
+                  </select>
                 </div>
                 <label className="flex items-center justify-between px-3 py-2 cursor-pointer">
                   <div className="flex items-center gap-2">
@@ -1003,72 +983,26 @@ export default function App() {
                 {
                   step: 1, title: "Location", icon: MapPin, cardId: "mobile-location-card", content: (
                     <div className="relative">
-                      <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                      <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 z-10">
                         <MapPin size={14} strokeWidth={2} />
                       </div>
-                      <Select value={selectedBranch || null} onValueChange={(value) => sel.branch(value ?? "")}>
-                        <SelectTrigger className="w-full pl-11" disabled={loadingBranches}>
-                          <SelectValue>
-                            {branches.find((b: any) => b.code === selectedBranch)?.description ||
-                              (loadingBranches ? "Loading…" : "Choose branch")}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {branches.map((branch: any) => (
-                            <SelectItem className="pl-11" key={branch.code} value={branch.code}>
-                              {branch.description}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <select value={selectedBranch || ""} onChange={e => sel.branch(e.target.value)} disabled={loadingBranches} className="w-full pl-11 pr-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 text-sm appearance-none cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <option value="">{loadingBranches ? "Loading…" : "Choose branch"}</option>
+                        {branches.map((branch: any) => <option key={branch.code} value={branch.code}>{branch.description}</option>)}
+                      </select>
                     </div>
                   )
                 },
                 {
                   step: 2, title: "Service", icon: Briefcase, cardId: "mobile-service-card", content: (
                     <div className="relative">
-                      <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                      <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 z-10">
                         <Briefcase size={14} strokeWidth={2} />
                       </div>
-                      <Select value={selectedService ?? null} onValueChange={(value) => sel.service(value ?? "")}>
-                        <SelectTrigger className="w-full pl-11" disabled={!selectedBranch || loadingServices}>
-                          <SelectValue>
-                            {(() => {
-                              const service = services.find(
-                                (s: any) => s.id === (selectedService ?? "")
-                              );
-                              if (!service) {
-                                return loadingServices
-                                  ? "Loading…" : "Choose service";
-                              }
-                              return (
-                                <div className="flex flex-col items-start text-left">
-                                  <span>{service.name}</span>
-
-                                  <span className="text-[10px] text-slate-500">
-                                    {service.duration}
-
-                                    {service.duration && service.price
-                                      ? ` · ${service.price}` : service.price}
-                                  </span>
-                                </div>
-                              );
-                            })()}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {services.map((service: any) => (
-                            <SelectItem className="pl-11" key={service.id} value={service.id}>
-                              <div className="flex flex-col gap-0.5">
-                                <span>{service.name}</span>
-                                <span className="text-xs text-slate-500">
-                                  {service.duration && `${service.duration}`}{service.duration && service.price ? ` · ${service.price}` : service.price}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <select value={selectedService || ""} onChange={e => sel.service(e.target.value)} disabled={!selectedBranch || loadingServices} className="w-full pl-11 pr-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 text-sm appearance-none cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <option value="">{loadingServices ? "Loading…" : "Choose service"}</option>
+                        {services.map(s => <option key={s.id} value={s.id}>{s.name} - {s.duration}  ({s.price})</option>)}
+                      </select>
                     </div>
                   )
                 },
@@ -1076,24 +1010,13 @@ export default function App() {
                   step: 3, title: "Professional", icon: Users, cardId: "mobile-professional-card", content: (
                     <div className="space-y-3">
                       <div className="relative">
-                        <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                        <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 z-10">
                           <User size={14} strokeWidth={2} />
                         </div>
-                        <Select value={selectedStaff || null} onValueChange={(value) => sel.staff(value ?? "")}>
-                          <SelectTrigger className="w-full pl-11" disabled={!selectedService || loadingStaff}>
-                            <SelectValue>
-                              {assignedStaff.find((s: any) => s.staffId === selectedStaff)?.staffName ||
-                                (loadingStaff ? "Loading…" : "Choose staff")}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {assignedStaff.map((staff: any) => (
-                              <SelectItem className="pl-11" key={staff.staffId} value={staff.staffId}>
-                                {staff.staffName}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <select value={selectedStaff || ""} onChange={e => sel.staff(e.target.value)} disabled={!selectedService || loadingStaff} className="w-full pl-11 pr-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 text-sm appearance-none cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                          <option value="">{loadingStaff ? "Loading…" : "Choose staff"}</option>
+                          {assignedStaff.map((staff: any) => <option key={staff.staffId} value={staff.staffId}>{staff.staffName}</option>)}
+                        </select>
                       </div>
                       <label className="flex items-center gap-2.5 cursor-pointer px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors">
                         <input
