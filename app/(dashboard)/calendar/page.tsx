@@ -562,7 +562,7 @@ export default function CalendarPage() {
   return (
     <>
       {/* Header */}
-      <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-white px-4">
+      <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-white px-4">
         <SidebarTrigger className="-ml-1" />
         <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
         <Breadcrumb>
@@ -572,85 +572,75 @@ export default function CalendarPage() {
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
+
+        <div className="ml-auto flex items-center gap-2">
+          {/* Status filter */}
+          <div className="relative">
+            <button
+              onClick={() => setStatusMenuOpen((prev) => !prev)}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+            >
+              Status
+              <span className="rounded-full bg-blue-100 text-blue-700 text-xs font-semibold px-1.5 py-0.5">
+                {selectedStatuses.length}
+              </span>
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {statusMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setStatusMenuOpen(false)} />
+                <div className="absolute right-0 top-full mt-1 z-20 w-48 rounded-lg border border-gray-200 bg-white shadow-md py-1">
+                  {(["Active", "Cancelled", "Finalized", "No Show"] as const).map((s) => (
+                    <label
+                      key={s}
+                      className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedStatuses.includes(s)}
+                        onChange={() => handleStatusToggle(s)}
+                        className="rounded border-gray-300 accent-blue-600 cursor-pointer focus:ring-blue-500"
+                      />
+                      {s}
+                    </label>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Hide time off */}
+          <label className="flex items-center gap-2 cursor-pointer select-none rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+            <input
+              type="checkbox"
+              checked={hideTimeOff}
+              onChange={(e) => setHideTimeOff(e.target.checked)}
+              className="rounded border-gray-300 accent-blue-600 cursor-pointer focus:ring-2 focus:ring-blue-500"
+            />
+            Hide Time Off
+          </label>
+
+          <button
+            onClick={handleOpenAddTimeOffDialog}
+            className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:from-blue-600 hover:to-blue-700"
+          >
+            <Plus className="h-4 w-4" />
+            Add Time Off
+          </button>
+        </div>
       </header>
 
       {/* Main */}
       <div className="flex flex-1 flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50 p-4 sm:p-6">
         <div className="flex flex-col flex-1 rounded-lg border border-blue-100 bg-white shadow-sm p-4 sm:p-6">
-          {/* Toolbar */}
-          <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-blue-100 p-2">
-                <CalendarCheck className="h-6 w-6 text-blue-600" />
-              </div>
-              <h2 className="text-xl font-bold text-gray-900 sm:text-2xl">Calendar</h2>
-            </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              {/* Status filter */}
-              <div className="relative">
-                <button
-                  onClick={() => setStatusMenuOpen((prev) => !prev)}
-                  className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-                >
-                  Status
-                  <span className="rounded-full bg-blue-100 text-blue-700 text-xs font-semibold px-1.5 py-0.5">
-                    {selectedStatuses.length}
-                  </span>
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {statusMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setStatusMenuOpen(false)} />
-                    <div className="absolute left-0 top-full mt-1 z-20 w-48 rounded-lg border border-gray-200 bg-white shadow-md py-1">
-                      {(["Active", "Cancelled", "Finalized", "No Show"] as const).map((s) => (
-                        <label
-                          key={s}
-                          className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedStatuses.includes(s)}
-                            onChange={() => handleStatusToggle(s)}
-                            className="rounded border-gray-300 accent-blue-600 cursor-pointer focus:ring-blue-500"
-                          />
-                          {s}
-                        </label>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Hide time off */}
-              <label className="flex items-center gap-2 cursor-pointer select-none rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={hideTimeOff}
-                  onChange={(e) => setHideTimeOff(e.target.checked)}
-                  className="rounded border-gray-300 accent-blue-600 cursor-pointer focus:ring-2 focus:ring-blue-500"
-                />
-                Hide Time Off
-              </label>
-
-              <button
-                onClick={handleOpenAddTimeOffDialog}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:from-blue-600 hover:to-blue-700 sm:w-auto"
-              >
-                <Plus className="h-4 w-4" />
-                Add Time Off
-              </button>
-            </div>
-          </div>
-
           {/* Calendar — fills remaining vertical space, no scroll */}
           <div className="relative flex-1 min-h-0 compact-calendar">
-              <style>{`
-    .compact-calendar .rbc-timeslot-group { min-height: 30px; }
-    .compact-calendar .rbc-time-slot { min-height: 20px; }
-  `}</style>
+            <style>{`
+              .compact-calendar .rbc-timeslot-group { min-height: 30px; }
+              .compact-calendar .rbc-time-slot { min-height: 20px; }
+            `}</style>
             {/* Loading overlay */}
             {loadingCalendar && (
               <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70 backdrop-blur-[2px]">
