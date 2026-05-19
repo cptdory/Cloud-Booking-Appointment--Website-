@@ -147,6 +147,7 @@ export default function SettingsPage() {
   const [planningOpen, setPlanningOpen] = useState(false);
   const [planningAction, setPlanningAction] = useState<"create" | "update">("create");
   const [planningSubmitting, setPlanningSubmitting] = useState(false);
+  const [planningTogglingCode, setPlanningTogglingCode] = useState<string | null>(null);
 
   const [code, setCode] = useState("");
   const [description, setDescription] = useState("");
@@ -286,14 +287,14 @@ export default function SettingsPage() {
 
   const openCreateHour = () => { resetHourForm(); setHourAction("create"); setHourOpen(true); };
 
-  const openUpdateHour = (row: BusinessHour) => {
+  const openUpdateHour = useCallback((row: BusinessHour) => {
     setHourAction("update");
     setDay(row.DayOfWeek);
     setStart(toTimeInputValue(row.StartTime));
     setEnd(toTimeInputValue(row.EndTime));
     setInterval(String(row.TimeIncrement || ""));
     setHourOpen(true);
-  };
+  }, []);
 
   const createHour = async () => {
     try {
@@ -346,7 +347,7 @@ export default function SettingsPage() {
     }
   };
 
-  const deleteHour = async (d: string) => {
+  const deleteHour = useCallback(async (d: string) => {
     const confirmed = confirm("Delete this business hour schedule?");
     if (!confirmed) return;
     try {
@@ -361,7 +362,7 @@ export default function SettingsPage() {
     } catch {
       sileo.error({ title: "Failed to delete business hours", fill: "#171717" });
     }
-  };
+  }, [bookingSetupCode, fetchBusinessHours]);
 
   const businessHourColumns: ColumnDef<BusinessHour>[] = useMemo(() => [
     { accessorKey: "DayOfWeek", header: "Day" },
@@ -388,7 +389,7 @@ export default function SettingsPage() {
         </div>
       ),
     },
-  ], []);
+  ], [deleteHour, openUpdateHour]);
 
   /* ================= PLANNING PERIOD ACTIONS ================= */
   const toDateInputValue = (date?: string) => {
@@ -403,14 +404,14 @@ export default function SettingsPage() {
 
   const openCreatePlanning = () => { resetPlanningForm(); setPlanningAction("create"); setPlanningOpen(true); };
 
-  const openUpdatePlanning = (row: BookingPlanningPeriod) => {
+  const openUpdatePlanning = useCallback((row: BookingPlanningPeriod) => {
     setPlanningAction("update");
     setCode(row.Code);
     setDescription(row.Description);
     setDateFrom(toDateInputValue(row.DateFrom));
     setDateTo(toDateInputValue(row.DateTo));
     setPlanningOpen(true);
-  };
+  }, []);
 
   const createPlanning = async () => {
     try {
@@ -451,21 +452,29 @@ export default function SettingsPage() {
     }
   };
 
-  const toggleActive = async (row: BookingPlanningPeriod) => {
+  const toggleActive = useCallback(async (row: BookingPlanningPeriod) => {
     const endpoint =
       row.Active === "Yes"
         ? "/api/booking-planning-period/set-booking-planning-period-inactive"
         : "/api/booking-planning-period/set-booking-planning-period-active";
-    await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bookingSetupCode, code: row.Code }),
-    });
-    sileo.success({ title: "Planning period updated", fill: "#171717" });
-    await fetchPlanningPeriods();
-  };
+    try {
+      setPlanningTogglingCode(row.Code);
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingSetupCode, code: row.Code }),
+      });
+      if (!res.ok) throw new Error();
+      sileo.success({ title: "Planning period updated", fill: "#171717" });
+      await fetchPlanningPeriods();
+    } catch {
+      sileo.error({ title: "Failed to update planning period", fill: "#171717" });
+    } finally {
+      setPlanningTogglingCode(null);
+    }
+  }, [bookingSetupCode, fetchPlanningPeriods]);
 
-  const deletePlanning = async (c: string) => {
+  const deletePlanning = useCallback(async (c: string) => {
     const confirmed = confirm("Delete this planning period?");
     if (!confirmed) return;
     try {
@@ -480,7 +489,7 @@ export default function SettingsPage() {
     } catch {
       sileo.error({ title: "Failed to delete planning period", fill: "#171717" });
     }
-  };
+  }, [bookingSetupCode, fetchPlanningPeriods]);
 
   const planningColumns: ColumnDef<BookingPlanningPeriod>[] = useMemo(() => [
     { accessorKey: "Code", header: "Code" },
@@ -489,27 +498,26 @@ export default function SettingsPage() {
     { accessorKey: "DateTo", header: "To" },
     {
       accessorKey: "Active",
-      header: "Active",
+      header: "Status",
       cell: ({ row }) => (
-        <label className="flex items-center cursor-pointer">
-          <div className="relative">
-            <input
-              type="checkbox"
-              className="sr-only"
-              checked={row.original.Active === "Yes"}
-              onChange={() => toggleActive(row.original)}
-            />
-            <div className={`block w-10 h-6 rounded-full transition-colors ${row.original.Active === "Yes" ? "bg-blue-600" : "bg-gray-200"}`} />
-            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${row.original.Active === "Yes" ? "translate-x-4" : ""}`} />
-          </div>
-        </label>
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+          row.original.Active === "Yes" 
+            ? "bg-green-50 text-green-700" 
+            : "bg-gray-100 text-gray-700"
+        }`}>
+          {row.original.Active === "Yes" ? "Active" : "Inactive"}
+        </span>
       ),
     },
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => (
+      cell: ({ row }) => {
+        const isToggling = planningTogglingCode === row.original.Code;
+
+        return (
         <div className="flex items-center gap-2">
+
           <button
             onClick={() => openUpdatePlanning(row.original)}
             className="rounded-md bg-blue-50 p-2 text-blue-600 hover:bg-blue-100 transition-colors"
@@ -522,10 +530,27 @@ export default function SettingsPage() {
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
+          <button
+            onClick={() => toggleActive(row.original)}
+            disabled={isToggling}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              row.original.Active === "Yes"
+                ? "bg-red-50 text-red-600 hover:bg-red-100"
+                : "bg-green-50 text-green-600 hover:bg-green-100"
+            } disabled:cursor-not-allowed disabled:opacity-60`}
+          >
+            {isToggling
+              ? row.original.Active === "Yes"
+                ? "Deactivating..."
+                : "Activating..."
+              : row.original.Active === "Yes"
+                ? "Deactivate"
+                : "Activate"}
+          </button>
         </div>
-      ),
+      )},
     },
-  ], []);
+  ], [deletePlanning, openUpdatePlanning, planningTogglingCode, toggleActive]);
 
   /* ================= UI ================= */
 
