@@ -556,7 +556,7 @@ export default function SettingsPage() {
           {/* SETTINGS SIDEBAR */}
           <aside className="w-56 shrink-0 border-r border-gray-100 bg-gray-50 flex flex-col">
             <div className="px-4 py-4 border-b border-gray-100">
-              <h1 className="text-sm font-semibold text-gray-900">{selectedTeamDescription ? ` ${selectedTeamDescription}` : ""}</h1>
+              <h1 className="text-sm font-semibold text-gray-900">{selectedTeamDescription ? ` ${selectedTeamDescription}` : ""} Branch</h1>
               <p className="text-xs text-gray-400 mt-0.5">Manage configurations</p>
             </div>
 

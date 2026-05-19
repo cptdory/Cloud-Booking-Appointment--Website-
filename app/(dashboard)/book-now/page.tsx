@@ -443,7 +443,7 @@ export default function BookNowPage() {
 
   // Step logic — reschedule jumps straight to date/time (step 4)
   const currentStep = isRescheduling
-    ? 4
+    ? (!selectedDate || !selectedTime || selectedTimeWarning) ? 4 : 5
     : !selectedBranch ? 1
       : !selectedService ? 2
         : (!selectedStaff && !noPreferenceStaff) ? 3
@@ -451,7 +451,7 @@ export default function BookNowPage() {
             : 5;
 
   const isFormValid = effectiveName !== "" && effectiveEmail !== "" && selectedTime !== "" && !selectedTimeWarning
-    && (!isCustomerRole ? (isNewCustomer ? true : selectedCustomer !== null) : true);
+    && (!isCustomerRole || isRescheduling? (isNewCustomer ? true : selectedCustomer !== null) : true);
 
   // Filtered customer list
   const filteredCustomers = customerList.filter(c =>

@@ -649,7 +649,7 @@ export default function CalendarPage() {
           <div className="relative flex-1 min-h-0 compact-calendar">
               <style>{`
     .compact-calendar .rbc-timeslot-group { min-height: 30px; }
-    .compact-calendar .rbc-time-slot { min-height: 10px; }
+    .compact-calendar .rbc-time-slot { min-height: 20px; }
   `}</style>
             {/* Loading overlay */}
             {loadingCalendar && (
