@@ -7,7 +7,7 @@ export async function GET() {
     const result = await bookingBranchSetupService.getBookingSetupList();
 
     const parsed = JSON.parse(result?.value);
-
+    console.log("Fetched booking setup list:", parsed);
     return NextResponse.json(parsed ?? []);
   } catch (err: any) {
     return NextResponse.json(

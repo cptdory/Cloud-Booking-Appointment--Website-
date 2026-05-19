@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     }
     const result = await bookingBranchSetupService.getBookingSetup(bookingSetupCode);
     const parsed = JSON.parse(result?.value || "null");
-
+    console.log("Fetched booking setup for code", bookingSetupCode, ":", parsed);
     return NextResponse.json(parsed);
   } catch (err: any) {
         console.error(
