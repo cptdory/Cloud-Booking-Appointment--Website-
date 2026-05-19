@@ -10,6 +10,7 @@ import {
 import { sileo } from "sileo";
 import { usePathname } from "next/navigation";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
@@ -359,6 +360,7 @@ export default function BookNowPage() {
   const [assignedStaff, setAssignedStaff] = useState<Staff[]>([]);
   const [timeslots, setTimeslots] = useState<Timeslot[]>([]);
   const [customerList, setCustomerList] = useState<CustomerData[]>([]);
+  const [customerSearch, setCustomerSearch] = useState("");
 
   // ── Selections ─────────────────────────────────────────────────────────────
   const [selectedBranch, setSelectedBranch] = useState("");
@@ -428,6 +430,13 @@ export default function BookNowPage() {
       : !isCustomerRole
         ? (isNewCustomer ? true : selectedCustomer !== null)
         : true);
+
+  const filteredCustomers = customerList.filter((c) =>
+    c.Name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+    (c.EMail ?? "").toLowerCase().includes(customerSearch.toLowerCase()) ||
+    (c.PhoneNo ?? "").toLowerCase().includes(customerSearch.toLowerCase()) ||
+    c.CustomerNo.toLowerCase().includes(customerSearch.toLowerCase())
+  );
 
   const pathname = usePathname();
 
@@ -794,22 +803,50 @@ export default function BookNowPage() {
           {!isNewCustomer ? (
             <div className="space-y-2">
               <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">Select customer</label>
-              <select
-                value={selectedCustomer?.CustomerNo ?? ""}
-                onChange={(e) => {
-                  const customer = customerList.find((c) => c.CustomerNo === e.target.value) || null;
-                  setSelectedCustomer(customer);
-                }}
-                disabled={customerList.length === 0 && !loadingCustomers}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-100"
-              >
-                <option value="">{loadingCustomers ? "Loading…" : "Choose an existing customer"}</option>
-                {customerList.map((c) => (
-                  <option key={c.CustomerNo} value={c.CustomerNo}>
-                    {c.Name}{c.EMail ? ` — ${c.EMail}` : c.PhoneNo ? ` — ${c.PhoneNo}` : ""}
-                  </option>
-                ))}
-              </select>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  disabled={customerList.length === 0 && !loadingCustomers}
+                  className="w-full text-left rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-3 focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {selectedCustomer
+                    ? `${selectedCustomer.Name}${selectedCustomer.EMail ? ` — ${selectedCustomer.EMail}` : selectedCustomer.PhoneNo ? ` — ${selectedCustomer.PhoneNo}` : ""}`
+                    : (loadingCustomers ? "Loading…" : "Choose an existing customer")}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-full max-w-[24rem] p-2">
+                  <div className="px-1 pb-2">
+                    <FieldInput
+                      icon={undefined}
+                      placeholder="Search by name, email, phone, or ID..."
+                      value={customerSearch}
+                      onChange={(e: any) => setCustomerSearch(e.target.value)}
+                      className="bg-slate-50 border-slate-200"
+                    />
+                  </div>
+                  <div className="max-h-60 overflow-y-auto space-y-1">
+                    {loadingCustomers ? (
+                      [1, 2, 3].map((i) => (
+                        <div key={i} className="h-12 rounded-xl bg-slate-100 animate-pulse" />
+                      ))
+                    ) : filteredCustomers.length === 0 ? (
+                      <div className="px-3 py-3 text-xs text-slate-500">No customers found</div>
+                    ) : (
+                      filteredCustomers.map((c) => (
+                        <DropdownMenuItem
+                          key={c.CustomerNo}
+                          onClick={() => {
+                            setSelectedCustomer(c);
+                            setCustomerSearch("");
+                          }}
+                          className="flex flex-col items-start gap-1 rounded-xl px-3 py-3"
+                        >
+                          <span className="text-sm font-semibold text-slate-800">{c.Name}</span>
+                          <span className="text-[11px] text-slate-500">{c.CustomerNo}{c.EMail ? ` • ${c.EMail}` : c.PhoneNo ? ` • ${c.PhoneNo}` : ""}</span>
+                        </DropdownMenuItem>
+                      ))
+                    )}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           ) : (
             <div className="space-y-2.5">
