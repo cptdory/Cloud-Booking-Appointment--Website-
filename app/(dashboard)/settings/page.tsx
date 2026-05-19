@@ -125,6 +125,7 @@ export default function SettingsPage() {
   const [currencySymbol, setCurrencySymbol] = useState("");
   const [allowableTime, setAllowableTime] = useState("");
   const [generalSubmitting, setGeneralSubmitting] = useState(false);
+  const [showGeneralConfirm, setShowGeneralConfirm] = useState(false);
 
   /* ================= BUSINESS HOURS STATE ================= */
 
@@ -604,7 +605,7 @@ export default function SettingsPage() {
                       </div>
                     </div>
                     <button
-                      onClick={saveGeneralSettings}
+                      onClick={() => setShowGeneralConfirm(true)}
                       disabled={generalSubmitting}
                       className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-sm text-white font-medium hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
                     >
@@ -725,6 +726,38 @@ export default function SettingsPage() {
 
         </div>
       </div>
+
+      <Dialog open={showGeneralConfirm} onOpenChange={setShowGeneralConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm business hours update</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2 text-sm text-slate-600">
+            <p>
+              When you update the time increment, the business-hours intervals will be recalculated to match the new increment. Existing business hours may change accordingly.
+            </p>
+            <p>Do you want to continue?</p>
+          </div>
+          <DialogFooter className="gap-2">
+            <button
+              onClick={() => setShowGeneralConfirm(false)}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                setShowGeneralConfirm(false);
+                await saveGeneralSettings();
+              }}
+              disabled={generalSubmitting}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {generalSubmitting ? "Saving..." : "Confirm"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ====== BUSINESS HOURS DIALOG ====== */}
       <Dialog open={hourOpen} onOpenChange={setHourOpen}>
