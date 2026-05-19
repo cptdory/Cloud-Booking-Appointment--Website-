@@ -105,7 +105,7 @@ function StepBadge({ number, done, active }: { number: number; done: boolean; ac
 }
 
 // ─── Horizontal Setup Card ────────────────────────────────────────────────────
-function HorizontalSetupCard({ step, currentStep, title, icon: Icon, children, id, disabled, readonlyValue, readonlySub ,readonlySub2}: {
+function HorizontalSetupCard({ step, currentStep, title, icon: Icon, children, id, disabled, readonlyValue, readonlySub, readonlySub2 }: {
   step: number; currentStep: number; title: string; icon: React.ComponentType<any>; children: React.ReactNode; id?: string; disabled?: boolean; readonlyValue?: string; readonlySub?: string; readonlySub2?: string;
 }) {
   const done = currentStep > step;
@@ -129,9 +129,8 @@ function HorizontalSetupCard({ step, currentStep, title, icon: Icon, children, i
     <div className="space-y-2">
       <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white">
         <span className="text-sm text-slate-600 flex-1">{readonlyValue}</span>
-        {readonlySub && <span className="text-xs text-slate-400">{readonlySub}</span>}
       </div>
-      {readonlySub2 && <div className="px-1 text-xs text-slate-400">{readonlySub2}</div>}
+      {readonlySub2 && <div className="px-1 text-xs text-slate-500">{readonlySub2}</div>}
     </div>
   ) : children}
 </div>
@@ -932,8 +931,8 @@ export default function BookNowPage() {
           <HorizontalSetupCard
             id="location-card" step={1} currentStep={currentStep} title="Location" icon={MapPin}
             disabled={isRescheduling}
-              readonlyValue={selectedBranchObj?.description ?? rescheduleData?.BookingSetupCode}
-  readonlySub2="Address not available"
+            readonlyValue={selectedBranchObj?.description ?? rescheduleData?.BookingSetupCode}
+            readonlySub2="Address not available"
           >
             <div className="space-y-2">
               <div className="relative">
@@ -952,11 +951,11 @@ export default function BookNowPage() {
           </HorizontalSetupCard>
 
           {/* Service */}
-          <HorizontalSetupCard
+<HorizontalSetupCard
   id="service-card" step={2} currentStep={currentStep} title="Service" icon={Briefcase}
   disabled={isRescheduling}
   readonlyValue={selectedServiceObj?.name ?? rescheduleData?.ServiceName}
-  readonlySub={selectedServiceObj ? `${selectedServiceObj.duration} · ${selectedServiceObj.price}` : undefined}
+  readonlySub2={selectedServiceObj ? `${selectedServiceObj.duration} · ${selectedServiceObj.price}` : undefined}
 >
             <div className="space-y-2">
               <div className="relative">
