@@ -121,6 +121,7 @@ export default function SettingsPage() {
   const [address, setAddress] = useState("");
   const [timeSlotBookableCount, setTimeSlotBookableCount] = useState("");
   const [timeIncrementMinutes, setTimeIncrementMinutes] = useState("");
+  const [originalTimeIncrement, setOriginalTimeIncrement] = useState("");
   const [currencyCode, setCurrencyCode] = useState("");
   const [currencySymbol, setCurrencySymbol] = useState("");
   const [allowableTime, setAllowableTime] = useState("");
@@ -220,13 +221,13 @@ export default function SettingsPage() {
           ""
         )
       );
-      setTimeIncrementMinutes(
-        String(
-          selected?.BookingSetupTimeIncrement ??
-          selected?.TimeIncrement ??
-          ""
-        )
+      const timeIncValue = String(
+        selected?.BookingSetupTimeIncrement ??
+        selected?.TimeIncrement ??
+        ""
       );
+      setTimeIncrementMinutes(timeIncValue);
+      setOriginalTimeIncrement(timeIncValue);
       setCurrencyCode(selected?.BookingSetupCurrencyCode || selected?.CurrencyCode || "");
       setCurrencySymbol(selected?.BookingSetupCurrencySymbol || selected?.CurrencySymbol || "");
       setAllowableTime(
@@ -266,6 +267,7 @@ export default function SettingsPage() {
 
       if (!res.ok) throw new Error();
       sileo.success({ title: "General settings saved", fill: "#171717" });
+      setOriginalTimeIncrement(timeIncrementMinutes);
       await fetchSelectedTeamDescription();
     } catch {
       sileo.error({ title: "Failed to save general settings", fill: "#171717" });
@@ -605,7 +607,13 @@ export default function SettingsPage() {
                       </div>
                     </div>
                     <button
-                      onClick={() => setShowGeneralConfirm(true)}
+                      onClick={() => {
+                        if (timeIncrementMinutes !== originalTimeIncrement) {
+                          setShowGeneralConfirm(true);
+                        } else {
+                          saveGeneralSettings();
+                        }
+                      }}
                       disabled={generalSubmitting}
                       className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-sm text-white font-medium hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
                     >
