@@ -30,7 +30,7 @@ class BusinessCentralTokenService {
   }
 
   private async requestNewToken(): Promise<string> {
-    const tenant = process.env.BC_TENANT_ID!;
+    const tenant = process.env.TENANT_ID!;
 
     const response = await fetch(
       `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`,
@@ -42,9 +42,9 @@ class BusinessCentralTokenService {
         },
         body: new URLSearchParams({
           grant_type: "client_credentials",
-          client_id: process.env.BC_CLIENT_ID!,
-          client_secret: process.env.BC_CLIENT_SECRET!,
-          scope: process.env.BC_SCOPE!,
+          client_id: process.env.CLIENT_ID!,
+          client_secret: process.env.CLIENT_SECRET!,
+          scope: process.env.SCOPE!,
         }),
       }
     );

@@ -7,7 +7,7 @@ class BookingBranchSetupService {
     return bcClient.post<{ value: string }>(
       "BookingAppointment_GetBookingSetup",
       {
-        _BookingSetupCode: bookingSetupCode,
+        _Code: bookingSetupCode,
       }
     );
   }

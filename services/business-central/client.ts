@@ -10,9 +10,9 @@ class BusinessCentralClient {
   private company: string;
 
   constructor() {
-    const tenant = process.env.BC_TENANT_ID!;
-    const env = process.env.BC_ENVIRONMENT!;
-    this.company = process.env.BC_COMPANY!;
+    const tenant = process.env.TENANT_ID!;
+    const env = process.env.ENVIRONMENT!;
+    this.company = process.env.COMPANY!;
 
     this.baseUrl = `https://api.businesscentral.dynamics.com/v2.0/${tenant}/${env}/ODataV4`;
   }

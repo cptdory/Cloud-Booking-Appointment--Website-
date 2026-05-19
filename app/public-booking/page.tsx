@@ -644,20 +644,12 @@ export default function App() {
   useEffect(() => {
     if (!isNextStepVisible) return;
     if (tourStep === 2 && (selectedStaff || noPreferenceStaff)) {
-      setCurrentStep(3);
-    }
-  }, [selectedStaff, noPreferenceStaff, tourStep, setCurrentStep, isNextStepVisible]);
-  // ── Auto-close tour when all steps are completed ────────────────────────
-  useEffect(() => {
-    if (!isNextStepVisible) return;
-    if (tourStep === 3 && selectedDate) {
-      // Close tour after a brief delay to show the final step
       const timer = setTimeout(() => {
         closeNextStep();
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [selectedDate, tourStep, closeNextStep, isNextStepVisible]);
+  }, [selectedStaff, noPreferenceStaff, tourStep, closeNextStep, isNextStepVisible]);
   const confirmData = {
     branch: selectedBranchObj?.description ?? selectedBranch,
     service: selectedServiceObj?.name ?? "",
@@ -856,7 +848,7 @@ export default function App() {
           {/* Left: Calendar + Timeslots side by side */}
           <div className="flex-1 flex gap-4 min-h-0 items-stretch">
             {/* Calendar */}
-            <div className={`flex-1 min-h-[32rem] max-h-[32rem] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-opacity ${!selectedStaff && !noPreferenceStaff ? "opacity-40 pointer-events-none" : ""}`}>
+            <div id="calendar-card" className={`flex-1 min-h-[32rem] max-h-[32rem] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-opacity ${!selectedStaff && !noPreferenceStaff ? "opacity-40 pointer-events-none" : ""}`}>
               <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
                 <StepBadge number={4} done={currentStep > 4} active={currentStep === 4} />
                 <Calendar size={13} strokeWidth={2} className={currentStep >= 4 ? "text-blue-600" : "text-slate-400"} />
@@ -912,7 +904,7 @@ export default function App() {
               </div>
             </div>
             {/* Timeslots Panel — inline beside calendar */}
-            <div className={`flex-1 min-h-[32rem] max-h-[32rem] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-opacity ${!selectedStaff && !noPreferenceStaff ? "opacity-40 pointer-events-none" : ""}`}>
+            <div id="timeslot-card" className={`flex-1 min-h-[32rem] max-h-[32rem] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-opacity ${!selectedStaff && !noPreferenceStaff ? "opacity-40 pointer-events-none" : ""}`}>
               <TimeslotPanel
                 selectedDate={selectedDate}
                 timeslots={timeslots}
@@ -925,7 +917,7 @@ export default function App() {
           </div>
 
           {/* Right: Your Details */}
-          <div className="w-80 shrink-0 flex flex-col gap-4 overflow-y-auto pb-2">
+          <div id="details-card" className="w-80 shrink-0 flex flex-col gap-4 overflow-y-auto pb-2">
 
             <div className={`transition-opacity ${(!selectedTime || selectedTimeWarning) ? "opacity-40 pointer-events-none" : ""}`}>
               <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
@@ -1130,7 +1122,7 @@ export default function App() {
           {mobilePanel === "schedule" && (
             <div className={`space-y-4 ${!selectedStaff && !noPreferenceStaff ? "opacity-40 pointer-events-none" : ""}`}>
               {/* Calendar */}
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div id="mobile-calendar-card" className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
                   <StepBadge number={4} done={currentStep > 4} active={currentStep === 4} />
                   <Calendar size={13} strokeWidth={2} className="text-blue-600" />
@@ -1166,7 +1158,7 @@ export default function App() {
                 </div>
               </div>
               {/* Timeslots panel on mobile — full width below calendar */}
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden min-h-[200px] flex flex-col">
+              <div id="mobile-timeslot-card" className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden min-h-[200px] flex flex-col">
                 <TimeslotPanel
                   selectedDate={selectedDate}
                   timeslots={timeslots}
@@ -1210,7 +1202,7 @@ export default function App() {
                   </div>
                 </div>
               )}
-              <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+              <div id="mobile-details-card" className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
                   <StepBadge number={6} done={false} active={currentStep === 6} />
                   <User size={13} strokeWidth={2} className="text-blue-600" />

@@ -482,11 +482,10 @@ export default function BookNowPage() {
   // ── Tour auto-advance ──────────────────────────────────────────────────────
   useEffect(() => { if (!isNextStepVisible || tourStep !== 0) return; if (selectedBranch) setTourStep(1); }, [selectedBranch, tourStep, isNextStepVisible]);
   useEffect(() => { if (!isNextStepVisible || tourStep !== 1) return; if (selectedService) setTourStep(2); }, [selectedService, tourStep, isNextStepVisible]);
-  useEffect(() => { if (!isNextStepVisible || tourStep !== 2) return; if (selectedStaff || noPreferenceStaff) setTourStep(3); }, [selectedStaff, noPreferenceStaff, tourStep, isNextStepVisible]);
   useEffect(() => {
-    if (!isNextStepVisible || tourStep !== 3) return;
-    if (selectedDate) { const t = setTimeout(() => closeNextStep(), 2000); return () => clearTimeout(t); }
-  }, [selectedDate, tourStep, isNextStepVisible]);
+    if (!isNextStepVisible || tourStep !== 2) return;
+    if (selectedStaff || noPreferenceStaff) { const t = setTimeout(() => closeNextStep(), 2000); return () => clearTimeout(t); }
+  }, [selectedStaff, noPreferenceStaff, tourStep, isNextStepVisible, closeNextStep]);
 
   // ── Auto-select today when reaching date step ──────────────────────────────
   useEffect(() => {

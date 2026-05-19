@@ -18,6 +18,10 @@ export async function GET() {
 
     return NextResponse.json(parsed);
   } catch (err: any) {
+        console.error(
+      "BC ERROR:",
+      JSON.stringify(err?.response?.data, null, 2)
+    );
     return NextResponse.json(
       {
         error:
