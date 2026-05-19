@@ -17,14 +17,13 @@ export async function POST(req: Request) {
         { status: 401 }
       );
     }
-
+    const defaultBranch = user?.Branches?.find((b: any) => b.Default === true) ?? user?.Branches?.[0];
     const sessionData = isUserLogin === "true"
         ? {
             logged_in: true,
             user: {
-              booking_setup_code: user?.BookingSetupCode ?? "MAIN",
-              booking_parameter_id: user?.BookingParameterId,
-              booking_parameter_value_id: user?.BookingParameterValueId,
+              // booking_setup_code: user?.BranchCode ?? "MAIN",
+              booking_setup_code: defaultBranch?.BranchCode ?? "",
               staff_code: user?.StaffCode,
               name: user?.Name,
               email: user?.Email,

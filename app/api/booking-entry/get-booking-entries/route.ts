@@ -4,7 +4,7 @@ import { bookingEntryService } from "@/services/business-central/booking-entry.s
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-
+    console.log("Received body:", body);
     const {
     bookingSetupCode,
     dateFrom,

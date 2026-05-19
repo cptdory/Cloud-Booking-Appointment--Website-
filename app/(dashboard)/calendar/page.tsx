@@ -270,6 +270,7 @@ export default function CalendarPage() {
   );
 
   useEffect(() => {
+    console.log("sessionUser:", sessionUser);
     if (sessionUser) fetchBookingEntries(dateRange.start, dateRange.end);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionUser]);
