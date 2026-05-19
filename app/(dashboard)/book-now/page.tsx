@@ -361,6 +361,9 @@ export default function BookNowPage() {
   const [timeslots, setTimeslots] = useState<Timeslot[]>([]);
   const [customerList, setCustomerList] = useState<CustomerData[]>([]);
   const [customerSearch, setCustomerSearch] = useState("");
+  const [branchSearch, setBranchSearch] = useState("");
+  const [serviceSearch, setServiceSearch] = useState("");
+  const [staffSearch, setStaffSearch] = useState("");
 
   // ── Selections ─────────────────────────────────────────────────────────────
   const [selectedBranch, setSelectedBranch] = useState("");
@@ -436,6 +439,24 @@ export default function BookNowPage() {
     (c.EMail ?? "").toLowerCase().includes(customerSearch.toLowerCase()) ||
     (c.PhoneNo ?? "").toLowerCase().includes(customerSearch.toLowerCase()) ||
     c.CustomerNo.toLowerCase().includes(customerSearch.toLowerCase())
+  );
+
+  const filteredBranches = branches.filter((b) =>
+    b.description.toLowerCase().includes(branchSearch.toLowerCase()) ||
+    b.code.toLowerCase().includes(branchSearch.toLowerCase()) ||
+    b.address.toLowerCase().includes(branchSearch.toLowerCase())
+  );
+
+  const filteredServices = services.filter((s) =>
+    s.name.toLowerCase().includes(serviceSearch.toLowerCase()) ||
+    s.code.toLowerCase().includes(serviceSearch.toLowerCase()) ||
+    s.duration.toLowerCase().includes(serviceSearch.toLowerCase()) ||
+    s.price.toLowerCase().includes(serviceSearch.toLowerCase())
+  );
+
+  const filteredStaff = assignedStaff.filter((s) =>
+    s.staffName.toLowerCase().includes(staffSearch.toLowerCase()) ||
+    s.staffCode.toLowerCase().includes(staffSearch.toLowerCase())
   );
 
   const pathname = usePathname();
@@ -727,13 +748,50 @@ export default function BookNowPage() {
   // ── Staff panel (shared between desktop + mobile) ─────────────────────────
   const staffPanelContent = (
     <div className="space-y-3">
-      <div className="relative">
-        <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 z-10"><User size={14} strokeWidth={2} /></div>
-        <select value={selectedStaff || ""} onChange={e => sel.staff(e.target.value)} disabled={!selectedService || loadingStaff} className="w-full pl-11 pr-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 text-sm appearance-none cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
-          <option value="">{loadingStaff ? "Loading…" : "Choose staff"}</option>
-          {assignedStaff.map(st => <option key={st.staffId} value={st.staffId}>{st.staffName}</option>)}
-        </select>
-      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          disabled={!selectedService || loadingStaff}
+          className="w-full text-left rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-3 focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {selectedStaff
+            ? selectedStaffObj?.staffName
+            : (loadingStaff ? "Loading…" : "Choose staff")}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-full max-w-[24rem] p-2">
+          <div className="px-1 pb-2">
+            <FieldInput
+              icon={undefined}
+              placeholder="Search professional..."
+              value={staffSearch}
+              onChange={(e: any) => setStaffSearch(e.target.value)}
+              onPointerDown={(e: any) => e.stopPropagation()}
+              onClick={(e: any) => e.stopPropagation()}
+              onKeyDown={(e: any) => e.stopPropagation()}
+              className="bg-slate-50 border-slate-200"
+            />
+          </div>
+          <div className="max-h-60 overflow-y-auto space-y-1">
+            {loadingStaff ? (
+              [1, 2, 3].map((i) => (
+                <div key={i} className="h-12 rounded-xl bg-slate-100 animate-pulse" />
+              ))
+            ) : filteredStaff.length === 0 ? (
+              <div className="px-3 py-3 text-xs text-slate-500">No professionals found</div>
+            ) : (
+              filteredStaff.map((st) => (
+                <DropdownMenuItem
+                  key={st.staffId}
+                  onClick={() => { sel.staff(st.staffId); setStaffSearch(""); }}
+                  className="flex flex-col items-start gap-1 rounded-xl px-3 py-3"
+                >
+                  <span className="text-sm font-semibold text-slate-800">{st.staffName}</span>
+                  <span className="text-[11px] text-slate-500">{st.staffCode}</span>
+                </DropdownMenuItem>
+              ))
+            )}
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <label className="flex items-center gap-2.5 cursor-pointer px-1">
         <input type="checkbox" checked={noPreferenceStaff}
           onChange={e => { setNoPreferenceStaff(e.target.checked); if (e.target.checked) setSelectedStaff(""); }}
@@ -947,13 +1005,50 @@ export default function BookNowPage() {
             readonlySub2="Address not available"
           >
             <div className="space-y-2">
-              <div className="relative">
-                <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 z-10"><MapPin size={14} strokeWidth={2} /></div>
-                <select value={selectedBranch || ""} onChange={e => sel.branch(e.target.value)} disabled={loadingBranches || !isCustomerRole} className="w-full pl-11 pr-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 text-sm appearance-none cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                  <option value="">{loadingBranches ? "Loading…" : !isCustomerRole ? "Location fixed by active team" : "Choose branch"}</option>
-                  {branches.map(b => <option key={b.code} value={b.code}>{b.description}</option>)}
-                </select>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  disabled={loadingBranches || !isCustomerRole}
+                  className="w-full text-left rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-3 focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {selectedBranch
+                    ? selectedBranchObj?.description
+                    : (loadingBranches ? "Loading…" : !isCustomerRole ? "Location fixed by active team" : "Choose branch")}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-full max-w-[24rem] p-2">
+                  <div className="px-1 pb-2">
+                    <FieldInput
+                      icon={undefined}
+                      placeholder="Search branch..."
+                      value={branchSearch}
+                      onChange={(e: any) => setBranchSearch(e.target.value)}
+                      onPointerDown={(e: any) => e.stopPropagation()}
+                      onClick={(e: any) => e.stopPropagation()}
+                      onKeyDown={(e: any) => e.stopPropagation()}
+                      className="bg-slate-50 border-slate-200"
+                    />
+                  </div>
+                  <div className="max-h-60 overflow-y-auto space-y-1">
+                    {loadingBranches ? (
+                      [1, 2, 3].map((i) => (
+                        <div key={i} className="h-12 rounded-xl bg-slate-100 animate-pulse" />
+                      ))
+                    ) : filteredBranches.length === 0 ? (
+                      <div className="px-3 py-3 text-xs text-slate-500">No branches found</div>
+                    ) : (
+                      filteredBranches.map((b) => (
+                        <DropdownMenuItem
+                          key={b.code}
+                          onClick={() => { sel.branch(b.code); setBranchSearch(""); }}
+                          className="flex flex-col items-start gap-1 rounded-xl px-3 py-3"
+                        >
+                          <span className="text-sm font-semibold text-slate-800">{b.description}</span>
+                          <span className="text-[11px] text-slate-500">{b.code}{b.address ? ` • ${b.address}` : ""}</span>
+                        </DropdownMenuItem>
+                      ))
+                    )}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <div className="px-1 text-xs text-slate-400">{selectedBranch
                       ? selectedBranchData?.address || "Address not available"
                       : "Select a branch"}</div>
@@ -968,13 +1063,50 @@ export default function BookNowPage() {
             readonlySub2={selectedServiceObj ? `${selectedServiceObj.duration} · ${selectedServiceObj.price}` : undefined}
           >
             <div className="space-y-2">
-              <div className="relative">
-                <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 z-10"><Briefcase size={14} strokeWidth={2} /></div>
-                <select value={selectedService || ""} onChange={e => sel.service(e.target.value)} disabled={!selectedBranch || loadingServices} className="w-full pl-11 pr-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 text-sm appearance-none cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                  <option value="">{loadingServices ? "Loading…" : "Choose service"}</option>
-                  {services.map((service: any) => <option key={service.id} value={service.id}>{service.name} - {service.price} ({service.duration})</option>)}
-                </select>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  disabled={!selectedBranch || loadingServices}
+                  className="w-full text-left rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-3 focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {selectedService
+                    ? selectedServiceObj?.name
+                    : (loadingServices ? "Loading…" : "Choose service")}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-full max-w-[24rem] p-2">
+                  <div className="px-1 pb-2">
+                    <FieldInput
+                      icon={undefined}
+                      placeholder="Search service..."
+                      value={serviceSearch}
+                      onChange={(e: any) => setServiceSearch(e.target.value)}
+                      onPointerDown={(e: any) => e.stopPropagation()}
+                      onClick={(e: any) => e.stopPropagation()}
+                      onKeyDown={(e: any) => e.stopPropagation()}
+                      className="bg-slate-50 border-slate-200"
+                    />
+                  </div>
+                  <div className="max-h-60 overflow-y-auto space-y-1">
+                    {loadingServices ? (
+                      [1, 2, 3].map((i) => (
+                        <div key={i} className="h-12 rounded-xl bg-slate-100 animate-pulse" />
+                      ))
+                    ) : filteredServices.length === 0 ? (
+                      <div className="px-3 py-3 text-xs text-slate-500">No services found</div>
+                    ) : (
+                      filteredServices.map((service) => (
+                        <DropdownMenuItem
+                          key={service.id}
+                          onClick={() => { sel.service(service.id); setServiceSearch(""); }}
+                          className="flex flex-col items-start gap-1 rounded-xl px-3 py-3"
+                        >
+                          <span className="text-sm font-semibold text-slate-800">{service.name}</span>
+                          <span className="text-[11px] text-slate-500">{service.duration} · {service.price}</span>
+                        </DropdownMenuItem>
+                      ))
+                    )}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
               {selectedService && (() => { const sv = services.find(s => s.id === selectedService); return sv ? <div className="px-1 text-xs text-slate-500">{sv.duration} · {sv.price}</div> : null; })()}
             </div>
           </HorizontalSetupCard>
@@ -1035,8 +1167,8 @@ export default function BookNowPage() {
           </div>
 
           {/* Right panel: Customer + Details + CTA */}
-          <div className="w-80 shrink-0 flex flex-col gap-4">
-            <div className={`flex-1 min-h-0 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-opacity ${(!selectedTime || (selectedTimeWarning && skipAvailabilityCheck !== "true")) ? "opacity-40 pointer-events-none" : ""}`}>
+          <div className="w-80 shrink-0 flex flex-col gap-4 min-h-[32rem]">
+            <div className={`flex-1 min-h-[32rem] overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-opacity ${(!selectedTime || (selectedTimeWarning && skipAvailabilityCheck !== "true")) ? "opacity-40 pointer-events-none" : ""}`}>
               <div className="max-h-[56vh] overflow-y-auto p-4 space-y-4">
                 <div>
                   <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
@@ -1110,25 +1242,99 @@ export default function BookNowPage() {
                 {
                   step: 1, title: "Location", icon: MapPin, id: "mobile-location-card",
                   content: (
-                    <div className="relative">
-                      <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 z-10"><MapPin size={14} strokeWidth={2} /></div>
-                      <select value={selectedBranch || ""} onChange={e => sel.branch(e.target.value)} disabled={loadingBranches} className="w-full pl-11 pr-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 text-sm appearance-none cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <option value="">{loadingBranches ? "Loading…" : "Choose branch"}</option>
-                        {branches.map(b => <option key={b.code} value={b.code}>{b.description}</option>)}
-                      </select>
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        disabled={loadingBranches || !isCustomerRole}
+                        className="w-full text-left rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-3 focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {selectedBranch
+                          ? selectedBranchObj?.description
+                          : (loadingBranches ? "Loading…" : !isCustomerRole ? "Location fixed by active team" : "Choose branch")}
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-full max-w-[24rem] p-2">
+                        <div className="px-1 pb-2">
+                          <FieldInput
+                            icon={undefined}
+                            placeholder="Search branch..."
+                            value={branchSearch}
+                            onChange={(e: any) => setBranchSearch(e.target.value)}
+                            onPointerDown={(e: any) => e.stopPropagation()}
+                            onClick={(e: any) => e.stopPropagation()}
+                            onKeyDown={(e: any) => e.stopPropagation()}
+                            className="bg-slate-50 border-slate-200"
+                          />
+                        </div>
+                        <div className="max-h-60 overflow-y-auto space-y-1">
+                          {loadingBranches ? (
+                            [1, 2, 3].map((i) => (
+                              <div key={i} className="h-12 rounded-xl bg-slate-100 animate-pulse" />
+                            ))
+                          ) : filteredBranches.length === 0 ? (
+                            <div className="px-3 py-3 text-xs text-slate-500">No branches found</div>
+                          ) : (
+                            filteredBranches.map((b) => (
+                              <DropdownMenuItem
+                                key={b.code}
+                                onClick={() => { sel.branch(b.code); setBranchSearch(""); }}
+                                className="flex flex-col items-start gap-1 rounded-xl px-3 py-3"
+                              >
+                                <span className="text-sm font-semibold text-slate-800">{b.description}</span>
+                                <span className="text-[11px] text-slate-500">{b.code}{b.address ? ` • ${b.address}` : ""}</span>
+                              </DropdownMenuItem>
+                            ))
+                          )}
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   ),
                 },
                 {
                   step: 2, title: "Service", icon: Briefcase, id: "mobile-service-card",
                   content: (
-                    <div className="relative">
-                      <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 z-10"><Briefcase size={14} strokeWidth={2} /></div>
-                      <select value={selectedService || ""} onChange={e => sel.service(e.target.value)} disabled={!selectedBranch || loadingServices} className="w-full pl-11 pr-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 text-sm appearance-none cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <option value="">{loadingServices ? "Loading…" : "Choose service"}</option>
-                        {services.map(s => <option key={s.id} value={s.id}>{s.name} - {s.duration}  ({s.price})</option>)}
-                      </select>
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        disabled={!selectedBranch || loadingServices}
+                        className="w-full text-left rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-3 focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {selectedService
+                          ? selectedServiceObj?.name
+                          : (loadingServices ? "Loading…" : "Choose service")}
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-full max-w-[24rem] p-2">
+                        <div className="px-1 pb-2">
+                          <FieldInput
+                            icon={undefined}
+                            placeholder="Search service..."
+                            value={serviceSearch}
+                            onChange={(e: any) => setServiceSearch(e.target.value)}
+                            onPointerDown={(e: any) => e.stopPropagation()}
+                            onClick={(e: any) => e.stopPropagation()}
+                            onKeyDown={(e: any) => e.stopPropagation()}
+                            className="bg-slate-50 border-slate-200"
+                          />
+                        </div>
+                        <div className="max-h-60 overflow-y-auto space-y-1">
+                          {loadingServices ? (
+                            [1, 2, 3].map((i) => (
+                              <div key={i} className="h-12 rounded-xl bg-slate-100 animate-pulse" />
+                            ))
+                          ) : filteredServices.length === 0 ? (
+                            <div className="px-3 py-3 text-xs text-slate-500">No services found</div>
+                          ) : (
+                            filteredServices.map((service) => (
+                              <DropdownMenuItem
+                                key={service.id}
+                                onClick={() => { sel.service(service.id); setServiceSearch(""); }}
+                                className="flex flex-col items-start gap-1 rounded-xl px-3 py-3"
+                              >
+                                <span className="text-sm font-semibold text-slate-800">{service.name}</span>
+                                <span className="text-[11px] text-slate-500">{service.duration} · {service.price}</span>
+                              </DropdownMenuItem>
+                            ))
+                          )}
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   ),
                 },
                 {
