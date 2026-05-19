@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNextStep } from "nextstepjs";
 import {
   CheckCircle2, MapPin, Briefcase, Users, Calendar, User, Clock,
@@ -10,7 +10,6 @@ import {
 import { sileo } from "sileo";
 import { usePathname } from "next/navigation";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
@@ -361,6 +360,8 @@ export default function BookNowPage() {
   const [timeslots, setTimeslots] = useState<Timeslot[]>([]);
   const [customerList, setCustomerList] = useState<CustomerData[]>([]);
   const [customerSearch, setCustomerSearch] = useState("");
+  const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
+  const customerDropdownRef = useRef<HTMLDivElement | null>(null);
 
   // ── Selections ─────────────────────────────────────────────────────────────
   const [selectedBranch, setSelectedBranch] = useState("");
@@ -445,6 +446,23 @@ export default function BookNowPage() {
     if (!isCustomerRole || !sessionUser) return;
     setSelectedCustomer({ CustomerNo: sessionUser.customer_number ?? "", Name: sessionUser.name ?? "", PhoneNo: sessionUser.phone_number ?? "", EMail: sessionUser.email ?? "", Address: sessionUser.address ?? "", Address2: sessionUser.address2 ?? "" });
   }, [sessionUser, isCustomerRole]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target as Node)) {
+        setCustomerDropdownOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setCustomerDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   // ── Mobile tab auto-advance ────────────────────────────────────────────────
   useEffect(() => {
@@ -801,21 +819,26 @@ export default function BookNowPage() {
             <span className="text-xs font-bold text-slate-600">New Customer</span>
           </label>
           {!isNewCustomer ? (
-            <div className="space-y-2">
+            <div className="space-y-2 relative" ref={customerDropdownRef}>
               <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">Select customer</label>
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  disabled={customerList.length === 0 && !loadingCustomers}
-                  className="w-full text-left rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-3 focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {selectedCustomer
-                    ? `${selectedCustomer.Name}${selectedCustomer.EMail ? ` — ${selectedCustomer.EMail}` : selectedCustomer.PhoneNo ? ` — ${selectedCustomer.PhoneNo}` : ""}`
-                    : (loadingCustomers ? "Loading…" : "Choose an existing customer")}
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-full max-w-[24rem] p-2">
+              <button
+                type="button"
+                onClick={() => setCustomerDropdownOpen((prev) => !prev)}
+                disabled={customerList.length === 0 && !loadingCustomers}
+                className="w-full text-left rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-3 focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-haspopup="listbox"
+                aria-expanded={customerDropdownOpen}
+              >
+                {selectedCustomer
+                  ? `${selectedCustomer.Name}${selectedCustomer.EMail ? ` — ${selectedCustomer.EMail}` : selectedCustomer.PhoneNo ? ` — ${selectedCustomer.PhoneNo}` : ""}`
+                  : (loadingCustomers ? "Loading…" : "Choose an existing customer")}
+              </button>
+              {customerDropdownOpen && (
+                <div className="absolute left-0 right-0 z-50 mt-2 max-w-[24rem] rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
                   <div className="px-1 pb-2">
                     <FieldInput
                       icon={undefined}
+                      autoFocus
                       placeholder="Search by name, email, phone, or ID..."
                       value={customerSearch}
                       onChange={(e: any) => setCustomerSearch(e.target.value)}
@@ -831,22 +854,24 @@ export default function BookNowPage() {
                       <div className="px-3 py-3 text-xs text-slate-500">No customers found</div>
                     ) : (
                       filteredCustomers.map((c) => (
-                        <DropdownMenuItem
+                        <button
                           key={c.CustomerNo}
+                          type="button"
                           onClick={() => {
                             setSelectedCustomer(c);
                             setCustomerSearch("");
+                            setCustomerDropdownOpen(false);
                           }}
-                          className="flex flex-col items-start gap-1 rounded-xl px-3 py-3"
+                          className="w-full text-left flex flex-col items-start gap-1 rounded-xl px-3 py-3 hover:bg-slate-50"
                         >
                           <span className="text-sm font-semibold text-slate-800">{c.Name}</span>
                           <span className="text-[11px] text-slate-500">{c.CustomerNo}{c.EMail ? ` • ${c.EMail}` : c.PhoneNo ? ` • ${c.PhoneNo}` : ""}</span>
-                        </DropdownMenuItem>
+                        </button>
                       ))
                     )}
                   </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-2.5">
