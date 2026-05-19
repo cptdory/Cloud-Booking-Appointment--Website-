@@ -788,7 +788,19 @@ export default function BookNowPage() {
         <>
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={isNewCustomer}
-              onChange={e => { setIsNewCustomer(e.target.checked); if (!e.target.checked) { setCustomerName(""); setCustomerEmail(""); setCustomerPhone(""); setCustomerAddress1(""); setCustomerAddress2(""); } }}
+              onChange={e => {
+                const checked = e.target.checked;
+                setIsNewCustomer(checked);
+                if (checked) {
+                  setSelectedCustomer(null);
+                } else {
+                  setCustomerName("");
+                  setCustomerEmail("");
+                  setCustomerPhone("");
+                  setCustomerAddress1("");
+                  setCustomerAddress2("");
+                }
+              }}
               className="w-4 h-4 accent-blue-600" />
             <span className="text-xs font-bold text-slate-600">New Customer</span>
           </label>
