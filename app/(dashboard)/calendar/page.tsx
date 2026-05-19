@@ -648,8 +648,8 @@ export default function CalendarPage() {
           {/* Calendar — fills remaining vertical space, no scroll */}
           <div className="relative flex-1 min-h-0 compact-calendar">
               <style>{`
-    .compact-calendar .rbc-timeslot-group { min-height: 70px; }
-    .compact-calendar .rbc-time-slot { min-height: 40px; }
+    .compact-calendar .rbc-timeslot-group { min-height: 30px; }
+    .compact-calendar .rbc-time-slot { min-height: 10px; }
   `}</style>
             {/* Loading overlay */}
             {loadingCalendar && (
