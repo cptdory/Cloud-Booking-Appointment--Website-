@@ -105,25 +105,33 @@ function StepBadge({ number, done, active }: { number: number; done: boolean; ac
 }
 
 // ─── Horizontal Setup Card ────────────────────────────────────────────────────
-function HorizontalSetupCard({ step, currentStep, title, icon: Icon, children, id }: {
-  step: number; currentStep: number; title: string; icon: React.ComponentType<any>; children: React.ReactNode; id?: string;
+function HorizontalSetupCard({ step, currentStep, title, icon: Icon, children, id, disabled, readonlyValue, readonlySub }: {
+  step: number; currentStep: number; title: string; icon: React.ComponentType<any>; children: React.ReactNode; id?: string; disabled?: boolean; readonlyValue?: string; readonlySub?: string;
 }) {
   const done = currentStep > step;
   const active = currentStep === step;
-  const locked = currentStep < step;
   return (
-    <div id={id} className={`flex-1 rounded-2xl border transition-all duration-300 overflow-hidden
-      ${active ? "border-blue-200 bg-white shadow-md shadow-blue-50" : ""}
-      ${done ? "border-blue-100 bg-blue-50/40" : ""}
-      ${locked ? "border-slate-100 bg-slate-50/60 opacity-50" : ""}`}>
+    <div id={id} className={`flex-1 rounded-2xl border transition-all duration-300
+      ${disabled ? "border-slate-100 bg-slate-50/60 opacity-60 pointer-events-none" : ""}
+      ${!disabled && active ? "border-blue-200 bg-white shadow-md shadow-blue-50" : ""}
+      ${!disabled && done ? "border-blue-100 bg-blue-50/40" : ""}
+      ${!disabled && !active && !done ? "border-slate-100 bg-slate-50/60 opacity-50" : ""}`}>
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-inherit">
-        <StepBadge number={step} done={done} active={active} />
+        <StepBadge number={step} done={!disabled && done} active={!disabled && active} />
         <Icon size={12} strokeWidth={2} className={active || done ? "text-blue-600" : "text-slate-400"} />
         <span className={`text-[11px] font-bold uppercase tracking-wider ${active || done ? "text-blue-700" : "text-slate-400"}`}>{title}</span>
-        {active && <span className="ml-auto text-[9px] font-bold bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">Select</span>}
-        {done && <CheckCircle2 size={11} className="ml-auto text-blue-500" strokeWidth={2.5} />}
+        {!disabled && active && <span className="ml-auto text-[9px] font-bold bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">Select</span>}
+        {!disabled && done && <CheckCircle2 size={11} className="ml-auto text-blue-500" strokeWidth={2.5} />}
+        {disabled && <span className="ml-auto text-[9px] font-bold bg-slate-200 text-slate-400 px-1.5 py-0.5 rounded-full">Locked</span>}
       </div>
-      <div className="px-3 py-2.5">{children}</div>
+      <div className="px-3 py-2.5">
+        {disabled && readonlyValue ? (
+          <div className="flex flex-col gap-0.5 px-1 py-1">
+            <span className="text-sm font-semibold text-slate-600">{readonlyValue}</span>
+            {readonlySub && <span className="text-xs text-slate-400">{readonlySub}</span>}
+          </div>
+        ) : children}
+      </div>
     </div>
   );
 }
@@ -907,12 +915,22 @@ console.log("isFormValid check:", {
 
       {/* ── DESKTOP LAYOUT ─────────────────────────────────────────────────── */}
       <div className="hidden md:flex flex-1 flex-col max-w-screen-xl mx-auto w-full px-6 py-6 gap-5">
-
+        {/* Reschedule banner */}
+        {isRescheduling && (
+          <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-amber-700 text-sm font-semibold">
+            <span>🔄</span>
+            <span>Rescheduling booking <strong>{rescheduleEntryNo}</strong> — only Date &amp; Time can be changed.</span>
+          </div>
+        )}
         {/* Row 1: Horizontal cards — hidden/locked when rescheduling */}
-        {!isRescheduling && (
+
           <div className="flex gap-4">
             {/* Location */}
-            <HorizontalSetupCard id="location-card" step={1} currentStep={currentStep} title="Location" icon={MapPin}>
+              <HorizontalSetupCard
+    id="location-card" step={1} currentStep={currentStep} title="Location" icon={MapPin}
+    disabled={isRescheduling}
+    readonlyValue={rescheduleData?.BookingSetupCode ?? selectedBranch}
+  >
               <div className="space-y-2">
                 <div className="relative">
                   <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><MapPin size={14} strokeWidth={2} /></div>
@@ -930,7 +948,12 @@ console.log("isFormValid check:", {
             </HorizontalSetupCard>
 
             {/* Service */}
-            <HorizontalSetupCard id="service-card" step={2} currentStep={currentStep} title="Service" icon={Briefcase}>
+              <HorizontalSetupCard
+    id="service-card" step={2} currentStep={currentStep} title="Service" icon={Briefcase}
+    disabled={isRescheduling}
+    readonlyValue={rescheduleData?.ServiceName ?? selectedServiceObj?.name}
+    readonlySub={selectedServiceObj?.duration}
+  >
               <div className="space-y-2">
                 <div className="relative">
                   <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><Briefcase size={14} strokeWidth={2} /></div>
@@ -958,19 +981,14 @@ console.log("isFormValid check:", {
             </HorizontalSetupCard>
 
             {/* Professional */}
-            <HorizontalSetupCard id="professional-card" step={3} currentStep={currentStep} title="Professional" icon={Users}>
-              {staffPanelContent}
-            </HorizontalSetupCard>
+  <HorizontalSetupCard
+    id="professional-card" step={3} currentStep={currentStep} title="Professional" icon={Users}
+    disabled={isRescheduling}
+    readonlyValue={rescheduleData?.StaffName ?? selectedStaffObj?.staffName}
+  >
+    {staffPanelContent}
+  </HorizontalSetupCard>
           </div>
-        )}
-
-        {/* Reschedule banner */}
-        {isRescheduling && (
-          <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-amber-700 text-sm font-semibold">
-            <span>🔄</span>
-            <span>Rescheduling booking <strong>{rescheduleEntryNo}</strong> — only Date &amp; Time can be changed.</span>
-          </div>
-        )}
 
         {/* Row 2: Calendar + Timeslots | Right panel */}
         <div className="flex gap-5 flex-1 min-h-0">
