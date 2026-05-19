@@ -105,8 +105,8 @@ function StepBadge({ number, done, active }: { number: number; done: boolean; ac
 }
 
 // ─── Horizontal Setup Card ────────────────────────────────────────────────────
-function HorizontalSetupCard({ step, currentStep, title, icon: Icon, children, id, disabled, readonlyValue, readonlySub }: {
-  step: number; currentStep: number; title: string; icon: React.ComponentType<any>; children: React.ReactNode; id?: string; disabled?: boolean; readonlyValue?: string; readonlySub?: string;
+function HorizontalSetupCard({ step, currentStep, title, icon: Icon, children, id, disabled, readonlyValue, readonlySub ,readonlySub2}: {
+  step: number; currentStep: number; title: string; icon: React.ComponentType<any>; children: React.ReactNode; id?: string; disabled?: boolean; readonlyValue?: string; readonlySub?: string; readonlySub2?: string;
 }) {
   const done = currentStep > step;
   const active = currentStep === step;
@@ -124,14 +124,17 @@ function HorizontalSetupCard({ step, currentStep, title, icon: Icon, children, i
         {!disabled && done && <CheckCircle2 size={11} className="ml-auto text-blue-500" strokeWidth={2.5} />}
         {disabled && <span className="ml-auto text-[9px] font-bold bg-slate-200 text-slate-400 px-1.5 py-0.5 rounded-full">Locked</span>}
       </div>
-      <div className="px-3 py-2.5">
-        {disabled && readonlyValue ? (
-          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white">
-            <span className="text-sm text-slate-600 flex-1">{readonlyValue}</span>
-            {readonlySub && <span className="text-xs text-slate-400">{readonlySub}</span>}
-          </div>
-        ) : children}
+<div className="px-3 py-2.5">
+  {disabled && readonlyValue ? (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white">
+        <span className="text-sm text-slate-600 flex-1">{readonlyValue}</span>
+        {readonlySub && <span className="text-xs text-slate-400">{readonlySub}</span>}
       </div>
+      {readonlySub2 && <div className="px-1 text-xs text-slate-400">{readonlySub2}</div>}
+    </div>
+  ) : children}
+</div>
     </div>
   );
 }
@@ -926,11 +929,12 @@ export default function BookNowPage() {
 
         <div className="flex gap-4">
           {/* Location */}
-<HorizontalSetupCard
-  id="location-card" step={1} currentStep={currentStep} title="Location" icon={MapPin}
-  disabled={isRescheduling}
-  readonlyValue={selectedBranchObj?.description ?? rescheduleData?.BookingSetupCode}
->
+          <HorizontalSetupCard
+            id="location-card" step={1} currentStep={currentStep} title="Location" icon={MapPin}
+            disabled={isRescheduling}
+              readonlyValue={selectedBranchObj?.description ?? rescheduleData?.BookingSetupCode}
+  readonlySub2="Address not available"
+          >
             <div className="space-y-2">
               <div className="relative">
                 <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><MapPin size={14} strokeWidth={2} /></div>
@@ -948,11 +952,11 @@ export default function BookNowPage() {
           </HorizontalSetupCard>
 
           {/* Service */}
-<HorizontalSetupCard
+          <HorizontalSetupCard
   id="service-card" step={2} currentStep={currentStep} title="Service" icon={Briefcase}
   disabled={isRescheduling}
   readonlyValue={selectedServiceObj?.name ?? rescheduleData?.ServiceName}
-  readonlySub={selectedServiceObj?.duration}
+  readonlySub={selectedServiceObj ? `${selectedServiceObj.duration} · ${selectedServiceObj.price}` : undefined}
 >
             <div className="space-y-2">
               <div className="relative">
@@ -981,11 +985,11 @@ export default function BookNowPage() {
           </HorizontalSetupCard>
 
           {/* Professional */}
-<HorizontalSetupCard
-  id="professional-card" step={3} currentStep={currentStep} title="Professional" icon={Users}
-  disabled={isRescheduling}
-  readonlyValue={selectedStaffObj?.staffName ?? rescheduleData?.StaffName}
->
+          <HorizontalSetupCard
+            id="professional-card" step={3} currentStep={currentStep} title="Professional" icon={Users}
+            disabled={isRescheduling}
+            readonlyValue={selectedStaffObj?.staffName ?? rescheduleData?.StaffName}
+          >
             {staffPanelContent}
           </HorizontalSetupCard>
         </div>
