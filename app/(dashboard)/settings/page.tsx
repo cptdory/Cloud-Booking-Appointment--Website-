@@ -124,7 +124,6 @@ export default function SettingsPage() {
   const [currencyCode, setCurrencyCode] = useState("");
   const [currencySymbol, setCurrencySymbol] = useState("");
   const [allowableTime, setAllowableTime] = useState("");
-  const [otpValidityPeriod, setOtpValidityPeriod] = useState("");
   const [generalSubmitting, setGeneralSubmitting] = useState(false);
 
   /* ================= BUSINESS HOURS STATE ================= */
@@ -197,7 +196,6 @@ export default function SettingsPage() {
       setCurrencyCode("");
       setCurrencySymbol("");
       setAllowableTime("");
-      setOtpValidityPeriod("");
       return;
     }
 
@@ -237,14 +235,6 @@ export default function SettingsPage() {
           ""
         )
       );
-      setOtpValidityPeriod(
-        String(
-          selected?.["BookingSetupOTPValidityPeriod(Minutes)"] ??
-          selected?.OTPValidityPeriod ??
-          selected?.OTPValidityPeriodMinutes ??
-          ""
-        )
-      );
     } catch {
       setSelectedTeamDescription(bookingSetupCode);
     }
@@ -265,12 +255,11 @@ export default function SettingsPage() {
           bookingSetupCode,
           description: branchDescription,
           locationCode: address,
-          timeIncrement: Number(timeIncrementMinutes) || 0,
-          closingAllowableTime: Number(allowableTime) || 0,
-          timeSlotBookableCount: Number(timeSlotBookableCount) || 0,
+          timeIncrement: String(timeIncrementMinutes) || "0",
+          closingAllowableTime: String(allowableTime) || "0",
+          timeSlotBookableCount: String(timeSlotBookableCount) || "0",
           currencyCode,
-          currencySymbol,
-          otpValidityPeriod: Number(otpValidityPeriod) || 0,
+          currencySymbol
         }),
       });
 

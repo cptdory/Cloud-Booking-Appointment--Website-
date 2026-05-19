@@ -19,21 +19,19 @@ class BookingBranchSetupService {
     closingAllowableTime: number,
     timeSlotBookableCount?: number,
     currencyCode?: string,
-    currencySymbol?: string,
-    otpValidityPeriod?: number
+    currencySymbol?: string
   ) {
     return bcClient.post<{ value: string }>(
       "BookingAppointment_UpdateBookingSetup",
       {
         _Code: bookingSetupCode,
         _Description: description,
-        _LocationCode: locationCode,
+        _Address: locationCode,
         _TimeIncrement: timeIncrement,
         _ClosingAllowableTime: closingAllowableTime,
         _TimeSlotBookableCount: timeSlotBookableCount,
         _CurrencyCode: currencyCode,
-        _CurrencySymbol: currencySymbol,
-        _OTPValidityPeriod: otpValidityPeriod,
+        _CurrencySymbol: currencySymbol
       }
     );
   }

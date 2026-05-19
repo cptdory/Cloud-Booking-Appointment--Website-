@@ -5,6 +5,7 @@ import { bookingBranchSetupService } from "@/services/business-central/booking-b
 export async function POST(req: Request) {
     try {
         const body = await req.json();
+        console.log("Received booking setup update request with body:", body);
         const {
           bookingSetupCode,
           description,
@@ -13,8 +14,7 @@ export async function POST(req: Request) {
           closingAllowableTime,
           timeSlotBookableCount,
           currencyCode,
-          currencySymbol,
-          otpValidityPeriod,
+          currencySymbol
         } = body;
         const result = await bookingBranchSetupService.updateBookingSetup(
           bookingSetupCode,
@@ -24,12 +24,15 @@ export async function POST(req: Request) {
           closingAllowableTime,
           timeSlotBookableCount,
           currencyCode,
-          currencySymbol,
-          otpValidityPeriod
+          currencySymbol
         );
         const parsed = JSON.parse(result?.value || "null");
         return NextResponse.json(parsed);
     } catch (err: any) {
+                console.error(
+      "BC ERROR:",
+      JSON.stringify(err?.response?.data, null, 2)
+    );
         return NextResponse.json(
             {error:err?.response?.data?.error?.message ||"Failed to update booking setup",},
             { status: err?.response?.status || 500 }
