@@ -646,6 +646,15 @@ export default function CalendarPage() {
 
           {/* Calendar — fills remaining vertical space, no scroll */}
           <div className="relative flex-1 min-h-0 compact-calendar">
+              {/* Loading overlay */}
+  {loadingCalendar && (
+    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70 backdrop-blur-[2px]">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
+        <span className="text-sm font-medium text-slate-500">Loading appointments…</span>
+      </div>
+    </div>
+  )}
             <Calendar
               key={currentView}
               localizer={localizer}
