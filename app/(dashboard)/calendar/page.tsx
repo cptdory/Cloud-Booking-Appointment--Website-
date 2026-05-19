@@ -20,12 +20,13 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { CalendarCheck, Plus, AlertCircle, CheckCircle, RefreshCw } from "lucide-react";
-import { Calendar, momentLocalizer } from "react-big-calendar";
+import { Calendar, momentLocalizer, View } from "react-big-calendar";
 import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { useState, useEffect, useCallback } from "react";
 import { BookingEntriesData } from "@/types/bc-types";
 import { sileo } from "sileo";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -184,7 +185,8 @@ export default function CalendarPage() {
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(["Active", "Cancelled", "Finalized", "No Show"]);
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [hideTimeOff, setHideTimeOff] = useState(true);
-  const [currentView, setCurrentView] = useState<string>("week");
+  const [currentView, setCurrentView] = useState<View>("week");
+  const isMobile = useIsMobile();
 
   const [selectedEvent, setSelectedEvent] = useState<BookingEntriesData | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>("Active");
@@ -205,10 +207,10 @@ export default function CalendarPage() {
       .then((data) => setSessionUser(data.user ?? null))
       .catch(console.error);
   }, []);
-useEffect(() => {
-  if (!sessionUser?.booking_setup_code) return;  // Wait for session user
-  handleGetBusinessStartTime();
-}, [sessionUser]);
+  useEffect(() => {
+    if (!sessionUser?.booking_setup_code) return;  // Wait for session user
+    handleGetBusinessStartTime();
+  }, [sessionUser]);
   // ── Staff list ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!sessionUser?.booking_setup_code) return;
@@ -268,6 +270,14 @@ useEffect(() => {
     if (sessionUser) fetchBookingEntries(dateRange.start, dateRange.end);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionUser]);
+
+  useEffect(() => {
+    if (isMobile) {
+      setCurrentView("agenda");
+    } else if (currentView === "agenda") {
+      setCurrentView("week");
+    }
+  }, [isMobile]);
 
   // ── Calendar handlers ────────────────────────────────────────────────────────
   const handleRangeChange = useCallback(
@@ -502,7 +512,7 @@ useEffect(() => {
       min.setHours(min.getHours() - 1);
       const max = parseTime(data["Latest End Time"]);
       max.setHours(max.getHours() + 2);
-      setBusinessHours({ min, max,});
+      setBusinessHours({ min, max, });
     } catch {
       sileo.error({
         title: "Failed to get business hours.",
@@ -528,7 +538,7 @@ useEffect(() => {
   return (
     <>
       {/* Header */}
-      {/* <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-white px-4">
+      <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-white px-4">
         <SidebarTrigger className="-ml-1" />
         <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
         <Breadcrumb>
@@ -538,7 +548,7 @@ useEffect(() => {
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
-      </header> */}
+      </header>
 
       {/* Main */}
       <div className="flex flex-1 flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50 p-4 sm:p-6">
@@ -624,7 +634,7 @@ useEffect(() => {
               style={{ height: "100%", minHeight: 500 }}
               onRangeChange={handleRangeChange}
               onSelectEvent={handleSelectEvent}
-              defaultView="week"
+              view={currentView}
               onView={(view) => setCurrentView(view)}
               formats={{
                 eventTimeRangeFormat: () => "",

@@ -238,6 +238,8 @@ const BookingParameterContent = ({
             id: String(v.BookingParameterValueId),
             code: String(v.BookingParameterValueCode),
             description: String(v.BookingParameterValueDescription),
+            price: String(v.BookingParameterValuePrice),
+            sequence: String(v.BookingParameterValueServiceSequence),
           })) ?? [];
         setStaffList(list);
       })
@@ -734,8 +736,24 @@ const handleGetStaffAssignment = async (itemId: string, itemCode: string) => {
     { accessorKey: "Description", header: "Name" },
   ];
 
+  const sequenceColumn: ColumnDef<BookingParameterValue>[] = isService
+    ? [{ accessorKey: "ServiceSequence", header: "Sequence" }]
+    : [];
+
   const durationColumn: ColumnDef<BookingParameterValue>[] = isService
     ? [{ accessorKey: "Duration", header: "Duration (mins)" }]
+    : [];
+
+  const priceColumn: ColumnDef<BookingParameterValue>[] = isService
+    ? [
+        {
+          accessorKey: "BookingParameterValueServicePrice",
+          header: "Price (₱)",
+          cell: ({ row }: any) => (
+            <span>{row.original.BookingParameterValueServicePrice ?? row.original.ServicePrice ?? "0"}</span>
+          ),
+        },
+      ]
     : [];
 
   const colorColumn: ColumnDef<BookingParameterValue>[] =
@@ -841,7 +859,9 @@ const handleGetStaffAssignment = async (itemId: string, itemCode: string) => {
   const columns = useMemo(
     () => [
       ...baseColumns,
+      ...sequenceColumn,
       ...durationColumn,
+      ...priceColumn,
       ...colorColumn,
       ...emailColumn,
       ...staffManagementColumn,
