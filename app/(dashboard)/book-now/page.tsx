@@ -1004,30 +1004,31 @@ export default function BookNowPage() {
           </div>
 
           {/* Right panel: Customer + Details + CTA */}
-          <div className="w-80 shrink-0 flex flex-col gap-4 overflow-y-auto pb-2">
-            {/* Customer Selection */}
-            <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden transition-opacity ${(!selectedTime || (selectedTimeWarning && skipAvailabilityCheck !== "true")) ? "opacity-40 pointer-events-none" : ""}`}>
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
-                <StepBadge number={5} done={false} active={currentStep === 5} />
-                <User size={13} strokeWidth={2} className="text-blue-600" />
-                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Customer</span>
+          <div className="w-80 shrink-0 flex flex-col gap-4">
+            <div className={`flex-1 min-h-0 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-opacity ${(!selectedTime || (selectedTimeWarning && skipAvailabilityCheck !== "true")) ? "opacity-40 pointer-events-none" : ""}`}>
+              <div className="max-h-[56vh] overflow-y-auto p-4 space-y-4">
+                <div>
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
+                    <StepBadge number={5} done={false} active={currentStep === 5} />
+                    <User size={13} strokeWidth={2} className="text-blue-600" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Customer</span>
+                  </div>
+                  <div className="p-4">{customerPanel}</div>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
+                    <FileText size={13} strokeWidth={2} className="text-blue-600" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Notes</span>
+                  </div>
+                  <div className="p-4">
+                    <FieldTextarea rows={3} value={notes} onChange={(e: any) => setNotes(e.target.value)}
+                      placeholder="Special requests, reason for visit…" disabled={!selectedTime} />
+                  </div>
+                </div>
               </div>
-              <div className="p-4">{customerPanel}</div>
             </div>
 
-            {/* Notes */}
-            <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden transition-opacity ${(!selectedTime || (selectedTimeWarning && skipAvailabilityCheck !== "true")) ? "opacity-40 pointer-events-none" : ""}`}>
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
-                <FileText size={13} strokeWidth={2} className="text-blue-600" />
-                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Notes</span>
-              </div>
-              <div className="p-4">
-                <FieldTextarea rows={3} value={notes} onChange={(e: any) => setNotes(e.target.value)}
-                  placeholder="Special requests, reason for visit…" disabled={!selectedTime} />
-              </div>
-            </div>
-
-            {/* CTA */}
             <button disabled={!isFormValid || isBookingLoading} onClick={handleConfirmOpen}
               className="w-full py-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold text-sm rounded-2xl
                 transition-all shadow-xl shadow-blue-200 disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-2.5">
@@ -1168,25 +1169,27 @@ export default function BookNowPage() {
                 </div>
               )}
 
-              {/* Customer */}
               <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden transition-opacity ${(!selectedTime || (selectedTimeWarning && skipAvailabilityCheck !== "true")) ? "opacity-40 pointer-events-none" : ""}`}>
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
-                  <StepBadge number={5} done={false} active={currentStep === 5} />
-                  <User size={13} strokeWidth={2} className="text-blue-600" />
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Customer</span>
-                </div>
-                <div className="p-4">{customerPanel}</div>
-              </div>
+                <div className="max-h-[56vh] overflow-y-auto p-4 space-y-4">
+                  <div>
+                    <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
+                      <StepBadge number={5} done={false} active={currentStep === 5} />
+                      <User size={13} strokeWidth={2} className="text-blue-600" />
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Customer</span>
+                    </div>
+                    <div className="p-4">{customerPanel}</div>
+                  </div>
 
-              {/* Notes */}
-              <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden transition-opacity ${(!selectedTime || (selectedTimeWarning && skipAvailabilityCheck !== "true")) ? "opacity-40 pointer-events-none" : ""}`}>
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
-                  <FileText size={13} strokeWidth={2} className="text-blue-600" />
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Notes</span>
-                </div>
-                <div className="p-4">
-                  <FieldTextarea rows={3} value={notes} onChange={(e: any) => setNotes(e.target.value)}
-                    placeholder="Special requests, reason for visit…" disabled={!selectedTime} />
+                  <div>
+                    <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
+                      <FileText size={13} strokeWidth={2} className="text-blue-600" />
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Notes</span>
+                    </div>
+                    <div className="p-4">
+                      <FieldTextarea rows={3} value={notes} onChange={(e: any) => setNotes(e.target.value)}
+                        placeholder="Special requests, reason for visit…" disabled={!selectedTime} />
+                    </div>
+                  </div>
                 </div>
               </div>
 
