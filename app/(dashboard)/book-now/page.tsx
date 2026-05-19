@@ -124,16 +124,16 @@ function HorizontalSetupCard({ step, currentStep, title, icon: Icon, children, i
         {!disabled && done && <CheckCircle2 size={11} className="ml-auto text-blue-500" strokeWidth={2.5} />}
         {disabled && <span className="ml-auto text-[9px] font-bold bg-slate-200 text-slate-400 px-1.5 py-0.5 rounded-full">Locked</span>}
       </div>
-<div className="px-3 py-2.5">
-  {disabled && readonlyValue ? (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white">
-        <span className="text-sm text-slate-600 flex-1">{readonlyValue}</span>
+      <div className="px-3 py-2.5">
+        {disabled && readonlyValue ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white">
+              <span className="text-sm text-slate-600 flex-1">{readonlyValue}</span>
+            </div>
+            {readonlySub2 && <div className="px-1 text-xs text-slate-500">{readonlySub2}</div>}
+          </div>
+        ) : children}
       </div>
-      {readonlySub2 && <div className="px-1 text-xs text-slate-500">{readonlySub2}</div>}
-    </div>
-  ) : children}
-</div>
     </div>
   );
 }
@@ -243,13 +243,14 @@ function MobileProgress({ currentStep, totalSteps }: { currentStep: number; tota
 }
 
 // ─── Timeslot Panel ───────────────────────────────────────────────────────────
-function TimeslotPanel({ selectedDate, timeslots, loading, selectedTime, onSelectTime, stepNumber, currentStep }: {
+function TimeslotPanel({ selectedDate, timeslots, loading, selectedTime, onSelectTime, stepNumber, currentStep, skipAvailabilityCheck }: {
   selectedDate: DateObj | null; timeslots: Timeslot[]; loading: boolean; selectedTime: string;
-  onSelectTime: (t: string) => void; stepNumber: number; currentStep: number;
+  onSelectTime: (t: string) => void; stepNumber: number; currentStep: number; skipAvailabilityCheck: string;
 }) {
   const slots = timeslots || [];
   const selectedSlot = slots.find((ts) => ts.time === selectedTime) ?? null;
-  const selectedSlotWarning = Boolean(selectedSlot?.availability && !selectedSlot?.allowBooking);
+  const bypass = skipAvailabilityCheck === "true";
+  const selectedSlotWarning = Boolean(selectedSlot?.availability && !selectedSlot?.allowBooking && !bypass);
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
@@ -284,8 +285,8 @@ function TimeslotPanel({ selectedDate, timeslots, loading, selectedTime, onSelec
             <div className="grid grid-cols-4 gap-2">
               {slots.map((ts) => {
                 const isSelected = selectedTime === ts.time;
-                const isWarning = ts.availability && !ts.allowBooking;
-                const isDisabled = !ts.availability && !ts.allowBooking;
+                const isWarning = !bypass && ts.availability && !ts.allowBooking;
+                const isDisabled = !bypass && !ts.availability && !ts.allowBooking;
                 return (
                   <button key={ts.id} type="button" onClick={() => !isDisabled && onSelectTime(ts.time)} disabled={isDisabled}
                     className={`py-3 px-2 rounded-xl text-xs font-bold text-center transition-all border
@@ -442,7 +443,7 @@ export default function BookNowPage() {
     (isRescheduling && rescheduleData ? { id: selectedService, code: "", name: rescheduleData.ServiceName ?? "", duration: "", price: "" } : undefined);
   const selectedStaffObj = assignedStaff.find(s => s.staffId === selectedStaff) ?? null;
   const selectedTimeslot = timeslots.find(ts => ts.time === selectedTime) ?? null;
-  const selectedTimeWarning = Boolean(selectedTimeslot?.availability && !selectedTimeslot?.allowBooking);
+  const selectedTimeWarning = (skipAvailabilityCheck === "true") ? false : Boolean(selectedTimeslot?.availability && !selectedTimeslot?.allowBooking);
 
   // Effective customer info
   const effectiveName = isCustomerRole ? (sessionUser?.name ?? "") : isNewCustomer ? customerName : (selectedCustomer?.Name ?? "");
@@ -460,11 +461,11 @@ export default function BookNowPage() {
           : (!selectedDate || !selectedTime || selectedTimeWarning) ? 4
             : 5;
 
+  const hasEmailOrExistingCustomer = isRescheduling ? true : (effectiveEmail !== "" || (!!selectedCustomer && !!selectedCustomer.CustomerNo));
   const isFormValid =
     effectiveName !== "" &&
-    (isRescheduling ? true : effectiveEmail !== "") &&  // ← email not required for reschedule
+    hasEmailOrExistingCustomer &&
     selectedTime !== "" &&
-    !selectedTimeWarning &&
     (isRescheduling
       ? true
       : !isCustomerRole
@@ -646,16 +647,18 @@ export default function BookNowPage() {
 
   // ── Book button → open confirm directly ───────────────────────────────────
   const handleConfirmOpen = () => {
-    if (!effectiveEmail) { sileo.error({ title: "Email is required", fill: "#171717" }); return; }
+    const ok = Boolean(effectiveEmail) || Boolean(selectedCustomer) || isCustomerRole || isRescheduling;
+    if (!ok) { sileo.error({ title: "Email is required or select an existing customer", fill: "#171717" }); return; }
     setConfirmDialogOpen(true);
   };
 
   // ── Booking submit ─────────────────────────────────────────────────────────
   const handleBooking = async () => {
-    if (!selectedDate || !selectedTime || selectedTimeWarning || !effectiveName || !effectiveEmail) return;
+    if (!selectedDate || !selectedTime || !effectiveName || !(effectiveEmail || (selectedCustomer && selectedCustomer.CustomerNo))) return;
     setIsBookingLoading(true);
     try {
       const fmt = `${String(selectedDate.month + 1).padStart(2, "0")}/${String(selectedDate.day).padStart(2, "0")}/${selectedDate.year}`;
+      const autoSkip = (skipAvailabilityCheck === "true" || (selectedTimeslot?.availability && !selectedTimeslot?.allowBooking)) ? "true" : "false";
       const res = await fetch("/api/available-timeslot-v2/book-available-timeslot-v2", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -666,13 +669,13 @@ export default function BookNowPage() {
           staffid: noPreferenceStaff ? "" : selectedStaff,
           bookingNote: notes,
           bookingEntryNo: isRescheduling ? rescheduleEntryNo : "",
-          customerNoOrEmailAdd: effectiveEmail,
+          customerNoOrEmailAdd: selectedCustomer?.CustomerNo ?? effectiveEmail,
           customerName: effectiveName,
           customerPhoneNo: effectivePhone,
           customerBirthDate: "",
           customerAddress1: effectiveAddr1,
           customerAddress2: effectiveAddr2,
-          skipTimeSlotAvailabilityCheck: skipAvailabilityCheck,
+          skipTimeSlotAvailabilityCheck: autoSkip,
         }),
       });
       if (!res.ok) throw new Error("Booking failed");
@@ -683,6 +686,7 @@ export default function BookNowPage() {
       setSelectedBranch(""); setSelectedService(""); setSelectedStaff(""); setNoPreferenceStaff(false);
       setSelectedDate(null); setSelectedTime(""); setSelectedCustomer(null); setIsNewCustomer(false);
       setCustomerName(""); setCustomerEmail(""); setCustomerPhone(""); setCustomerAddress1(""); setCustomerAddress2(""); setNotes("");
+      setSkipAvailabilityCheck("false");
       setMobilePanel("select"); fetchBranches();
     } catch (e) { sileo.error({ title: e instanceof Error ? e.message : "Booking failed. Please try again.", fill: "#171717" }); }
     finally { setIsBookingLoading(false); }
@@ -951,12 +955,12 @@ export default function BookNowPage() {
           </HorizontalSetupCard>
 
           {/* Service */}
-<HorizontalSetupCard
-  id="service-card" step={2} currentStep={currentStep} title="Service" icon={Briefcase}
-  disabled={isRescheduling}
-  readonlyValue={selectedServiceObj?.name ?? rescheduleData?.ServiceName}
-  readonlySub2={selectedServiceObj ? `${selectedServiceObj.duration} · ${selectedServiceObj.price}` : undefined}
->
+          <HorizontalSetupCard
+            id="service-card" step={2} currentStep={currentStep} title="Service" icon={Briefcase}
+            disabled={isRescheduling}
+            readonlyValue={selectedServiceObj?.name ?? rescheduleData?.ServiceName}
+            readonlySub2={selectedServiceObj ? `${selectedServiceObj.duration} · ${selectedServiceObj.price}` : undefined}
+          >
             <div className="space-y-2">
               <div className="relative">
                 <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><Briefcase size={14} strokeWidth={2} /></div>
@@ -1034,14 +1038,14 @@ export default function BookNowPage() {
             <div className={`flex-1 min-h-[32rem] max-h-[32rem] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-opacity
               ${(!selectedStaff && !noPreferenceStaff && !isRescheduling) ? "opacity-40 pointer-events-none" : ""}`}>
               <TimeslotPanel selectedDate={selectedDate} timeslots={timeslots} loading={loadingTimeslots}
-                selectedTime={selectedTime} onSelectTime={t => setSelectedTime(t)} stepNumber={4} currentStep={currentStep} />
+                selectedTime={selectedTime} onSelectTime={t => setSelectedTime(t)} stepNumber={4} currentStep={currentStep} skipAvailabilityCheck={skipAvailabilityCheck} />
             </div>
           </div>
 
           {/* Right panel: Customer + Details + CTA */}
           <div className="w-80 shrink-0 flex flex-col gap-4 overflow-y-auto pb-2">
             {/* Customer Selection */}
-            <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden transition-opacity ${(!selectedTime || selectedTimeWarning) ? "opacity-40 pointer-events-none" : ""}`}>
+            <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden transition-opacity ${(!selectedTime || (selectedTimeWarning && skipAvailabilityCheck !== "true")) ? "opacity-40 pointer-events-none" : ""}`}>
               <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
                 <StepBadge number={5} done={false} active={currentStep === 5} />
                 <User size={13} strokeWidth={2} className="text-blue-600" />
@@ -1051,7 +1055,7 @@ export default function BookNowPage() {
             </div>
 
             {/* Notes */}
-            <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden transition-opacity ${(!selectedTime || selectedTimeWarning) ? "opacity-40 pointer-events-none" : ""}`}>
+            <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden transition-opacity ${(!selectedTime || (selectedTimeWarning && skipAvailabilityCheck !== "true")) ? "opacity-40 pointer-events-none" : ""}`}>
               <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
                 <FileText size={13} strokeWidth={2} className="text-blue-600" />
                 <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Notes</span>
@@ -1071,7 +1075,7 @@ export default function BookNowPage() {
             {!isFormValid && (
               <p className="text-[11px] text-slate-400 text-center -mt-1">
                 {!selectedTime ? "Select a date and time slot to continue"
-                  : selectedTimeWarning ? "Selected slot cannot be booked. Choose another time."
+                  : (selectedTimeWarning && skipAvailabilityCheck !== "true") ? "Selected slot cannot be booked. Choose another time." 
                     : "Complete all required fields to continue"}
               </p>
             )}
@@ -1189,7 +1193,7 @@ export default function BookNowPage() {
               </div>
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden min-h-[200px] flex flex-col">
                 <TimeslotPanel selectedDate={selectedDate} timeslots={timeslots} loading={loadingTimeslots}
-                  selectedTime={selectedTime} onSelectTime={t => setSelectedTime(t)} stepNumber={4} currentStep={currentStep} />
+                  selectedTime={selectedTime} onSelectTime={t => setSelectedTime(t)} stepNumber={4} currentStep={currentStep} skipAvailabilityCheck={skipAvailabilityCheck} />
               </div>
             </div>
           )}
@@ -1220,7 +1224,7 @@ export default function BookNowPage() {
               )}
 
               {/* Customer */}
-              <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden transition-opacity ${(!selectedTime || selectedTimeWarning) ? "opacity-40 pointer-events-none" : ""}`}>
+              <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden transition-opacity ${(!selectedTime || (selectedTimeWarning && skipAvailabilityCheck !== "true")) ? "opacity-40 pointer-events-none" : ""}`}>
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
                   <StepBadge number={5} done={false} active={currentStep === 5} />
                   <User size={13} strokeWidth={2} className="text-blue-600" />
@@ -1230,7 +1234,7 @@ export default function BookNowPage() {
               </div>
 
               {/* Notes */}
-              <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden transition-opacity ${(!selectedTime || selectedTimeWarning) ? "opacity-40 pointer-events-none" : ""}`}>
+              <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden transition-opacity ${(!selectedTime || (selectedTimeWarning && skipAvailabilityCheck !== "true")) ? "opacity-40 pointer-events-none" : ""}`}>
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
                   <FileText size={13} strokeWidth={2} className="text-blue-600" />
                   <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Notes</span>
@@ -1249,7 +1253,7 @@ export default function BookNowPage() {
               {!isFormValid && (
                 <p className="text-[11px] text-slate-400 text-center">
                   {!selectedTime ? "Select a date and time slot to continue"
-                    : selectedTimeWarning ? "Selected slot cannot be booked. Choose another time."
+                    : (selectedTimeWarning && skipAvailabilityCheck !== "true") ? "Selected slot cannot be booked. Choose another time."
                       : "Complete all required fields to continue"}
                 </p>
               )}
