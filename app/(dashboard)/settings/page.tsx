@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   Breadcrumb,
@@ -57,7 +57,7 @@ type BookingPlanningPeriod = {
   Active: string;
 };
 
-type SettingsSection = "business-hours" | "planning-period";
+type SettingsSection = "general" | "business-hours" | "planning-period";
 
 const DAYS = [
   "Monday",
@@ -69,11 +69,7 @@ const DAYS = [
   "Sunday",
 ];
 
-const bookingSetupCode = "MAIN";
-
-/* =========================================================
-   HELPERS
-========================================================= */
+const DEFAULT_BOOKING_SETUP_CODE = "MAIN";
 
 const toTimeInputValue = (time?: string) => {
   if (!time) return "";
@@ -93,6 +89,12 @@ const toTimeInputValue = (time?: string) => {
 
 const navItems: { id: SettingsSection; label: string; icon: React.ReactNode; description: string }[] = [
   {
+    id: "general",
+    label: "General",
+    icon: <Pencil className="h-4 w-4" />,
+    description: "Branch general settings",
+  },
+  {
     id: "business-hours",
     label: "Business Hours",
     icon: <Clock className="h-4 w-4" />,
@@ -111,7 +113,19 @@ const navItems: { id: SettingsSection; label: string; icon: React.ReactNode; des
 ========================================================= */
 
 export default function SettingsPage() {
-  const [activeSection, setActiveSection] = useState<SettingsSection>("business-hours");
+  const [activeSection, setActiveSection] = useState<SettingsSection>("general");
+  const [bookingSetupCode, setBookingSetupCode] = useState("");
+  const [selectedTeamDescription, setSelectedTeamDescription] = useState("");
+
+  const [branchDescription, setBranchDescription] = useState("");
+  const [address, setAddress] = useState("");
+  const [timeSlotBookableCount, setTimeSlotBookableCount] = useState("");
+  const [timeIncrementMinutes, setTimeIncrementMinutes] = useState("");
+  const [currencyCode, setCurrencyCode] = useState("");
+  const [currencySymbol, setCurrencySymbol] = useState("");
+  const [allowableTime, setAllowableTime] = useState("");
+  const [otpValidityPeriod, setOtpValidityPeriod] = useState("");
+  const [generalSubmitting, setGeneralSubmitting] = useState(false);
 
   /* ================= BUSINESS HOURS STATE ================= */
 
@@ -140,7 +154,8 @@ export default function SettingsPage() {
 
   /* ================= FETCH ================= */
 
-  const fetchBusinessHours = async () => {
+  const fetchBusinessHours = useCallback(async () => {
+    if (!bookingSetupCode) return;
     try {
       setLoadingHours(true);
       const res = await fetch("/api/business-hours/get-booking-business-hour", {
@@ -155,9 +170,10 @@ export default function SettingsPage() {
     } finally {
       setLoadingHours(false);
     }
-  };
+  }, [bookingSetupCode]);
 
-  const fetchPlanningPeriods = async () => {
+  const fetchPlanningPeriods = useCallback(async () => {
+    if (!bookingSetupCode) return;
     try {
       const res = await fetch("/api/booking-planning-period/get-booking-planning-period", {
         method: "POST",
@@ -169,12 +185,111 @@ export default function SettingsPage() {
     } catch {
       sileo.error({ title: "Failed to load planning periods", fill: "#171717" });
     }
+  }, [bookingSetupCode]);
+
+  const fetchSelectedTeamDescription = useCallback(async () => {
+    if (!bookingSetupCode) {
+      setSelectedTeamDescription("");
+      setBranchDescription("");
+      setAddress("");
+      setTimeSlotBookableCount("");
+      setTimeIncrementMinutes("");
+      setCurrencyCode("");
+      setCurrencySymbol("");
+      setAllowableTime("");
+      setOtpValidityPeriod("");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/booking-branch-setup/get-booking-setup?code=${encodeURIComponent(bookingSetupCode)}`);
+      const json = await res.json();
+      const selected = Array.isArray(json) ? json[0] : json;
+
+      setSelectedTeamDescription(selected?.BookingSetupDescription || selected?.Description || bookingSetupCode);
+      setBranchDescription(selected?.BookingSetupDescription || selected?.Description || "");
+      setAddress(
+        selected?.BookingSetupAddress ||
+        selected?.BookingSetupLocationCode ||
+        selected?.Location ||
+        ""
+      );
+      setTimeSlotBookableCount(
+        String(
+          selected?.BookingSetupTimeSlotBookableCount ??
+          selected?.TimeSlotBookableCount ??
+          ""
+        )
+      );
+      setTimeIncrementMinutes(
+        String(
+          selected?.BookingSetupTimeIncrement ??
+          selected?.TimeIncrement ??
+          ""
+        )
+      );
+      setCurrencyCode(selected?.BookingSetupCurrencyCode || selected?.CurrencyCode || "");
+      setCurrencySymbol(selected?.BookingSetupCurrencySymbol || selected?.CurrencySymbol || "");
+      setAllowableTime(
+        String(
+          selected?.BookingSetupAllowableTime ??
+          selected?.AllowableTime ??
+          ""
+        )
+      );
+      setOtpValidityPeriod(
+        String(
+          selected?.["BookingSetupOTPValidityPeriod(Minutes)"] ??
+          selected?.OTPValidityPeriod ??
+          selected?.OTPValidityPeriodMinutes ??
+          ""
+        )
+      );
+    } catch {
+      setSelectedTeamDescription(bookingSetupCode);
+    }
+  }, [bookingSetupCode]);
+
+  useEffect(() => {
+    const storedCode = window.localStorage.getItem("selectedBookingSetupCode");
+    setBookingSetupCode(storedCode ?? DEFAULT_BOOKING_SETUP_CODE);
+  }, []);
+
+  const saveGeneralSettings = async () => {
+    try {
+      setGeneralSubmitting(true);
+      const res = await fetch("/api/booking-branch-setup/update-booking-setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingSetupCode,
+          description: branchDescription,
+          locationCode: address,
+          timeIncrement: Number(timeIncrementMinutes) || 0,
+          closingAllowableTime: Number(allowableTime) || 0,
+          timeSlotBookableCount: Number(timeSlotBookableCount) || 0,
+          currencyCode,
+          currencySymbol,
+          otpValidityPeriod: Number(otpValidityPeriod) || 0,
+        }),
+      });
+
+      if (!res.ok) throw new Error();
+      sileo.success({ title: "General settings saved", fill: "#171717" });
+      await fetchSelectedTeamDescription();
+    } catch {
+      sileo.error({ title: "Failed to save general settings", fill: "#171717" });
+    } finally {
+      setGeneralSubmitting(false);
+    }
   };
 
   useEffect(() => {
+    if (!bookingSetupCode) return;
     fetchBusinessHours();
     fetchPlanningPeriods();
-  }, []);
+    fetchSelectedTeamDescription();
+  }, [bookingSetupCode, fetchBusinessHours, fetchPlanningPeriods, fetchSelectedTeamDescription]);
 
   /* ================= BUSINESS HOURS ACTIONS ================= */
 
@@ -436,7 +551,9 @@ export default function SettingsPage() {
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbPage>Settings</BreadcrumbPage>
+              <BreadcrumbPage>
+                Settings
+              </BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
@@ -449,7 +566,7 @@ export default function SettingsPage() {
           {/* SETTINGS SIDEBAR */}
           <aside className="w-56 shrink-0 border-r border-gray-100 bg-gray-50 flex flex-col">
             <div className="px-4 py-4 border-b border-gray-100">
-              <h1 className="text-sm font-semibold text-gray-900">Settings</h1>
+              <h1 className="text-sm font-semibold text-gray-900">{selectedTeamDescription ? ` ${selectedTeamDescription}` : ""}</h1>
               <p className="text-xs text-gray-400 mt-0.5">Manage configurations</p>
             </div>
 
@@ -483,6 +600,74 @@ export default function SettingsPage() {
           {/* SETTINGS CONTENT */}
           <main className="flex-1 overflow-auto bg-white">
             <div className="px-8 py-7">
+
+              {/* ====== GENERAL SECTION ====== */}
+              {activeSection === "general" && (
+                <div>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50">
+                        <Pencil className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <h2 className="text-sm font-semibold text-gray-900">General</h2>
+                        <p className="text-xs text-gray-400 mt-0.5">Edit branch general settings</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={saveGeneralSettings}
+                      disabled={generalSubmitting}
+                      className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-sm text-white font-medium hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {generalSubmitting ? "Saving..." : "Save Changes"}
+                    </button>
+                  </div>
+
+                  <div className="grid gap-4 rounded-lg border border-gray-100 bg-white p-6">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="grid gap-1.5">
+                        <Label>Code</Label>
+                        <Input value={bookingSetupCode} readOnly />
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label>Description</Label>
+                        <Input
+                          value={branchDescription}
+                          onChange={(e) => setBranchDescription(e.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label>Address</Label>
+                        <Input value={address} onChange={(e) => setAddress(e.target.value)} />
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label>Time Slot Bookable Count</Label>
+                        <Input
+                          type="number"
+                          value={timeSlotBookableCount}
+                          onChange={(e) => setTimeSlotBookableCount(e.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label>Time Increment (Minutes)</Label>
+                        <Input
+                          type="number"
+                          value={timeIncrementMinutes}
+                          onChange={(e) => setTimeIncrementMinutes(e.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label>Currency Code</Label>
+                        <Input value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)} />
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label>Currency Symbol</Label>
+                        <Input value={currencySymbol} onChange={(e) => setCurrencySymbol(e.target.value)} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* ====== BUSINESS HOURS SECTION ====== */}
               {activeSection === "business-hours" && (

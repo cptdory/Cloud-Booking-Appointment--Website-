@@ -23,7 +23,7 @@ import { CalendarCheck, Plus, AlertCircle, CheckCircle, RefreshCw } from "lucide
 import { Calendar, momentLocalizer, View } from "react-big-calendar";
 import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback } from "react";
 import { BookingEntriesData } from "@/types/bc-types";
 import { sileo } from "sileo";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -186,6 +186,7 @@ export default function CalendarPage() {
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [hideTimeOff, setHideTimeOff] = useState(true);
   const [currentView, setCurrentView] = useState<View>("week");
+  const [calendarKey, setCalendarKey] = useState(0);
   const isMobile = useIsMobile();
 
   const [selectedEvent, setSelectedEvent] = useState<BookingEntriesData | null>(null);
@@ -198,7 +199,10 @@ export default function CalendarPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editEntryNo, setEditEntryNo] = useState<string>("");
 
-  const [businessHours, setBusinessHours] = useState({ min: new Date(), max: new Date(), });
+  const [businessHours, setBusinessHours] = useState({
+    min: moment().startOf("day").toDate(),
+    max: moment().endOf("day").toDate(),
+  });
 
   // ── Session ─────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -261,6 +265,7 @@ export default function CalendarPage() {
         sileo.error({ title: "Failed to load calendar entries.", fill: SILEO_FILL });
       } finally {
         setLoadingCalendar(false);
+        setCalendarKey((prev) => prev + 1);
       }
     },
     [sessionUser?.booking_setup_code]
@@ -270,6 +275,18 @@ export default function CalendarPage() {
     if (sessionUser) fetchBookingEntries(dateRange.start, dateRange.end);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionUser]);
+
+  useLayoutEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setCalendarKey((prev) => prev + 1);
+      window.dispatchEvent(new Event("resize"));
+    }, 150);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
+    window.dispatchEvent(new Event("resize"));
+  }, [currentView]);
 
   useEffect(() => {
     if (isMobile) {
@@ -288,6 +305,15 @@ export default function CalendarPage() {
     },
     [fetchBookingEntries]
   );
+
+  useEffect(() => {
+    if (!loadingCalendar) {
+      const timeout = window.setTimeout(() => {
+        window.dispatchEvent(new Event("resize"));
+      }, 150);
+      return () => window.clearTimeout(timeout);
+    }
+  }, [events, currentView, businessHours, loadingCalendar]);
 
   const handleSelectEvent = (event: CalendarEvent) => {
     const entry = calendarEvents.find((e) => e.EntryNo === event.id);
@@ -624,6 +650,7 @@ export default function CalendarPage() {
           {/* Calendar — fills remaining vertical space, no scroll */}
           <div className="relative flex-1 min-h-0 compact-calendar">
             <Calendar
+              key={`${currentView}-${calendarKey}`}
               localizer={localizer}
               events={filteredEvents}
               startAccessor="start"
@@ -631,7 +658,7 @@ export default function CalendarPage() {
               min={businessHours.min}
               max={businessHours.max}
               popup
-              style={{ height: "100%", minHeight: 500 }}
+              style={{ height: currentView === "month" ? "auto" : "100%", minHeight: 500 }}
               onRangeChange={handleRangeChange}
               onSelectEvent={handleSelectEvent}
               view={currentView}

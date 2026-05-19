@@ -8,7 +8,6 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
@@ -22,20 +21,47 @@ import { ChevronsUpDownIcon, Settings2 } from "lucide-react"
 import Link from "next/link"
 export function TeamSwitcher({
   teams,
+  defaultTeamCode,
   disabled,
 }: {
   teams: {
     name: string
     logo: React.ReactNode
-    plan?: string
+    description?: string
+    code: string
   }[]
+  defaultTeamCode?: string
   disabled?: boolean
 }) {
   const { isMobile } = useSidebar()
   const [activeTeam, setActiveTeam] = React.useState(teams[0])
+
+  React.useEffect(() => {
+    const storageKey = "selectedBookingSetupCode"
+    if (!teams?.length) return
+
+    const storedCode = window.localStorage.getItem(storageKey)
+    const initialCode = storedCode ?? defaultTeamCode ?? teams[0]?.code
+    const initialTeam = teams.find((team) => team.code === initialCode) ?? teams[0]
+
+    setActiveTeam(initialTeam)
+  }, [teams, defaultTeamCode])
+
+  const handleTeamSelect = (team: {
+    name: string
+    logo: React.ReactNode
+    description?: string
+    code: string
+  }) => {
+    const storageKey = "selectedBookingSetupCode"
+    window.localStorage.setItem(storageKey, team.code)
+    setActiveTeam(team)
+  }
+
   if (!activeTeam) {
     return null
   }
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -54,8 +80,8 @@ export function TeamSwitcher({
             </div>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">{activeTeam.name}</span>
-              {activeTeam.plan ? (
-                <span className="truncate text-xs">{activeTeam.plan}</span>
+              {activeTeam.description ? (
+                <span className="truncate text-xs">{activeTeam.description}</span>
               ) : null}
             </div>
             <ChevronsUpDownIcon className="ml-auto" />
@@ -70,30 +96,23 @@ export function TeamSwitcher({
               <DropdownMenuLabel className="text-xs text-muted-foreground">
                 Tenant
               </DropdownMenuLabel>
-              {teams.map((team, index) => (
+              {teams.map((team) => (
                 <DropdownMenuItem
-                  key={team.name}
-                  onClick={() => setActiveTeam(team)}
+                  key={team.code}
+                  onClick={() => handleTeamSelect(team)}
                   className="gap-2 p-2"
                 >
                   <div className="flex size-6 items-center justify-center rounded-md border">
                     {team.logo}
                   </div>
-                  {team.plan}
-                  <DropdownMenuShortcut><Link href="/settings" title="Settings"><Settings2 /></Link></DropdownMenuShortcut>
+                  {team.description}
+                  <DropdownMenuShortcut>
+                    <Link href="/settings" title="Settings">
+                      <Settings2 />
+                    </Link>
+                  </DropdownMenuShortcut>
                 </DropdownMenuItem>
               ))}
-            {/* </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem className="gap-2 p-2">
-                <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
-                  <PlusIcon className="size-4" />
-                </div>
-                <div className="font-medium text-muted-foreground">
-                  Add team
-                </div>
-              </DropdownMenuItem> */}
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>

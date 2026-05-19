@@ -3,10 +3,12 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/get-session";
 import { bookingBranchSetupService } from "@/services/business-central/booking-branch-setup.service";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const url = new URL(req.url);
+    const code = url.searchParams.get("code")?.trim();
     const session = await getSession();
-    const bookingSetupCode = session?.user?.booking_setup_code ?? "MAIN";
+    const bookingSetupCode = code || session?.user?.booking_setup_code || "MAIN";
     if (!bookingSetupCode) {
       return NextResponse.json(
         { error: "Unauthorized" },

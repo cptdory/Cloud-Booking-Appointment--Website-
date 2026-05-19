@@ -18,6 +18,22 @@ async function getBookingParameters() {
   }
 }
 
+async function getBookingSetupList() {
+  try {
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore.toString();
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/booking-branch-setup/get-booking-setup-list`,
+      { cache: "force-cache", headers: { Cookie: cookieHeader } }
+    );
+    if (!res.ok) return [];
+    return res.json();
+  } catch (err) {
+    console.error("Failed to fetch booking setup list:", err);
+    return [];
+  }
+}
+
 async function getSession() {
   try {
     const cookieStore = await cookies();
@@ -40,8 +56,9 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [bookingParameters, sessionUser] = await Promise.all([
+  const [bookingParameters, bookingSetupList, sessionUser] = await Promise.all([
     getBookingParameters(),
+    getBookingSetupList(),
     getSession(),
   ]);
 
@@ -50,6 +67,7 @@ export default async function DashboardLayout({
       <div className="flex min-h-screen w-full">
         <AppSidebar
           bookingParameters={bookingParameters}
+          bookingSetups={bookingSetupList}
           sessionUser={sessionUser}
         />
         <div className="flex-1">{children}</div>
