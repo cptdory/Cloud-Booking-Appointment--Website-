@@ -450,9 +450,26 @@ export default function BookNowPage() {
           : (!selectedDate || !selectedTime || selectedTimeWarning) ? 4
             : 5;
 
-  const isFormValid = effectiveName !== "" && effectiveEmail !== "" && selectedTime !== "" && !selectedTimeWarning
-    && (!isCustomerRole || isRescheduling? (isNewCustomer ? true : selectedCustomer !== null) : true);
-
+const isFormValid =
+  effectiveName !== "" &&
+  (isRescheduling ? true : effectiveEmail !== "") &&  // ← email not required for reschedule
+  selectedTime !== "" &&
+  !selectedTimeWarning &&
+  (isRescheduling
+    ? true
+    : !isCustomerRole
+      ? (isNewCustomer ? true : selectedCustomer !== null)
+      : true);
+console.log("isFormValid check:", {
+  effectiveName,
+  effectiveEmail,
+  selectedTime,
+  selectedTimeWarning,
+  isCustomerRole,
+  isNewCustomer,
+  selectedCustomer,
+  isRescheduling,
+});
   // Filtered customer list
   const filteredCustomers = customerList.filter(c =>
     c.Name.toLowerCase().includes(customerSearch.toLowerCase()) ||
