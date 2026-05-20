@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useNextStep } from "nextstepjs";
 import {
   CheckCircle2, MapPin, Briefcase, Users, Calendar, User, Clock,
   Phone, Mail, FileText, RefreshCw, ChevronLeft, ChevronRight, X,
@@ -9,6 +8,7 @@ import {
 } from "lucide-react";
 import { sileo } from "sileo";
 import { usePathname } from "next/navigation";
+import { usePageActivation } from "@/hooks/use-page-activation";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
@@ -36,7 +36,7 @@ interface CustomerData {
   Address?: string;
   Address2?: string;
 }
-interface Branch { code: string; description: string, address:string }
+interface Branch { code: string; description: string, address: string }
 interface Service { id: string; code: string; name: string; duration: string; price: string }
 interface Staff { staffId: string; staffCode: string; staffName: string }
 interface Timeslot { id: string; time: string; availability: boolean; allowBooking: boolean }
@@ -226,11 +226,12 @@ function ConfirmDialog({ open, onClose, onConfirm, loading, data, isRescheduling
 function MobileProgress({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) {
   const steps = ["Location", "Service", "Staff", "Date & Time", "Customer"];
   const capped = Math.min(currentStep, totalSteps);
+  const stepIndex = Number.isInteger(capped) && capped >= 1 && capped <= steps.length ? capped - 1 : 0;
   return (
     <div className="md:hidden bg-white border-b border-slate-100 px-4 py-3">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-bold text-slate-500">Step {capped} of {totalSteps}</span>
-        <span className="text-xs font-semibold text-blue-600">{steps[capped - 1]}</span>
+        <span className="text-xs font-bold text-slate-500">Step {capped > 0 ? capped : 1} of {totalSteps}</span>
+        <span className="text-xs font-semibold text-blue-600">{steps[stepIndex]}</span>
       </div>
       <div className="flex gap-1">
         {steps.map((_, i) => (
@@ -331,7 +332,7 @@ export default function BookNowPage() {
   // ── Session ────────────────────────────────────────────────────────────────
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
   useEffect(() => {
-    fetch("/api/me").then(r => r.json()).then(d => setSessionUser(d.user ?? null)).catch(console.error);
+    fetch("/api/me", { cache: "no-store" }).then(r => r.json()).then(d => setSessionUser(d.user ?? null)).catch(console.error);
   }, []);
   const isCustomerRole = sessionUser?.role === "customer";
 
@@ -343,9 +344,6 @@ export default function BookNowPage() {
   const [rescheduleData, setRescheduleData] = useState<any>(null);
 
   // ── Tour ───────────────────────────────────────────────────────────────────
-  const { startNextStep, setCurrentStep: setTourStep, closeNextStep, currentStep: tourStep, isNextStepVisible } = useNextStep();
-  const [orgName, setOrgName] = useState("");
-  const [orgSetupLoading, setOrgSetupLoading] = useState(true);
 
   // ── Loading ────────────────────────────────────────────────────────────────
   const [loadingBranches, setLoadingBranches] = useState(false);
@@ -455,16 +453,9 @@ export default function BookNowPage() {
   // ── Auto-start tour ────────────────────────────────────────────────────────
   // useEffect(() => {
   //   const isMobile = window.innerWidth < 768;
-  //   if (!isRescheduling) startNextStep(isMobile ? "bookingTourMobile" : "bookingTour");
   // }, []);
 
   // ── Tour auto-advance ──────────────────────────────────────────────────────
-  useEffect(() => { if (!isNextStepVisible || tourStep !== 0) return; if (selectedBranch) setTourStep(1); }, [selectedBranch, tourStep, isNextStepVisible]);
-  useEffect(() => { if (!isNextStepVisible || tourStep !== 1) return; if (selectedService) setTourStep(2); }, [selectedService, tourStep, isNextStepVisible]);
-  useEffect(() => {
-    if (!isNextStepVisible || tourStep !== 2) return;
-    if (selectedStaff || noPreferenceStaff) { const t = setTimeout(() => closeNextStep(), 2000); return () => clearTimeout(t); }
-  }, [selectedStaff, noPreferenceStaff, tourStep, isNextStepVisible, closeNextStep]);
 
   // ── Auto-select today when reaching date step ──────────────────────────────
   useEffect(() => {
@@ -505,11 +496,11 @@ export default function BookNowPage() {
   const fetchBranches = async () => {
     try {
       setLoadingBranches(true);
-      const res = await fetch("/api/booking-branch-setup/get-booking-setup-list");
+      const res = await fetch("/api/booking-branch-setup/get-booking-setup-list", { cache: "no-store" });
       const d = await res.json();
       const branchList = (Array.isArray(d) ? d : []).map((b: any) => ({ code: String(b.Code ?? ""), description: String(b.Description ?? ""), address: String(b.Address ?? "") }));
       setBranches(branchList);
-    } catch (_) { } finally { setLoadingBranches(false); setOrgSetupLoading(false); }
+    } catch (_) { } finally { setLoadingBranches(false); }
   };
   const selectedBranchData = branches.find(
     (b: any) => b.code === selectedBranch
@@ -518,7 +509,7 @@ export default function BookNowPage() {
     if (!selectedBranch) return;
     try {
       setLoadingServices(true);
-      const res = await fetch(`/api/booking-branch-setup/get-booking-setup?code=${selectedBranch}`);
+      const res = await fetch(`/api/booking-branch-setup/get-booking-setup?code=${selectedBranch}`, { cache: "no-store" });
       const d = await res.json();
       const list = Array.isArray(d) ? d : [];
       const p = list[0]?.BookingParameter?.find((x: any) => x.BookingParameterId === 1);
@@ -576,7 +567,7 @@ export default function BookNowPage() {
     if (isCustomerRole) return;
     try {
       setLoadingCustomers(true);
-      const res = await fetch("/api/customer/get-customers");
+      const res = await fetch("/api/customer/get-customers", { cache: "no-store" });
       const d = await res.json();
       setCustomerList((Array.isArray(d) ? d : []).map((c: any) => ({
         CustomerNo: c.CustomerNo, Name: c.Name, Name2: c.Name2,
@@ -593,17 +584,20 @@ export default function BookNowPage() {
         body: JSON.stringify({ bookingEntryNo: entryNo }),
       });
       const data = await res.json();
+      console.log("Reschedule data:", data);
       const list = Array.isArray(data) ? data : [];
       const entry = list[0];
       if (!entry) throw new Error("Booking entry not found");
       setRescheduleData(entry);
       const paramMap: Record<string, any> = {};
       (entry.BookingParameters || []).forEach((p: any) => { paramMap[p.BookingParameterCode] = p; });
-      const serviceId = String(paramMap["SERVICE"]?.BookingParameterValueId ?? paramMap["SERVICES"]?.BookingParameterValueId ?? "");
+      const serviceId = String(paramMap["SERVICES"]?.BookingParameterValueId ?? "");
       const staffId = String(paramMap["STAFF"]?.BookingParameterValueId ?? "");
+      const hasStaff = staffId !== "";
       setSelectedBranch(entry.BookingSetupCode ?? "");
       setSelectedService(serviceId);
       setSelectedStaff(staffId);
+      setNoPreferenceStaff(!hasStaff);
       setSelectedCustomer({ CustomerNo: entry.CustomerNo ?? "", Name: entry.Name ?? "", PhoneNo: entry.PhoneNo ?? "", EMail: entry.EMail ?? "", Address: entry.Address ?? "", Address2: entry.Address2 ?? "" });
       setCustomerName(entry.Name ?? "");
       setCustomerEmail(entry.EMail ?? "");
@@ -611,7 +605,13 @@ export default function BookNowPage() {
       setCustomerAddress1(entry.Address ?? "");
       setCustomerAddress2(entry.Address2 ?? "");
       setNotes(entry.BookingNote ?? "");
-      setSelectedDate({ day: today.getDate(), month: today.getMonth(), year: today.getFullYear() });
+      const bookingDate = new Date(entry.BookingStartDate);
+
+setSelectedDate({
+  day: bookingDate.getDate(),
+  month: bookingDate.getMonth(),
+  year: bookingDate.getFullYear(),
+});
       sileo.info({ title: "Booking loaded. Only Date & Time can be changed.", fill: "#171717" });
     } catch (err: any) {
       sileo.error({ title: err?.message || "Failed to load booking entry.", fill: "#171717" });
@@ -682,6 +682,25 @@ export default function BookNowPage() {
   useEffect(() => { if (rescheduleEntryNo && rescheduleData && selectedDate && selectedBranch && selectedService && selectedStaff) fetchTimeslots(); }, [selectedDate, rescheduleData]);
 
   // ── Confirm data ───────────────────────────────────────────────────────────
+  usePageActivation(() => {
+    fetch("/api/me", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setSessionUser(d.user ?? null))
+      .catch(console.error);
+
+    fetchBranches();
+    fetchCustomers();
+
+    if (selectedBranch) fetchServices();
+    if (selectedService && selectedBranch) fetchStaff();
+    if (selectedDate && selectedBranch && selectedService && (selectedStaff || noPreferenceStaff)) {
+      fetchTimeslots();
+    }
+    if (rescheduleEntryNo) {
+      loadRescheduleData(rescheduleEntryNo);
+    }
+  });
+
   const confirmData = {
     branch: selectedBranchObj?.description ?? selectedBranch,
     service: selectedServiceObj?.name ?? "",
@@ -693,16 +712,6 @@ export default function BookNowPage() {
     phone: effectivePhone,
     notes,
   };
-
-  // ── Summary items ──────────────────────────────────────────────────────────
-  const summaryItems = [
-    { icon: MapPin, label: "Branch", value: selectedBranchObj?.description, sub: selectedBranchObj?.code },
-    { icon: Briefcase, label: "Service", value: selectedServiceObj?.name, sub: selectedServiceObj?.duration },
-    { icon: Users, label: "Staff", value: selectedStaffObj?.staffName ?? (noPreferenceStaff ? "No Preference" : undefined) ?? (rescheduleData?.StaffName ?? undefined) },
-    { icon: Calendar, label: "Date", value: selectedDate ? `${MONTH_NAMES[selectedDate.month]} ${selectedDate.day}, ${selectedDate.year}` : undefined },
-    { icon: Clock, label: "Time", value: selectedTime || undefined },
-    { icon: User, label: "Customer", value: effectiveName || undefined, sub: effectiveEmail || undefined },
-  ];
 
   // ── Calendar day renderer (shared) ────────────────────────────────────────
   const renderCalendarDay = (day: number) => {
@@ -897,32 +906,6 @@ export default function BookNowPage() {
           </Breadcrumb>
         </div>
 
-        {/* RIGHT SIDE */}
-        <div className="flex items-center gap-2 ml-auto">
-
-          {!isRescheduling && (
-            <>
-              {/* Desktop Tour */}
-              {/* <button
-                onClick={() => startNextStep("bookingTour")}
-                className="hidden md:inline-flex px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors items-center gap-1.5"
-              >
-                <Sparkles size={12} strokeWidth={2} />
-                Tour
-              </button> */}
-
-              {/* Mobile Tour */}
-              {/* <button
-                onClick={() => startNextStep("bookingTourMobile")}
-                className="inline-flex md:hidden px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors items-center gap-1.5"
-              >
-                <Sparkles size={12} strokeWidth={2} />
-                Tour
-              </button> */}
-            </>
-          )}
-
-        </div>
       </header>
 
       <MobileProgress currentStep={currentStep} totalSteps={5} />
@@ -941,7 +924,7 @@ export default function BookNowPage() {
         <div className="flex gap-4">
           {/* Location */}
           <HorizontalSetupCard
-            id="location-card" step={1} currentStep={currentStep} title="Location" icon={MapPin}
+            step={1} currentStep={currentStep} title="Location" icon={MapPin}
             disabled={isRescheduling}
             readonlyValue={selectedBranchObj?.description ?? rescheduleData?.BookingSetupCode}
             readonlySub2="Address not available"
@@ -955,14 +938,14 @@ export default function BookNowPage() {
                 </select>
               </div>
               <div className="px-1 text-xs text-slate-400">{selectedBranch
-                      ? selectedBranchData?.address || "Address not available"
-                      : "Select a branch"}</div>
+                ? selectedBranchData?.address || "Address not available"
+                : "Select a branch"}</div>
             </div>
           </HorizontalSetupCard>
 
           {/* Service */}
           <HorizontalSetupCard
-            id="service-card" step={2} currentStep={currentStep} title="Service" icon={Briefcase}
+            step={2} currentStep={currentStep} title="Service" icon={Briefcase}
             disabled={isRescheduling}
             readonlyValue={selectedServiceObj?.name ?? rescheduleData?.ServiceName}
             readonlySub2={selectedServiceObj ? `${selectedServiceObj.duration} · ${selectedServiceObj.price}` : undefined}
@@ -981,8 +964,7 @@ export default function BookNowPage() {
 
           {/* Professional */}
           <HorizontalSetupCard
-            id="professional-card" step={3} currentStep={currentStep} title="Professional" icon={Users}
-            disabled={isRescheduling}
+            step={3} currentStep={currentStep} title="Professional" icon={Users}
             readonlyValue={selectedStaffObj?.staffName ?? rescheduleData?.StaffName}
           >
             {staffPanelContent}
@@ -1068,7 +1050,7 @@ export default function BookNowPage() {
             {!isFormValid && (
               <p className="text-[11px] text-slate-400 text-center -mt-1">
                 {!selectedTime ? "Select a date and time slot to continue"
-                  : (selectedTimeWarning && skipAvailabilityCheck !== "true") ? "Selected slot cannot be booked. Choose another time." 
+                  : (selectedTimeWarning && skipAvailabilityCheck !== "true") ? "Selected slot cannot be booked. Choose another time."
                     : "Complete all required fields to continue"}
               </p>
             )}
@@ -1108,7 +1090,7 @@ export default function BookNowPage() {
             <div className="space-y-3">
               {[
                 {
-                  step: 1, title: "Location", icon: MapPin, id: "mobile-location-card",
+                  step: 1, title: "Location", icon: MapPin,
                   content: (
                     <div className="relative">
                       <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 z-10"><MapPin size={14} strokeWidth={2} /></div>
@@ -1120,7 +1102,7 @@ export default function BookNowPage() {
                   ),
                 },
                 {
-                  step: 2, title: "Service", icon: Briefcase, id: "mobile-service-card",
+                  step: 2, title: "Service", icon: Briefcase,
                   content: (
                     <div className="relative">
                       <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 z-10"><Briefcase size={14} strokeWidth={2} /></div>
@@ -1132,11 +1114,11 @@ export default function BookNowPage() {
                   ),
                 },
                 {
-                  step: 3, title: "Professional", icon: Users, id: "mobile-professional-card",
+                  step: 3, title: "Professional", icon: Users,
                   content: staffPanelContent,
                 },
               ].map(card => (
-                <HorizontalSetupCard key={card.step} id={card.id} step={card.step} currentStep={currentStep} title={card.title} icon={card.icon}>
+                <HorizontalSetupCard key={card.step} step={card.step} currentStep={currentStep} title={card.title} icon={card.icon}>
                   {card.content}
                 </HorizontalSetupCard>
               ))}

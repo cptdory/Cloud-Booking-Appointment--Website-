@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/get-session";
 import { bookingBranchSetupService } from "@/services/business-central/booking-branch-setup.service";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
@@ -17,8 +20,11 @@ export async function GET(req: Request) {
     }
     const result = await bookingBranchSetupService.getBookingSetup(bookingSetupCode);
     const parsed = JSON.parse(result?.value || "null");
-    console.log("Fetched booking setup for code", bookingSetupCode, ":", parsed);
-    return NextResponse.json(parsed);
+    return NextResponse.json(parsed, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+      },
+    });
   } catch (err: any) {
         console.error(
       "BC ERROR:",
@@ -30,7 +36,12 @@ export async function GET(req: Request) {
           err?.response?.data?.error?.message ||
           "Failed to fetch booking setup",
       },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        },
+      }
     );
   }
 }

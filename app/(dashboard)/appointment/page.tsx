@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePageActivation } from "@/hooks/use-page-activation";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -83,7 +84,7 @@ export default function Page() {
 
   const loadSession = async () => {
     try {
-      const res = await fetch("/api/me");
+      const res = await fetch("/api/me", { cache: "no-store" });
       if (!res.ok) {
         setError("Unable to load user session.");
         return;
@@ -131,6 +132,13 @@ export default function Page() {
     if (!sessionUser?.customer_number) return;
     loadAppointments(sessionUser.customer_number);
   }, [sessionUser]);
+
+  usePageActivation(() => {
+    loadSession();
+    if (sessionUser?.customer_number) {
+      loadAppointments(sessionUser.customer_number);
+    }
+  });
 
   const handleViewDetails = (appointment: Appointment) => {
     setSelectedAppointment(appointment);

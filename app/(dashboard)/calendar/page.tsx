@@ -27,6 +27,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { BookingEntriesData } from "@/types/bc-types";
 import { sileo } from "sileo";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePageActivation } from "@/hooks/use-page-activation";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -209,7 +210,7 @@ useEffect(() => {
 }, []);
   // ── Session ─────────────────────────────────────────────────────────────────
   useEffect(() => {
-    fetch("/api/me")
+fetch("/api/me", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => setSessionUser(data.user ?? null))
       .catch(console.error);
@@ -221,7 +222,7 @@ useEffect(() => {
   // ── Staff list ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!sessionUser?.booking_setup_code) return;
-    fetch("/api/booking-branch-setup/get-booking-setup")
+fetch("/api/booking-branch-setup/get-booking-setup", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
         const staffParam = data?.[0]?.BookingParameter?.find(
@@ -297,6 +298,40 @@ useEffect(() => {
   }, [isMobile]);
 
   // ── Calendar handlers ────────────────────────────────────────────────────────
+  usePageActivation(() => {
+fetch("/api/me", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => setSessionUser(data.user ?? null))
+      .catch(console.error);
+
+    if (!sessionUser?.booking_setup_code) return;
+
+    handleGetBusinessStartTime();
+
+fetch("/api/booking-branch-setup/get-booking-setup", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
+        const staffParam = data?.[0]?.BookingParameter?.find(
+          (p: any) => p.BookingParameterCode === "Staff"
+        );
+        const list: StaffItem[] =
+          staffParam?.BookingParameterValue?.map((v: any) => ({
+            id: v.BookingParameterValueId,
+            code: v.BookingParameterValueCode,
+            description: v.BookingParameterValueDescription,
+          })) ?? [];
+
+        setStaffList(
+          sessionUser.role === "user" && !sessionUser.is_admin
+            ? list.filter((s) => s.code === sessionUser.staff_code)
+            : list
+        );
+      })
+      .catch(console.error);
+
+    fetchBookingEntries(dateRange.start, dateRange.end);
+  });
+
   const handleRangeChange = useCallback(
     (range: Date[] | { start: Date; end: Date }) => {
       const { start, end } = normaliseRange(range);

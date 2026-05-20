@@ -5,6 +5,7 @@ import { availableTimeslotService } from "@/services/business-central/available-
 export async function POST(req: Request) {
     try {
         const body = await req.json();
+        console.log("Received booking request:", body);
         const { bookingSetupCode,
             bookingDate,
             bookingStartTime,
