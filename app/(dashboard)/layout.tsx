@@ -2,6 +2,8 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { cookies } from "next/headers";
 
+export const dynamic = "force-dynamic";
+
 async function getBookingParameters() {
   try {
     const cookieStore = await cookies();
