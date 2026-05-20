@@ -490,7 +490,6 @@ export default function BookNowPage() {
   }, [currentStep, selectedStaff, isRescheduling, selectedDate]);
 
   // ── Auto-select today when service selected with no preference ────────────
-  // removed no-preference auto-select behavior; selecting a service now sets sentinel staff '0'
 
   // ── Prevent past date if not allowed ──────────────────────────────────────
   useEffect(() => {
@@ -620,6 +619,7 @@ export default function BookNowPage() {
     selectedBranch,
     selectedStaff,
     selectedService,
+    sessionUser,
   ]);
 
   const fetchCustomers = async () => {
@@ -737,7 +737,7 @@ export default function BookNowPage() {
   useEffect(() => { if (selectedBranch) fetchServices(); }, [selectedBranch, fetchServices]);
   useEffect(() => { if (selectedDate && selectedBranch && selectedService && selectedStaff) fetchTimeslots(); }, [selectedDate, selectedBranch, selectedStaff, selectedService, fetchTimeslots]);
   useEffect(() => { if (rescheduleEntryNo) loadRescheduleData(rescheduleEntryNo); }, []);
-  useEffect(() => { if (rescheduleEntryNo && rescheduleData && selectedDate && selectedBranch && selectedService && selectedStaff) fetchTimeslots(); }, [selectedDate, rescheduleData]);
+  useEffect(() => { if (rescheduleEntryNo && rescheduleData && selectedDate && selectedBranch && selectedService && selectedStaff) fetchTimeslots(); }, [selectedDate, selectedBranch, selectedService, selectedStaff, rescheduleData, fetchTimeslots]);
 
   // ── Confirm data ───────────────────────────────────────────────────────────
   usePageActivation(() => {
