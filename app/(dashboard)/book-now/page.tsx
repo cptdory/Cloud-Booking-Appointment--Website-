@@ -38,7 +38,7 @@ interface CustomerData {
 }
 interface Branch { code: string; description: string, address: string }
 interface Service { id: string; code: string; name: string; duration: string; price: string }
-interface Staff { staffId: string; staffCode: string; staffName: string }
+interface Staff { staffId: string; staffCode: string; staffName: string, isAvailable: boolean; }
 interface Timeslot { id: string; time: string; availability: boolean; allowBooking: boolean }
 interface DateObj { day: number; month: number; year: number }
 
@@ -136,7 +136,6 @@ function HorizontalSetupCard({ step, currentStep, title, icon: Icon, children, i
     </div>
   );
 }
-
 // ─── Confirm Dialog ───────────────────────────────────────────────────────────
 function ConfirmDialog({ open, onClose, onConfirm, loading, data, isRescheduling }: {
   open: boolean; onClose: () => void; onConfirm: () => void; loading: boolean; data: any; isRescheduling: boolean;
@@ -520,45 +519,79 @@ export default function BookNowPage() {
     } catch (_) { } finally { setLoadingServices(false); }
   }, [selectedBranch]);
 
-  const fetchStaff = useCallback(async () => {
-    if (!selectedBranch || !selectedService) return;
-    try {
-      setLoadingStaff(true);
-      const res = await fetch("/api/booking-staff-rela/get-booking-staff-rela", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingSetupCode: selectedBranch, serviceId: selectedService }),
-      });
-      const d = await res.json();
-      setAssignedStaff((Array.isArray(d) ? d : []).map((s: any) => ({
-        staffId: String(s.StaffId ?? ""), staffCode: String(s.StaffCode ?? ""), staffName: String(s.StaffName ?? ""),
-      })));
-    } catch (_) { } finally { setLoadingStaff(false); }
-  }, [selectedBranch, selectedService]);
-
   const fetchTimeslots = useCallback(async () => {
     if (!selectedDate || !selectedBranch) return;
+
     try {
       setLoadingTimeslots(true);
-      const fullYear = String(selectedDate.year).length === 2 ? `20${selectedDate.year}` : selectedDate.year;
-      const fmt = `${String(selectedDate.month + 1).padStart(2, "0")}/${String(selectedDate.day).padStart(2, "0")}/${fullYear}`;
-      const res = await fetch("/api/available-timeslot-v2/get-available-timeslot-v2", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          branchCode: selectedBranch,
-          bookingDate: fmt,
-          serviceId: selectedService,
-          staffId: noPreferenceStaff ? "" : selectedStaff,
-        }),
-      });
+      setLoadingStaff(true);
+
+      const fullYear =
+        String(selectedDate.year).length === 2
+          ? `20${selectedDate.year}`
+          : selectedDate.year;
+
+      const fmt = `${String(selectedDate.month + 1).padStart(2, "0")}/${String(
+        selectedDate.day
+      ).padStart(2, "0")}/${fullYear}`;
+
+      const res = await fetch(
+        "/api/available-timeslot-v2/get-available-timeslot-v2",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            branchCode: selectedBranch,
+            bookingDate: fmt,
+            serviceId: selectedService,
+            staffId: noPreferenceStaff ? "" : selectedStaff,
+            isUserLogin: sessionUser?.role === 'user' ? "true" : "false",
+          }),
+        }
+      );
+
       const d = await res.json();
-      setTimeslots((Array.isArray(d) ? d : []).map((sl: any) => ({
-        id: String(sl.Id ?? ""),
-        time: new Date(`1970-01-01T${sl.Time}`).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }),
-        availability: Boolean(sl.IsAvailable),
-        allowBooking: Boolean(sl.AllowBooking),
-      })));
-    } catch (_) { } finally { setLoadingTimeslots(false); }
-  }, [selectedDate, selectedBranch, selectedStaff, selectedService, noPreferenceStaff]);
+      // TIMESLOTS
+      setTimeslots(
+        (Array.isArray(d?.TimeSlots) ? d.TimeSlots : []).map((sl: any) => ({
+          id: String(sl.Id ?? ""),
+          time: new Date(`1970-01-01T${sl.Time}`).toLocaleTimeString(
+            "en-US",
+            {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            }
+          ),
+          availability: Boolean(sl.IsAvailable),
+          allowBooking: Boolean(sl.AllowBooking),
+        }))
+      );
+      // STAFF
+      setAssignedStaff(
+        (Array.isArray(d?.ServiceStaffs)
+          ? d.ServiceStaffs
+          : []
+        ).map((s: any) => ({
+          staffId: String(s.StaffId ?? ""),
+          staffCode: String(s.StaffCode ?? ""),
+          staffName: String(s.StaffName ?? ""),
+          isAvailable: Boolean(s.IsAvailable),
+        }))
+      );
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingTimeslots(false);
+      setLoadingStaff(false);
+    }
+  }, [
+    selectedDate,
+    selectedBranch,
+    selectedStaff,
+    selectedService,
+    noPreferenceStaff,
+  ]);
 
   const fetchCustomers = async () => {
     if (isCustomerRole) return;
@@ -673,7 +706,6 @@ export default function BookNowPage() {
   // ── Effects ────────────────────────────────────────────────────────────────
   useEffect(() => { fetchBranches(); fetchCustomers(); }, [pathname]);
   useEffect(() => { if (selectedBranch) fetchServices(); }, [selectedBranch, fetchServices]);
-  useEffect(() => { if (selectedService && selectedBranch) fetchStaff(); }, [selectedService, selectedBranch, fetchStaff]);
   useEffect(() => { if (selectedDate && selectedBranch && selectedService && (selectedStaff || noPreferenceStaff)) fetchTimeslots(); }, [selectedDate, selectedBranch, selectedStaff, selectedService, noPreferenceStaff, fetchTimeslots]);
   useEffect(() => { if (rescheduleEntryNo) loadRescheduleData(rescheduleEntryNo); }, []);
   useEffect(() => { if (rescheduleEntryNo && rescheduleData && selectedDate && selectedBranch && selectedService && selectedStaff) fetchTimeslots(); }, [selectedDate, rescheduleData]);
@@ -689,7 +721,6 @@ export default function BookNowPage() {
     fetchCustomers();
 
     if (selectedBranch) fetchServices();
-    if (selectedService && selectedBranch) fetchStaff();
     if (selectedDate && selectedBranch && selectedService && (selectedStaff || noPreferenceStaff)) {
       fetchTimeslots();
     }
@@ -735,9 +766,25 @@ export default function BookNowPage() {
     <div className="space-y-3">
       <div className="relative">
         <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 z-10"><User size={14} strokeWidth={2} /></div>
-        <select value={selectedStaff || ""} onChange={e => sel.staff(e.target.value)} disabled={!selectedService || loadingStaff} className="w-full pl-11 pr-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 text-sm appearance-none cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
-          <option value="">{loadingStaff ? "Loading…" : "Choose staff"}</option>
-          {assignedStaff.map(st => <option key={st.staffId} value={st.staffId}>{st.staffName}</option>)}
+        <select
+          value={selectedStaff || ""}
+          onChange={e => sel.staff(e.target.value)}
+          disabled={!selectedService || loadingStaff}
+          className="w-full pl-11 pr-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 text-sm appearance-none cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <option value="">
+            {loadingStaff ? "Loading…" : "Choose staff"}
+          </option>
+
+          {assignedStaff.map(st => (
+            <option
+              key={st.staffId}
+              value={st.staffId}
+              disabled={!st.isAvailable}
+            >
+              {st.staffName} {st.isAvailable ? "🟢 Available" : "🔴 Unavailable"}
+            </option>
+          ))}
         </select>
       </div>
       <label className="flex items-center gap-2.5 cursor-pointer px-1">
@@ -874,7 +921,6 @@ export default function BookNowPage() {
       )}
     </div>
   );
-
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col">
@@ -921,7 +967,6 @@ export default function BookNowPage() {
           </div>
         )}
         {/* Row 1: Horizontal cards — hidden/locked when rescheduling */}
-
         <div className="flex gap-4">
           {/* Location */}
           <HorizontalSetupCard
@@ -1018,314 +1063,312 @@ export default function BookNowPage() {
             </div>
           </div>
 
-{/* Right panel: Customer + Details + CTA */}
-<div className="w-80 shrink-0 flex flex-col gap-4">
+          {/* Right panel: Customer + Details + CTA */}
+          <div className="w-80 shrink-0 flex flex-col gap-4">
 
-  <div
-    className={`flex flex-col rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden transition-opacity ${
-      (!selectedTime || (selectedTimeWarning && skipAvailabilityCheck !== "true"))
-        ? "opacity-40 pointer-events-none"
-        : ""
-    }`}
-  >
+            <div
+              className={`flex flex-col rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden transition-opacity ${(!selectedTime || (selectedTimeWarning && skipAvailabilityCheck !== "true"))
+                ? "opacity-40 pointer-events-none"
+                : ""
+                }`}
+            >
 
-    {/* ── Customer Section ───────────────────────────── */}
-    <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 shrink-0 bg-white">
-      <StepBadge number={5} done={false} active={currentStep === 5} />
-      <User size={13} strokeWidth={2} className="text-blue-600" />
-      <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">
-        Customer
-      </span>
-    </div>
+              {/* ── Customer Section ───────────────────────────── */}
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 shrink-0 bg-white">
+                <StepBadge number={5} done={false} active={currentStep === 5} />
+                <User size={13} strokeWidth={2} className="text-blue-600" />
+                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">
+                  Customer
+                </span>
+              </div>
 
-    {/* Customer Body */}
-    <div className="p-4 shrink-0 bg-slate-50/60">
+              {/* Customer Body */}
+              <div className="p-4 shrink-0 bg-slate-50/60">
 
-      {isCustomerRole ? (
+                {isCustomerRole ? (
 
-        <div className="flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50 p-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">
-            {(sessionUser?.name || "?")[0].toUpperCase()}
-          </div>
+                  <div className="flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50 p-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">
+                      {(sessionUser?.name || "?")[0].toUpperCase()}
+                    </div>
 
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-bold text-slate-700">
-              {sessionUser?.name}
-            </div>
-            <div className="truncate text-xs text-slate-400">
-              {sessionUser?.email}
-            </div>
-          </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-bold text-slate-700">
+                        {sessionUser?.name}
+                      </div>
+                      <div className="truncate text-xs text-slate-400">
+                        {sessionUser?.email}
+                      </div>
+                    </div>
 
-          <CheckCircle2
-            size={16}
-            strokeWidth={2.5}
-            className="shrink-0 text-blue-500"
-          />
-        </div>
-
-      ) : isRescheduling ? (
-
-        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 opacity-75 cursor-not-allowed">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-300 text-sm font-bold text-white">
-            {(rescheduleData?.Name || "?")[0]}
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-bold text-slate-600">
-              {rescheduleData?.Name}
-            </div>
-            <div className="truncate text-xs text-slate-400">
-              {rescheduleData?.EMail}
-            </div>
-          </div>
-
-          <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[9px] font-bold text-slate-400">
-            Locked
-          </span>
-        </div>
-
-      ) : (
-        <>
-
-          {/* Toggle */}
-          <label className="mb-3 flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isNewCustomer}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                setIsNewCustomer(checked);
-
-                if (checked) {
-                  setSelectedCustomer(null);
-                } else {
-                  setCustomerName("");
-                  setCustomerEmail("");
-                  setCustomerPhone("");
-                  setCustomerAddress1("");
-                  setCustomerAddress2("");
-                }
-              }}
-              className="h-4 w-4 accent-blue-600"
-            />
-
-            <span className="text-xs font-bold text-slate-600">
-              New Customer
-            </span>
-          </label>
-
-          {/* Existing Customer */}
-          {!isNewCustomer ? (
-
-            <div className="rounded-xl border border-slate-100 bg-white p-3 space-y-2">
-
-              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                Select customer
-              </label>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  disabled={customerList.length === 0 && !loadingCustomers}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left text-sm text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-3 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {selectedCustomer
-                    ? `${selectedCustomer.Name}${
-                        selectedCustomer.EMail
-                          ? ` — ${selectedCustomer.EMail}`
-                          : selectedCustomer.PhoneNo
-                          ? ` — ${selectedCustomer.PhoneNo}`
-                          : ""
-                      }`
-                    : loadingCustomers
-                    ? "Loading…"
-                    : "Choose an existing customer"}
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent className="w-full max-w-[24rem] p-2">
-
-                  <div className="px-1 pb-2">
-                    <FieldInput
-                      icon={undefined}
-                      placeholder="Search by name, email, phone, or ID..."
-                      value={customerSearch}
-                      onChange={(e: any) => setCustomerSearch(e.target.value)}
-                      onPointerDown={(e: any) => e.stopPropagation()}
-                      onClick={(e: any) => e.stopPropagation()}
-                      onKeyDown={(e: any) => e.stopPropagation()}
-                      className="border-slate-200 bg-slate-50"
+                    <CheckCircle2
+                      size={16}
+                      strokeWidth={2.5}
+                      className="shrink-0 text-blue-500"
                     />
                   </div>
 
-                  <div className="max-h-60 space-y-1 overflow-y-auto">
+                ) : isRescheduling ? (
 
-                    {loadingCustomers ? (
-                      [1, 2, 3].map((i) => (
-                        <div
-                          key={i}
-                          className="h-12 animate-pulse rounded-xl bg-slate-100"
-                        />
-                      ))
-                    ) : filteredCustomers.length === 0 ? (
-                      <div className="px-3 py-3 text-xs text-slate-500">
-                        No customers found
+                  <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 opacity-75 cursor-not-allowed">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-300 text-sm font-bold text-white">
+                      {(rescheduleData?.Name || "?")[0]}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-bold text-slate-600">
+                        {rescheduleData?.Name}
                       </div>
-                    ) : (
-                      filteredCustomers.map((c) => (
-                        <DropdownMenuItem
-                          key={c.CustomerNo}
-                          onClick={() => {
-                            setSelectedCustomer(c);
-                            setCustomerSearch("");
-                          }}
-                          className="flex flex-col items-start gap-1 rounded-xl px-3 py-3"
-                        >
-                          <span className="text-sm font-semibold text-slate-800">
-                            {c.Name}
-                          </span>
+                      <div className="truncate text-xs text-slate-400">
+                        {rescheduleData?.EMail}
+                      </div>
+                    </div>
 
-                          <span className="text-[11px] text-slate-500">
-                            {c.CustomerNo}
-                            {c.EMail
-                              ? ` • ${c.EMail}`
-                              : c.PhoneNo
-                              ? ` • ${c.PhoneNo}`
-                              : ""}
-                          </span>
-                        </DropdownMenuItem>
-                      ))
+                    <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[9px] font-bold text-slate-400">
+                      Locked
+                    </span>
+                  </div>
+
+                ) : (
+                  <>
+
+                    {/* Toggle */}
+                    <label className="mb-3 flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isNewCustomer}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setIsNewCustomer(checked);
+
+                          if (checked) {
+                            setSelectedCustomer(null);
+                          } else {
+                            setCustomerName("");
+                            setCustomerEmail("");
+                            setCustomerPhone("");
+                            setCustomerAddress1("");
+                            setCustomerAddress2("");
+                          }
+                        }}
+                        className="h-4 w-4 accent-blue-600"
+                      />
+
+                      <span className="text-xs font-bold text-slate-600">
+                        New Customer
+                      </span>
+                    </label>
+
+                    {/* Existing Customer */}
+                    {!isNewCustomer ? (
+
+                      <div className="rounded-xl border border-slate-100 bg-white p-3 space-y-2">
+
+                        <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                          Select customer
+                        </label>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            disabled={customerList.length === 0 && !loadingCustomers}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left text-sm text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-3 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {selectedCustomer
+                              ? `${selectedCustomer.Name}${selectedCustomer.EMail
+                                ? ` — ${selectedCustomer.EMail}`
+                                : selectedCustomer.PhoneNo
+                                  ? ` — ${selectedCustomer.PhoneNo}`
+                                  : ""
+                              }`
+                              : loadingCustomers
+                                ? "Loading…"
+                                : "Choose an existing customer"}
+                          </DropdownMenuTrigger>
+
+                          <DropdownMenuContent className="w-full max-w-[24rem] p-2">
+
+                            <div className="px-1 pb-2">
+                              <FieldInput
+                                icon={undefined}
+                                placeholder="Search by name, email, phone, or ID..."
+                                value={customerSearch}
+                                onChange={(e: any) => setCustomerSearch(e.target.value)}
+                                onPointerDown={(e: any) => e.stopPropagation()}
+                                onClick={(e: any) => e.stopPropagation()}
+                                onKeyDown={(e: any) => e.stopPropagation()}
+                                className="border-slate-200 bg-slate-50"
+                              />
+                            </div>
+
+                            <div className="max-h-60 space-y-1 overflow-y-auto">
+
+                              {loadingCustomers ? (
+                                [1, 2, 3].map((i) => (
+                                  <div
+                                    key={i}
+                                    className="h-12 animate-pulse rounded-xl bg-slate-100"
+                                  />
+                                ))
+                              ) : filteredCustomers.length === 0 ? (
+                                <div className="px-3 py-3 text-xs text-slate-500">
+                                  No customers found
+                                </div>
+                              ) : (
+                                filteredCustomers.map((c) => (
+                                  <DropdownMenuItem
+                                    key={c.CustomerNo}
+                                    onClick={() => {
+                                      setSelectedCustomer(c);
+                                      setCustomerSearch("");
+                                    }}
+                                    className="flex flex-col items-start gap-1 rounded-xl px-3 py-3"
+                                  >
+                                    <span className="text-sm font-semibold text-slate-800">
+                                      {c.Name}
+                                    </span>
+
+                                    <span className="text-[11px] text-slate-500">
+                                      {c.CustomerNo}
+                                      {c.EMail
+                                        ? ` • ${c.EMail}`
+                                        : c.PhoneNo
+                                          ? ` • ${c.PhoneNo}`
+                                          : ""}
+                                    </span>
+                                  </DropdownMenuItem>
+                                ))
+                              )}
+
+                            </div>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
+                      </div>
+
+                    ) : (
+
+                      /* New Customer Form */
+                      <div className="max-h-[220px] overflow-y-auto rounded-xl border border-slate-100 bg-white p-3 space-y-2.5">
+
+                        <div>
+                          <FieldLabel>Full Name *</FieldLabel>
+                          <FieldInput
+                            icon={User}
+                            value={customerName}
+                            onChange={(e: any) => setCustomerName(e.target.value)}
+                            placeholder="Legal full name"
+                          />
+                        </div>
+
+                        <div>
+                          <FieldLabel>Email Address *</FieldLabel>
+                          <FieldInput
+                            icon={Mail}
+                            type="email"
+                            value={customerEmail}
+                            onChange={(e: any) => setCustomerEmail(e.target.value)}
+                            placeholder="your@email.com"
+                          />
+                        </div>
+
+                        <div>
+                          <FieldLabel>Mobile Number</FieldLabel>
+                          <FieldInput
+                            icon={Phone}
+                            type="tel"
+                            value={customerPhone}
+                            onChange={(e: any) => setCustomerPhone(e.target.value)}
+                            placeholder="+63 9XX XXX XXXX"
+                          />
+                        </div>
+
+                        <div>
+                          <FieldLabel>Address</FieldLabel>
+                          <FieldInput
+                            icon={Home}
+                            value={customerAddress1}
+                            onChange={(e: any) => setCustomerAddress1(e.target.value)}
+                            placeholder="Street address"
+                          />
+                        </div>
+
+                        <div>
+                          <FieldLabel>Address Line 2</FieldLabel>
+                          <FieldInput
+                            icon={Home}
+                            value={customerAddress2}
+                            onChange={(e: any) => setCustomerAddress2(e.target.value)}
+                            placeholder="Unit, floor, etc."
+                          />
+                        </div>
+
+                      </div>
+
                     )}
 
+                  </>
+                )}
+              </div>
+
+              {/* ── Notes Section ───────────────────────────── */}
+              <div className="border-t border-slate-100 shrink-0">
+
+                {/* Header */}
+                <div className="flex items-center gap-2 border-b border-slate-100 bg-white px-4 py-3">
+                  <FileText size={13} strokeWidth={2} className="text-blue-600" />
+
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">
+                    Notes
+                  </span>
+                </div>
+
+                {/* Notes Body */}
+                <div className="bg-slate-50/60 p-4">
+                  <div className="rounded-xl border border-slate-100 bg-white p-3">
+                    <FieldTextarea
+                      rows={3}
+                      value={notes}
+                      onChange={(e: any) => setNotes(e.target.value)}
+                      placeholder="Special requests, reason for visit…"
+                      disabled={!selectedTime}
+                    />
                   </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </div>
 
-            </div>
-
-          ) : (
-
-            /* New Customer Form */
-            <div className="max-h-[220px] overflow-y-auto rounded-xl border border-slate-100 bg-white p-3 space-y-2.5">
-
-              <div>
-                <FieldLabel>Full Name *</FieldLabel>
-                <FieldInput
-                  icon={User}
-                  value={customerName}
-                  onChange={(e: any) => setCustomerName(e.target.value)}
-                  placeholder="Legal full name"
-                />
-              </div>
-
-              <div>
-                <FieldLabel>Email Address *</FieldLabel>
-                <FieldInput
-                  icon={Mail}
-                  type="email"
-                  value={customerEmail}
-                  onChange={(e: any) => setCustomerEmail(e.target.value)}
-                  placeholder="your@email.com"
-                />
-              </div>
-
-              <div>
-                <FieldLabel>Mobile Number</FieldLabel>
-                <FieldInput
-                  icon={Phone}
-                  type="tel"
-                  value={customerPhone}
-                  onChange={(e: any) => setCustomerPhone(e.target.value)}
-                  placeholder="+63 9XX XXX XXXX"
-                />
-              </div>
-
-              <div>
-                <FieldLabel>Address</FieldLabel>
-                <FieldInput
-                  icon={Home}
-                  value={customerAddress1}
-                  onChange={(e: any) => setCustomerAddress1(e.target.value)}
-                  placeholder="Street address"
-                />
-              </div>
-
-              <div>
-                <FieldLabel>Address Line 2</FieldLabel>
-                <FieldInput
-                  icon={Home}
-                  value={customerAddress2}
-                  onChange={(e: any) => setCustomerAddress2(e.target.value)}
-                  placeholder="Unit, floor, etc."
-                />
               </div>
 
             </div>
 
-          )}
+            {/* ── CTA ───────────────────────────── */}
+            <button
+              disabled={!isFormValid || isBookingLoading}
+              onClick={handleConfirmOpen}
+              className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-blue-600 py-4 text-sm font-bold text-white shadow-xl shadow-blue-200 transition-all hover:bg-blue-700 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40"
+            >
+              {isBookingLoading ? (
+                <>
+                  <Spinner size={18} />
+                  Processing…
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 size={18} strokeWidth={2.5} />
+                  {isRescheduling ? "Reschedule" : "Book Appointment"}
+                </>
+              )}
+            </button>
 
-        </>
-      )}
-    </div>
+            {!isFormValid && (
+              <p className="-mt-1 text-center text-[11px] text-slate-400">
+                {!selectedTime
+                  ? "Select a date and time slot to continue"
+                  : selectedTimeWarning && skipAvailabilityCheck !== "true"
+                    ? "Selected slot cannot be booked. Choose another time."
+                    : "Complete all required fields to continue"}
+              </p>
+            )}
 
-    {/* ── Notes Section ───────────────────────────── */}
-    <div className="border-t border-slate-100 shrink-0">
-
-      {/* Header */}
-      <div className="flex items-center gap-2 border-b border-slate-100 bg-white px-4 py-3">
-        <FileText size={13} strokeWidth={2} className="text-blue-600" />
-
-        <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">
-          Notes
-        </span>
-      </div>
-
-      {/* Notes Body */}
-      <div className="bg-slate-50/60 p-4">
-        <div className="rounded-xl border border-slate-100 bg-white p-3">
-          <FieldTextarea
-            rows={3}
-            value={notes}
-            onChange={(e: any) => setNotes(e.target.value)}
-            placeholder="Special requests, reason for visit…"
-            disabled={!selectedTime}
-          />
-        </div>
-      </div>
-
-    </div>
-
-  </div>
-
-  {/* ── CTA ───────────────────────────── */}
-  <button
-    disabled={!isFormValid || isBookingLoading}
-    onClick={handleConfirmOpen}
-    className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-blue-600 py-4 text-sm font-bold text-white shadow-xl shadow-blue-200 transition-all hover:bg-blue-700 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40"
-  >
-    {isBookingLoading ? (
-      <>
-        <Spinner size={18} />
-        Processing…
-      </>
-    ) : (
-      <>
-        <CheckCircle2 size={18} strokeWidth={2.5} />
-        {isRescheduling ? "Reschedule" : "Book Appointment"}
-      </>
-    )}
-  </button>
-
-  {!isFormValid && (
-    <p className="-mt-1 text-center text-[11px] text-slate-400">
-      {!selectedTime
-        ? "Select a date and time slot to continue"
-        : selectedTimeWarning && skipAvailabilityCheck !== "true"
-        ? "Selected slot cannot be booked. Choose another time."
-        : "Complete all required fields to continue"}
-    </p>
-  )}
-
-</div>
+          </div>
         </div>
       </div>
 

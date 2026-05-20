@@ -336,7 +336,6 @@ function TimeslotPanel({ selectedDate, timeslots, loading, selectedTime, onSelec
 // ─── Main ──────────────────────────────────────────────────────────────────────
 export default function App() {
   const tenantId = "9903ED01-A73C-4874-8ABF-D2678E3AE23D";
-  const { startNextStep, setCurrentStep, closeNextStep, currentStep: tourStep, isNextStepVisible } = useNextStep();
   const [orgName, setOrgName] = useState<string>("");
   const [headline, setHeadline] = useState("");
   const [logo, setLogo] = useState<string>("");
@@ -394,11 +393,7 @@ export default function App() {
     if (currentStep >= 4) setMobilePanel("schedule");
     if (currentStep >= 6) setMobilePanel("details");
   }, [currentStep]);
-  // ── Auto-start tour on page load ──────────────────────────────────────────
-  // useEffect(() => {
-  //   const isMobile = window.innerWidth < 768; // Tailwind md breakpoint
-  //   startNextStep(isMobile ? "bookingTourMobile" : "bookingTour");
-  // }, []);
+
   // ── OTP countdown ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (!otpDialogOpen || otpTimeRemaining <= 0) return;
@@ -458,32 +453,25 @@ export default function App() {
     finally { setLoadingServices(false); }
   }, [selectedBranch]);
 
-  const fetchStaff = useCallback(async () => {
-    if (!selectedBranch || !selectedService) return;
-    try {
-      setLoadingStaff(true);
-      const res = await fetch("/api/booking-staff-rela/get-booking-staff-rela", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingSetupCode: selectedBranch, serviceId: selectedService }),
-      });
-      const d = await res.json();
-      setAssignedStaff((Array.isArray(d) ? d : []).map((s: any) => ({
-        staffId: String(s.StaffId ?? ""),
-        staffCode: String(s.StaffCode ?? ""),
-        staffName: String(s.StaffName ?? ""),
-      })));
-    } catch (_) { }
-    finally { setLoadingStaff(false); }
-  }, [selectedBranch, selectedService]);
-  const fetchTimeslots = useCallback(async () => {
-    if (!selectedDate || !selectedBranch) return;
-    try {
-      setLoadingTimeslots(true);
-      const fullYear =
-        String(selectedDate.year).length === 2 ? `20${selectedDate.year}` : selectedDate.year;
-      const fmt = `${String(selectedDate.month + 1).padStart(2, "0")}/${String(selectedDate.day).padStart(2, "0")}/${fullYear}`;
-      const res = await fetch("/api/available-timeslot-v2/get-available-timeslot-v2", {
+const fetchTimeslots = useCallback(async () => {
+  if (!selectedDate || !selectedBranch) return;
+
+  try {
+    setLoadingTimeslots(true);
+    setLoadingStaff(true);
+
+    const fullYear =
+      String(selectedDate.year).length === 2
+        ? `20${selectedDate.year}`
+        : selectedDate.year;
+
+    const fmt = `${String(selectedDate.month + 1).padStart(2, "0")}/${String(
+      selectedDate.day
+    ).padStart(2, "0")}/${fullYear}`;
+
+    const res = await fetch(
+      "/api/available-timeslot-v2/get-available-timeslot-v2",
+      {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -491,19 +479,73 @@ export default function App() {
           bookingDate: fmt,
           serviceId: selectedService,
           staffId: noPreferenceStaff ? "" : selectedStaff,
+          isUserLogin: "false",
         }),
-      });
-      const d = await res.json();
-      console.log(d);
-      setTimeslots((Array.isArray(d) ? d : []).map((sl: any) => ({
+      }
+    );
+
+    const d = await res.json();
+
+    console.log(d);
+
+    // TIMESLOTS
+    setTimeslots(
+      (Array.isArray(d?.TimeSlots) ? d.TimeSlots : []).map((sl: any) => ({
         id: String(sl.Id ?? ""),
-        time: new Date(`1970-01-01T${sl.Time}`).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }),
+        time: new Date(`1970-01-01T${sl.Time}`).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        }),
         availability: Boolean(sl.IsAvailable),
         allowBooking: Boolean(sl.AllowBooking),
-      })));
-    } catch (_) { }
-    finally { setLoadingTimeslots(false); }
-  }, [selectedDate, selectedBranch, selectedStaff, selectedService, noPreferenceStaff]);
+      }))
+    );
+
+    // STAFF
+    setAssignedStaff(
+      (Array.isArray(d?.ServiceStaffs) ? d.ServiceStaffs : []).map(
+        (s: any) => ({
+          staffId: String(s.StaffId ?? ""),
+          staffCode: String(s.StaffCode ?? ""),
+          staffName: String(s.StaffName ?? ""),
+          isAvailable: Boolean(s.IsAvailable),
+        })
+      )
+    );
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoadingTimeslots(false);
+    setLoadingStaff(false);
+  }
+}, [
+  selectedDate,
+  selectedBranch,
+  selectedStaff,
+  selectedService,
+  noPreferenceStaff,
+]);
+  
+  //   const fetchStaff = useCallback(async () => {
+  //   if (!selectedBranch || !selectedDate) return;
+  //   try {
+  //     setLoadingStaff(true);
+  //     const res = await fetch("/api/", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({ }),
+  //     });
+  //     const d = await res.json();
+  //     setAssignedStaff((Array.isArray(d) ? d : []).map((s: any) => ({
+  //       staffId: String(s.StaffId ?? ""),
+  //       staffCode: String(s.StaffCode ?? ""),
+  //       staffName: String(s.StaffName ?? ""),
+  //       isAvailable: Boolean(s.IsAvailable),
+  //     })));
+  //   } catch (_) { }
+  //   finally { setLoadingStaff(false); }
+  // }, [selectedBranch, selectedService]);
   // ── OTP handlers ──────────────────────────────────────────────────────────
   const handleRequestOtp = async () => {
     if (!customerEmail) { sileo.error({ title: "Email is required", fill: "#171717" }); return; }
@@ -617,7 +659,7 @@ export default function App() {
   // ── Effects ────────────────────────────────────────────────────────────────
   useEffect(() => { fetchOrgSetup(); fetchBranches(); }, [pathname]);
   useEffect(() => { if (selectedBranch) fetchServices(); }, [selectedBranch, fetchServices]);
-  useEffect(() => { if (selectedService && selectedBranch) fetchStaff(); }, [selectedService, selectedBranch, fetchStaff]);
+  // useEffect(() => { if (selectedService && selectedBranch) fetchStaff(); }, [selectedService, selectedBranch, fetchStaff]);
   useEffect(() => {
     if (selectedDate && selectedBranch && selectedService && (selectedStaff || noPreferenceStaff)) {
       fetchTimeslots();
@@ -646,28 +688,7 @@ export default function App() {
       setSelectedDate({ day: d.getDate(), month: d.getMonth(), year: d.getFullYear() });
     }
   }, [selectedService, noPreferenceStaff, selectedBranch, selectedDate]);
-  // ── Auto-advance tour steps ────────────────────────────────────────────────
-  useEffect(() => {
-    if (!isNextStepVisible) return;
-    if (tourStep === 0 && selectedBranch) {
-      setCurrentStep(1);
-    }
-  }, [selectedBranch, tourStep, setCurrentStep, isNextStepVisible]);
-  useEffect(() => {
-    if (!isNextStepVisible) return;
-    if (tourStep === 1 && selectedService) {
-      setCurrentStep(2);
-    }
-  }, [selectedService, tourStep, setCurrentStep, isNextStepVisible]);
-  useEffect(() => {
-    if (!isNextStepVisible) return;
-    if (tourStep === 2 && (selectedStaff || noPreferenceStaff)) {
-      const timer = setTimeout(() => {
-        closeNextStep();
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [selectedStaff, noPreferenceStaff, tourStep, closeNextStep, isNextStepVisible]);
+
   const confirmData = {
     branch: selectedBranchObj?.description ?? selectedBranch,
     service: selectedServiceObj?.name ?? "",
@@ -720,27 +741,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* RIGHT: Actions */}
-          <div className="flex items-center gap-2">
-
-            {/* Desktop Tour */}
-            {/* <button
-        onClick={() => startNextStep("bookingTour")}
-        className="hidden md:inline-flex px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors items-center gap-1.5"
-      >
-        <Sparkles size={12} strokeWidth={2} />
-        Tour
-      </button> */}
-
-            {/* Mobile Tour */}
-            {/* <button
-        onClick={() => startNextStep("bookingTourMobile")}
-        className="inline-flex md:hidden px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors items-center gap-1.5"
-      >
-        <Sparkles size={12} strokeWidth={2} />
-        Tour
-      </button> */}
-          </div>
         </div>
       </header>
       <MobileProgress currentStep={currentStep} />

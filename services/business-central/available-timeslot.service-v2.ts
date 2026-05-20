@@ -5,7 +5,8 @@ class AvailableTimeslotServiceV2 {
     branchCode: string,
     bookingDate: string,
     serviceId: string,
-    staffId: string
+    staffId: string,
+    isUserLogin: string,
   ) {
     return bcClient.post<{value: string}>(
       "BookingAppointment_GetAvailableTimeSlotv2",
@@ -14,6 +15,7 @@ class AvailableTimeslotServiceV2 {
         _BookingDate:bookingDate,
         _ServiceId:serviceId,
         _StaffId:staffId,
+        _IsUserLogin: isUserLogin
       }
     );
   }
@@ -24,6 +26,7 @@ class AvailableTimeslotServiceV2 {
     startTime: string,
     serviceId: string,
     staffid: string,
+    isUserLogin: string,
     bookingNote: string,
     bookingEntryNo: string,
     customerNoOrEmailAdd: string,
@@ -42,6 +45,7 @@ class AvailableTimeslotServiceV2 {
         _StartTime:startTime,
         _ServiceId:serviceId,
         _StaffId:staffid,
+        _IsUserLogin:isUserLogin,
         _BookingNote:bookingNote,
         _BookingEntryNo:bookingEntryNo,
         _CustomerNoOrEmailAdd:customerNoOrEmailAdd,
