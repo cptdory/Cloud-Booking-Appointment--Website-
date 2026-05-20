@@ -22,6 +22,14 @@ import { DataTable } from "@/components/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { Calendar, Eye } from "lucide-react";
 import moment from "moment";
+import {
+  CalendarIcon,
+  ClockIcon,
+  MailIcon,
+  MapPinIcon,
+  PhoneIcon,
+  UserIcon,
+} from "lucide-react";
 
 interface Appointment {
   EntryNo: number | string;
@@ -234,67 +242,184 @@ export default function Page() {
         </div>
       </div>
 
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-md rounded-3xl border border-slate-200 bg-white shadow-2xl">
-          <DialogHeader>
-            <DialogTitle>{selectedAppointment?.ServiceName || "Booking details"}</DialogTitle>
-            <DialogDescription>View appointment details for your booking.</DialogDescription>
-          </DialogHeader>
+<Dialog open={showDialog} onOpenChange={setShowDialog}>
+  <DialogContent className="sm:max-w-2xl p-0 gap-0 overflow-hidden">
 
-          {selectedAppointment ? (
-            <div className="space-y-4 rounded-3xl border border-slate-100 bg-slate-50 p-5 text-sm text-slate-800">
-              <div className="grid gap-2 rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Appointment info</p>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <DetailRow label="Service" value={selectedAppointment.ServiceName} />
-                  <DetailRow label="Staff" value={selectedAppointment.StaffName || selectedAppointment.StaffCode} />
-                  <DetailRow label="Date" value={formatDate(selectedAppointment.BookingStartDate)} />
-                  <DetailRow label="Time" value={`${formatTime(selectedAppointment.BookingStartTime)} — ${formatTime(selectedAppointment.BookingEndTime)}`} />
-                  <DetailRow label="Status" value={selectedAppointment.BookingStatus} />
-                  <DetailRow label="Location" value={selectedAppointment.BookingSetupCode} />
-                </div>
-              </div>
+    {/* Header */}
+    <DialogHeader className="px-5 py-4 border-b border-slate-100">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2 flex-wrap">
+            {selectedAppointment?.ServiceName || "Booking Details"}
 
-              <div className="grid gap-2 rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Customer</p>
-                <DetailRow label="Name" value={selectedAppointment.Name} />
-                <DetailRow label="Email" value={selectedAppointment.EMail || "—"} />
-                <DetailRow label="Phone" value={selectedAppointment.PhoneNo || "—"} />
-                <DetailRow label="Address" value={`${selectedAppointment.Address || ""} ${selectedAppointment.Address2 || ""}`.trim() || "—"} />
-              </div>
-
-              {selectedAppointment.BookingNote ? (
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Notes</p>
-                  <p className="mt-2 text-sm text-slate-700">{selectedAppointment.BookingNote}</p>
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <p className="py-6 text-sm text-slate-500">No appointment selected.</p>
-          )}
-
-          <DialogFooter className="flex items-center gap-3">
-            {selectedAppointment?.BookingStatus === "Active" && (
-              <button
-                onClick={() => {
-                  if (!selectedAppointment) return;
-                  window.location.href = `/book-now?reschedule=${selectedAppointment.EntryNo}`;
-                }}
-                className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-2xl shadow-sm transition hover:bg-blue-700"
+            {selectedAppointment?.BookingStatus && (
+              <span
+                className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${
+                  selectedAppointment.BookingStatus === "Active"
+                    ? "bg-green-100 text-green-700"
+                    : selectedAppointment.BookingStatus === "Cancelled"
+                    ? "bg-red-100 text-red-700"
+                    : selectedAppointment.BookingStatus === "Finalized"
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-slate-100 text-slate-700"
+                }`}
               >
-                Reschedule
-              </button>
+                {selectedAppointment.BookingStatus}
+              </span>
             )}
-            <button
-              onClick={() => setShowDialog(false)}
-              className="px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-100 rounded-2xl transition hover:bg-slate-200"
-            >
-              Close
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DialogTitle>
+
+          <DialogDescription className="text-xs text-slate-500 mt-1">
+            View appointment details for this booking.
+          </DialogDescription>
+        </div>
+      </div>
+    </DialogHeader>
+
+    {/* Body */}
+    {selectedAppointment ? (
+      <div className="px-5 py-4 space-y-5">
+
+        {/* Appointment Info */}
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
+            Appointment Information
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+            <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+              <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
+                <CalendarIcon className="w-3.5 h-3.5" />
+                Date
+              </div>
+              <p className="text-sm font-medium text-slate-900">
+                {formatDate(selectedAppointment.BookingStartDate)}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+              <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
+                <ClockIcon className="w-3.5 h-3.5" />
+                Time
+              </div>
+              <p className="text-sm font-medium text-slate-900">
+                {formatTime(selectedAppointment.BookingStartTime)}
+                {" — "}
+                {formatTime(selectedAppointment.BookingEndTime)}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+              <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
+                <UserIcon className="w-3.5 h-3.5" />
+                Staff
+              </div>
+              <p className="text-sm font-medium text-slate-900">
+                {selectedAppointment.StaffName ||
+                  selectedAppointment.StaffCode ||
+                  "—"}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+              <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
+                <MapPinIcon className="w-3.5 h-3.5" />
+                Location
+              </div>
+              <p className="text-sm font-medium text-slate-900">
+                {selectedAppointment.BookingSetupCode || "—"}
+              </p>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Customer */}
+        <div className="border-t border-slate-100 pt-5 space-y-2">
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
+            Customer Information
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+            <div className="flex items-start gap-2 text-sm text-slate-800">
+              <UserIcon className="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+              <span className="truncate">
+                {selectedAppointment.Name || "—"}
+              </span>
+            </div>
+
+            <div className="flex items-start gap-2 text-sm text-slate-800">
+              <PhoneIcon className="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+              <span>{selectedAppointment.PhoneNo || "—"}</span>
+            </div>
+
+            <div className="flex items-start gap-2 text-sm text-slate-800">
+              <MailIcon className="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+              <span className="truncate">
+                {selectedAppointment.EMail || "—"}
+              </span>
+            </div>
+
+            <div className="flex items-start gap-2 text-sm text-slate-800">
+              <MapPinIcon className="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+              <span className="truncate">
+                {`${selectedAppointment.Address || ""} ${
+                  selectedAppointment.Address2 || ""
+                }`.trim() || "—"}
+              </span>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div className="border-t border-slate-100 pt-5 space-y-2">
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
+            Notes
+          </h3>
+
+          <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-700 whitespace-pre-line min-h-[72px]">
+            {selectedAppointment.BookingNote || "No additional notes provided."}
+          </div>
+        </div>
+
+      </div>
+    ) : (
+      <div className="px-5 py-10 text-center text-sm text-slate-500">
+        No appointment selected.
+      </div>
+    )}
+
+    {/* Footer */}
+    <div className="px-5 py-3 border-t border-slate-100 flex items-center gap-2">
+
+      {selectedAppointment?.BookingStatus === "Active" && (
+        <button
+          onClick={() => {
+            if (!selectedAppointment) return;
+            window.location.href = `/book-now?reschedule=${selectedAppointment.EntryNo}`;
+          }}
+          className="px-3 py-1.5 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-sm transition hover:bg-blue-700"
+        >
+          Reschedule
+        </button>
+      )}
+
+      <div className="ml-auto">
+        <button
+          onClick={() => setShowDialog(false)}
+          className="px-3 py-1.5 text-sm font-semibold text-slate-700 bg-slate-100 rounded-lg transition hover:bg-slate-200"
+        >
+          Close
+        </button>
+      </div>
+
+    </div>
+
+  </DialogContent>
+</Dialog>
     </>
   );
 }

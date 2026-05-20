@@ -101,6 +101,7 @@ export function AppSidebar({
           teams={teams}
           defaultTeamCode={sessionUser?.booking_setup_code}
           disabled={!canSwitchTeam}
+          showDescription={!isCustomerRole}
         />
       </SidebarHeader>
 

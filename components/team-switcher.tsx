@@ -23,6 +23,7 @@ export function TeamSwitcher({
   teams,
   defaultTeamCode,
   disabled,
+  showDescription = true,
 }: {
   teams: {
     name: string
@@ -32,6 +33,7 @@ export function TeamSwitcher({
   }[]
   defaultTeamCode?: string
   disabled?: boolean
+  showDescription?: boolean
 }) {
   const { isMobile } = useSidebar()
   const [activeTeam, setActiveTeam] = React.useState(teams[0])
@@ -80,7 +82,7 @@ export function TeamSwitcher({
             </div>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">{activeTeam.name}</span>
-              {activeTeam.description ? (
+              {showDescription && activeTeam.description ? (
                 <span className="truncate text-xs">{activeTeam.description}</span>
               ) : null}
             </div>

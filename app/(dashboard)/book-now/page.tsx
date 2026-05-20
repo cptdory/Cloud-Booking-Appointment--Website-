@@ -310,17 +310,21 @@ function TimeslotPanel({ selectedDate, timeslots, loading, selectedTime, onSelec
                 The selected time slot does not have enough available time to accommodate the full duration of the selected service.
               </div>
             )}
-            {!isCustomerRole && onSkipAvailabilityCheckChange && (
-              <div className="mt-4 pt-4 border-t border-slate-100">
-                <label className="flex items-center gap-2 text-xs text-slate-500 font-medium cursor-pointer">
-                  <input type="checkbox" checked={skipAvailabilityCheck === "true"}
-                    onChange={e => onSkipAvailabilityCheckChange(e.target.checked)}
-                    className="w-3.5 h-3.5 accent-blue-600 cursor-pointer" />
-                  Book Anyway
-                </label>
-              </div>
-            )}
           </>
+        )}
+      </div>
+      <div className="flex min-h-[4.5rem] items-center border-t border-slate-100 px-3 py-3">
+        {!isCustomerRole && onSkipAvailabilityCheckChange ? (
+          <label className="flex items-center gap-2 text-xs text-slate-500 font-medium cursor-pointer">
+            <input type="checkbox" checked={skipAvailabilityCheck === "true"}
+              onChange={e => onSkipAvailabilityCheckChange(e.target.checked)}
+              className="w-3.5 h-3.5 accent-blue-600 cursor-pointer" />
+            Open All Time Slots
+          </label>
+        ) : (
+          <div className="text-[11px] text-slate-300">
+            Select a time slot to continue.
+          </div>
         )}
       </div>
     </div>
@@ -607,11 +611,11 @@ export default function BookNowPage() {
       setNotes(entry.BookingNote ?? "");
       const bookingDate = new Date(entry.BookingStartDate);
 
-setSelectedDate({
-  day: bookingDate.getDate(),
-  month: bookingDate.getMonth(),
-  year: bookingDate.getFullYear(),
-});
+      setSelectedDate({
+        day: bookingDate.getDate(),
+        month: bookingDate.getMonth(),
+        year: bookingDate.getFullYear(),
+      });
       sileo.info({ title: "Booking loaded. Only Date & Time can be changed.", fill: "#171717" });
     } catch (err: any) {
       sileo.error({ title: err?.message || "Failed to load booking entry.", fill: "#171717" });
@@ -754,7 +758,7 @@ setSelectedDate({
 
   // ── Admin-only controls (allow prev date only — Book Anyway moved to TimeslotPanel) ────────────────────────────
   const adminControlsCalendar = !isCustomerRole ? (
-    <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-slate-100">
+    <div className="flex min-h-[4.5rem] items-center py-3">
       <label className="flex items-center gap-2 text-xs text-slate-500 font-medium cursor-pointer">
         <input type="checkbox" checked={allowPreviousDate}
           onChange={e => setAllowPreviousDate(e.target.checked)}
@@ -762,7 +766,11 @@ setSelectedDate({
         Allow Previous Date
       </label>
     </div>
-  ) : null;
+  ) : (
+    <div className="flex min-h-[4.5rem] items-center py-3 text-[11px] text-slate-300">
+      Choose a date to view open times.
+    </div>
+  );
 
   // ── Customer panel ─────────────────────────────────────────────────────────
   const customerPanel = (
@@ -1003,7 +1011,8 @@ setSelectedDate({
                   {Array.from({ length: (firstDay + 6) % 7 }).map((_, i) => <div key={`e${i}`} />)}
                   {Array.from({ length: daysInMonth }).map((_, i) => renderCalendarDay(i + 1))}
                 </div>
-                {/* Admin controls inside calendar card */}
+              </div>
+              <div className="border-t border-slate-100 px-4">
                 {adminControlsCalendar}
               </div>
             </div>
@@ -1147,6 +1156,8 @@ setSelectedDate({
                     {Array.from({ length: (firstDay + 6) % 7 }).map((_, i) => <div key={`e${i}`} />)}
                     {Array.from({ length: daysInMonth }).map((_, i) => renderCalendarDay(i + 1))}
                   </div>
+                </div>
+                <div className="border-t border-slate-100 px-4">
                   {adminControlsCalendar}
                 </div>
               </div>
