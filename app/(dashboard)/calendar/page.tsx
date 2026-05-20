@@ -23,7 +23,7 @@ import { Plus, PhoneIcon, MailIcon, MapPinIcon, AlertCircle, CheckCircle, Refres
 import { Calendar, momentLocalizer, View } from "react-big-calendar";
 import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import { useState, useEffect, useLayoutEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { BookingEntriesData } from "@/types/bc-types";
 import { sileo } from "sileo";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -195,7 +195,18 @@ export default function CalendarPage() {
     min: moment().startOf("day").toDate(),
     max: moment().endOf("day").toDate(),
   });
+const calendarContainerRef = useRef<HTMLDivElement>(null);
 
+useEffect(() => {
+  if (!calendarContainerRef.current) return;
+
+  const observer = new ResizeObserver(() => {
+    window.dispatchEvent(new Event("resize"));
+  });
+
+  observer.observe(calendarContainerRef.current);
+  return () => observer.disconnect();
+}, []);
   // ── Session ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     fetch("/api/me")
@@ -263,7 +274,6 @@ export default function CalendarPage() {
   );
 
   useEffect(() => {
-    console.log("sessionUser:", sessionUser);
     if (sessionUser) fetchBookingEntries(dateRange.start, dateRange.end);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionUser]);
@@ -277,17 +287,6 @@ export default function CalendarPage() {
       }
     }
   }, [calendarEvents, selectedEvent, showEventDialog]);
-
-  useLayoutEffect(() => {
-    const timeout = window.setTimeout(() => {
-      window.dispatchEvent(new Event("resize"));
-    }, 150);
-    return () => window.clearTimeout(timeout);
-  }, []);
-
-  useEffect(() => {
-    window.dispatchEvent(new Event("resize"));
-  }, [currentView]);
 
   useEffect(() => {
     if (isMobile) {
@@ -306,15 +305,6 @@ export default function CalendarPage() {
     },
     [fetchBookingEntries]
   );
-
-  useEffect(() => {
-    if (!loadingCalendar) {
-      const timeout = window.setTimeout(() => {
-        window.dispatchEvent(new Event("resize"));
-      }, 150);
-      return () => window.clearTimeout(timeout);
-    }
-  }, [events, currentView, businessHours, loadingCalendar]);
 
   const handleSelectEvent = (event: CalendarEvent) => {
     const entry = calendarEvents.find((e) => e.EntryNo === event.id);
@@ -567,23 +557,25 @@ export default function CalendarPage() {
   return (
     <>
       {/* Header */}
-      <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-white px-4">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbPage>Calendar</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
+      <header className="sticky top-0 z-10 flex shrink-0 flex-col gap-3 border-b bg-white px-4 py-3 sm:h-16 sm:flex-row sm:items-center sm:py-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <SidebarTrigger className="-ml-1 shrink-0" />
+          <Separator orientation="vertical" className="mr-2 hidden data-[orientation=vertical]:h-4 sm:block" />
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbPage>Calendar</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:ml-auto sm:justify-end">
           {/* Status filter */}
           <div className="relative">
             <button
               onClick={() => setStatusMenuOpen((prev) => !prev)}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-auto"
             >
               Status
               <span className="rounded-full bg-blue-100 text-blue-700 text-xs font-semibold px-1.5 py-0.5">
@@ -617,7 +609,7 @@ export default function CalendarPage() {
           </div>
 
           {/* Hide time off */}
-          <label className="flex items-center gap-2 cursor-pointer select-none rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+          <label className="flex min-h-10 items-center gap-2 cursor-pointer select-none rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50">
             <input
               type="checkbox"
               checked={hideTimeOff}
@@ -629,109 +621,116 @@ export default function CalendarPage() {
 
           <button
             onClick={handleOpenAddTimeOffDialog}
-            className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:from-blue-600 hover:to-blue-700"
+            className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:from-blue-600 hover:to-blue-700"
           >
             <Plus className="h-4 w-4" />
             Add Time Off
           </button>
         </div>
       </header>
+{/* Main */}
+<div className="flex min-h-0 min-w-0 flex-1 flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50 p-4 sm:p-6">
+  <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-blue-100 bg-white p-3 shadow-sm sm:p-6">
+    <div className="relative flex min-h-[70vh] min-w-0 flex-1 overflow-hidden rounded-lg compact-calendar sm:min-h-[calc(100svh-11rem)]" ref={calendarContainerRef}>
+      <style>{`
+        .compact-calendar { width: 100%; }
+        .compact-calendar .rbc-calendar { width: 100% !important; min-width: 0; }
+        .compact-calendar .rbc-toolbar {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.75rem;
+          margin-bottom: 1rem;
+        }
+        .compact-calendar .rbc-toolbar .rbc-btn-group {
+          display: flex;
+          flex-wrap: wrap;
+        }
+        .compact-calendar .rbc-header,
+        .compact-calendar .rbc-time-header-content,
+        .compact-calendar .rbc-time-content,
+        .compact-calendar .rbc-time-view,
+        .compact-calendar .rbc-month-view,
+        .compact-calendar .rbc-agenda-view {
+          min-width: 0;
+        }
+        .compact-calendar .rbc-timeslot-group { min-height: 30px; }
+        .compact-calendar .rbc-time-slot { min-height: 20px; }
+        .compact-calendar .rbc-month-view { width: 100% !important; }
+      `}</style>
 
-      {/* Main */}
-      <div className="flex flex-1 flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50 p-4 sm:p-6">
-        <div className="flex flex-col flex-1 rounded-lg border border-blue-100 bg-white shadow-sm p-4 sm:p-6">
-          {/* Calendar — fills remaining vertical space, no scroll */}
-          <div className="relative flex-1 min-h-0 compact-calendar">
-            <style>{`
-              .compact-calendar .rbc-timeslot-group { min-height: 30px; }
-              .compact-calendar .rbc-time-slot { min-height: 20px; }
-            `}</style>
-            {/* Loading overlay */}
-            {loadingCalendar && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70 backdrop-blur-[2px]">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
-                  <span className="text-sm font-medium text-slate-500">Loading appointments…</span>
-                </div>
-              </div>
-            )}
-            <Calendar
-              key={currentView}
-              localizer={localizer}
-              events={filteredEvents}
-              startAccessor="start"
-              endAccessor="end"
-              min={businessHours.min}
-              max={businessHours.max}
-              popup
-              style={{ height: currentView === "month" ? "auto" : "100%", minHeight: 500, width: "auto" }}
-              onRangeChange={handleRangeChange}
-              onSelectEvent={handleSelectEvent}
-              view={currentView}
-              onView={(view) => setCurrentView(view)}
-              formats={{
-                eventTimeRangeFormat: () => "",
-              }}
-              eventPropGetter={(event: any) => {
-                // Lookup the original booking entry to inspect its status
-                const entry = calendarEvents.find((c) => String(c.EntryNo) === String(event.id));
-                const isCancelled = entry?.BookingStatus === "Cancelled" || entry?.BookingStatus === "No Show";
-                const backgroundColor = isCancelled
-                  ? "#818182" // light gray for cancelled
-                  : (currentView === "week" || currentView === "day")
-                    ? event.color || "#3b82f6"
-                    : "transparent";
-
-                return {
-                  style: {
-                    backgroundColor,
-                    opacity: 0.9,
-                    color: "black",
-                    borderRadius: "4px",
-                    border: "none",
-                    padding: "1px 4px",
-                    fontSize: "11px",
-                  },
-                };
-              }}
-              components={{
-                event: ({ event }: any) => {
-                  const entry = calendarEvents.find((c) => String(c.EntryNo) === String(event.id));
-                  console.log("Rendering event:", { event, entry });
-                  const isNoShow = entry?.BookingStatus === "No Show";
-                  const isFinalized = entry?.BookingStatus === "Finalized";
-                  const isRescheduled = entry?.Rescheduled;
-                  return (
-                    <div className="text-[11px] leading-tight overflow-hidden">
-                      <div className="flex items-start gap-1">
-                        {currentView !== "week" && currentView !== "day" && (
-                          <Badge
-                            style={{ backgroundColor: event.color }}
-                            className="p-0.5 shrink-0"
-                          />
-                        )}
-
-                        {isNoShow ? (
-                          <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
-                        ) : isRescheduled ? (
-                          <RefreshCw className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                        ) : isFinalized ? (
-                          <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                        ) : null}
-
-                        <span className="block truncate text-[13px]">
-                          {event.title}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                },
-              }}
-            />
+      {loadingCalendar && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70 backdrop-blur-[2px]">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
+            <span className="text-sm font-medium text-slate-500">Loading appointments…</span>
           </div>
         </div>
-      </div>
+      )}
 
+      <Calendar
+        key={currentView}
+        localizer={localizer}
+        events={filteredEvents}
+        startAccessor="start"
+        endAccessor="end"
+        min={businessHours.min}
+        max={businessHours.max}
+        popup
+        style={{ height: "100%", width: "100%", minHeight: "100%" }}
+        onRangeChange={handleRangeChange}
+        onSelectEvent={handleSelectEvent}
+        view={currentView}
+        onView={(view) => setCurrentView(view)}
+        formats={{ eventTimeRangeFormat: () => "" }}
+        eventPropGetter={(event: any) => {
+          const entry = calendarEvents.find((c) => String(c.EntryNo) === String(event.id));
+          const isCancelled = entry?.BookingStatus === "Cancelled" || entry?.BookingStatus === "No Show";
+          const backgroundColor = isCancelled
+            ? "#818182"
+            : (currentView === "week" || currentView === "day")
+              ? event.color || "#3b82f6"
+              : "transparent";
+          return {
+            style: {
+              backgroundColor,
+              opacity: 0.9,
+              color: "black",
+              borderRadius: "4px",
+              border: "none",
+              padding: "1px 4px",
+              fontSize: "11px",
+            },
+          };
+        }}
+        components={{
+          event: ({ event }: any) => {
+            const entry = calendarEvents.find((c) => String(c.EntryNo) === String(event.id));
+            const isNoShow = entry?.BookingStatus === "No Show";
+            const isFinalized = entry?.BookingStatus === "Finalized";
+            const isRescheduled = entry?.Rescheduled;
+            return (
+              <div className="text-[11px] leading-tight overflow-hidden">
+                <div className="flex items-start gap-1">
+                  {currentView !== "week" && currentView !== "day" && (
+                    <Badge style={{ backgroundColor: event.color }} className="p-0.5 shrink-0" />
+                  )}
+                  {isNoShow ? (
+                    <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+                  ) : isRescheduled ? (
+                    <RefreshCw className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                  ) : isFinalized ? (
+                    <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  ) : null}
+                  <span className="block truncate text-[13px]">{event.title}</span>
+                </div>
+              </div>
+            );
+          },
+        }}
+      />
+    </div>
+  </div>
+</div>
 {/* ── Event Details Dialog ── */}
 <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
   <DialogContent className="sm:max-w-2xl p-0 gap-0">
