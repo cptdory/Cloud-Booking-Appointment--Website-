@@ -242,9 +242,9 @@ function MobileProgress({ currentStep, totalSteps }: { currentStep: number; tota
 }
 
 // ─── Timeslot Panel ───────────────────────────────────────────────────────────
-function TimeslotPanel({ selectedDate, timeslots, loading, selectedTime, onSelectTime, stepNumber, currentStep, skipAvailabilityCheck, onSkipAvailabilityCheckChange, isCustomerRole }: {
+function TimeslotPanel({ selectedDate, timeslots, loading, selectedTime, onSelectTime, stepNumber, currentStep, skipAvailabilityCheck, onSkipAvailabilityCheckChange, isCustomerRole, noStaffAvailable, contactNumber }: {
   selectedDate: DateObj | null; timeslots: Timeslot[]; loading: boolean; selectedTime: string;
-  onSelectTime: (t: string) => void; stepNumber: number; currentStep: number; skipAvailabilityCheck: string; onSkipAvailabilityCheckChange?: (checked: boolean) => void; isCustomerRole?: boolean;
+  onSelectTime: (t: string) => void; stepNumber: number; currentStep: number; skipAvailabilityCheck: string; onSkipAvailabilityCheckChange?: (checked: boolean) => void; isCustomerRole?: boolean; noStaffAvailable?: boolean; contactNumber?: string;
 }) {
   const slots = timeslots || [];
   const selectedSlot = slots.find((ts) => ts.time === selectedTime) ?? null;
@@ -260,6 +260,25 @@ function TimeslotPanel({ selectedDate, timeslots, loading, selectedTime, onSelec
         {currentStep > stepNumber && <CheckCircle2 size={11} className="ml-auto text-blue-500" strokeWidth={2.5} />}
       </div>
       <div className="flex-1 overflow-y-auto p-4">
+        {noStaffAvailable && (
+          <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm font-semibold px-4 py-3">
+            <div className="flex items-start gap-3">
+              <div className="text-2xl leading-6">⚠️</div>
+              <div className="flex-1">
+                <div className="text-sm font-bold">No staff available for this service</div>
+                <div className="text-[12px] text-amber-800 mt-1">
+                  Please contact us for assistance{contactNumber ? ':' : '.'}
+                </div>
+                {contactNumber && (
+                  <a href={`tel:${contactNumber.replace(/\s+/g, '')}`} className="mt-2 inline-flex items-center gap-2 text-amber-900 font-semibold text-sm">
+                    <span className="text-lg">📞</span>
+                    <span className="underline">{contactNumber}</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         {!selectedDate ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-300 py-10">
             <Calendar size={32} strokeWidth={1.2} className="mb-3" />
@@ -354,6 +373,9 @@ export default function BookNowPage() {
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [loadingTimeslots, setLoadingTimeslots] = useState(false);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [orgSetupLoading, setOrgSetupLoading] = useState(false);
+  const [contactNumber, setContactNumber] = useState("");
+  const tenantId = "9903ED01-A73C-4874-8ABF-D2678E3AE23D";
 
   // ── Data ───────────────────────────────────────────────────────────────────
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -404,6 +426,12 @@ export default function BookNowPage() {
   const selectedStaffObj = assignedStaff.find(s => s.staffId === selectedStaff) ?? null;
   const selectedTimeslot = timeslots.find(ts => ts.time === selectedTime) ?? null;
   const selectedTimeWarning = (skipAvailabilityCheck === "true") ? false : Boolean(selectedTimeslot?.availability && !selectedTimeslot?.allowBooking);
+  const noStaffAvailable = Boolean(
+    selectedService &&
+    assignedStaff.length === 1 &&
+    !loadingStaff &&
+    ((assignedStaff[0].staffCode === "ANY" && assignedStaff[0].staffName === "Any/No Preference") || !assignedStaff[0].isAvailable)
+  );
 
   // Effective customer info
   const effectiveName = isCustomerRole ? (sessionUser?.name ?? "") : isNewCustomer ? customerName : (selectedCustomer?.Name ?? "");
@@ -492,6 +520,14 @@ export default function BookNowPage() {
       const branchList = (Array.isArray(d) ? d : []).map((b: any) => ({ code: String(b.Code ?? ""), description: String(b.Description ?? ""), address: String(b.Address ?? "") }));
       setBranches(branchList);
     } catch (_) { } finally { setLoadingBranches(false); }
+  };
+  const fetchOrgSetup = async () => {
+    try {
+      setOrgSetupLoading(true);
+      const res = await fetch(`/api/booking-organization-setup?tenantId=${tenantId}`, { cache: "no-store" });
+      const d = await res.json();
+      setContactNumber(d?.MobileNumber ?? "");
+    } catch (_) { } finally { setOrgSetupLoading(false); }
   };
   const selectedBranchData = branches.find(
     (b: any) => b.code === selectedBranch
@@ -666,6 +702,7 @@ export default function BookNowPage() {
           startTime: selectedTime,
           serviceId: selectedService,
           staffid: (selectedStaff === "0" || selectedStaff === "") ? "" : selectedStaff,
+          isUserLogin: sessionUser?.role === 'user' ? "true" : "false",
           bookingNote: notes,
           bookingEntryNo: isRescheduling ? rescheduleEntryNo : "",
           customerNoOrEmailAdd: selectedCustomer?.CustomerNo ?? effectiveEmail,
@@ -700,7 +737,7 @@ export default function BookNowPage() {
   };
 
   // ── Effects ────────────────────────────────────────────────────────────────
-  useEffect(() => { fetchBranches(); fetchCustomers(); }, [pathname]);
+  useEffect(() => { fetchBranches(); fetchCustomers(); fetchOrgSetup(); }, [pathname]);
   useEffect(() => { if (selectedBranch) fetchServices(); }, [selectedBranch, fetchServices]);
   useEffect(() => { if (selectedDate && selectedBranch && selectedService && selectedStaff) fetchTimeslots(lastTrigger.current === 'service'); }, [selectedDate, selectedBranch, selectedStaff, selectedService, fetchTimeslots]);
   useEffect(() => { if (rescheduleEntryNo) loadRescheduleData(rescheduleEntryNo); }, []);
@@ -781,11 +818,6 @@ export default function BookNowPage() {
             </option>
           ))}
         </select>
-        {selectedService && assignedStaff.length === 1 && !loadingStaff && (
-          (assignedStaff[0].staffCode === "ANY" && assignedStaff[0].staffName === "Any/No Preference") || !assignedStaff[0].isAvailable
-        ) && (
-          <p className="mt-2 text-xs text-amber-700">No staff available for the selected service.</p>
-        )}
       </div>
       <label className="flex items-center gap-2.5 cursor-pointer px-1">
         {/* No Preference removed — staff must be selected */}
@@ -1057,7 +1089,7 @@ export default function BookNowPage() {
             <div className={`flex-1 min-h-[32rem] max-h-[32rem] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-opacity
               ${(!selectedStaff && !isRescheduling) ? "opacity-40 pointer-events-none" : ""}`}>
               <TimeslotPanel selectedDate={selectedDate} timeslots={timeslots} loading={loadingTimeslots}
-                selectedTime={selectedTime} onSelectTime={t => setSelectedTime(t)} stepNumber={4} currentStep={currentStep} skipAvailabilityCheck={skipAvailabilityCheck} onSkipAvailabilityCheckChange={checked => setSkipAvailabilityCheck(checked ? "true" : "false")} isCustomerRole={isCustomerRole} />
+                selectedTime={selectedTime} onSelectTime={t => setSelectedTime(t)} stepNumber={4} currentStep={currentStep} skipAvailabilityCheck={skipAvailabilityCheck} onSkipAvailabilityCheckChange={checked => setSkipAvailabilityCheck(checked ? "true" : "false")} isCustomerRole={isCustomerRole} noStaffAvailable={noStaffAvailable} contactNumber={contactNumber} />
             </div>
           </div>
 
@@ -1466,7 +1498,7 @@ export default function BookNowPage() {
               </div>
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden min-h-[200px] flex flex-col">
                 <TimeslotPanel selectedDate={selectedDate} timeslots={timeslots} loading={loadingTimeslots}
-                  selectedTime={selectedTime} onSelectTime={t => setSelectedTime(t)} stepNumber={4} currentStep={currentStep} skipAvailabilityCheck={skipAvailabilityCheck} onSkipAvailabilityCheckChange={checked => setSkipAvailabilityCheck(checked ? "true" : "false")} isCustomerRole={isCustomerRole} />
+                  selectedTime={selectedTime} onSelectTime={t => setSelectedTime(t)} stepNumber={4} currentStep={currentStep} skipAvailabilityCheck={skipAvailabilityCheck} onSkipAvailabilityCheckChange={checked => setSkipAvailabilityCheck(checked ? "true" : "false")} isCustomerRole={isCustomerRole} noStaffAvailable={noStaffAvailable} contactNumber={contactNumber} />
               </div>
             </div>
           )}

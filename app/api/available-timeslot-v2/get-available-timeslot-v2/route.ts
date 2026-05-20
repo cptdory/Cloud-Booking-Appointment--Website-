@@ -5,9 +5,9 @@ import { availableTimeslotServiceV2 } from "@/services/business-central/availabl
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        console.log("Received request with body:", body);
         const { branchCode, bookingDate, serviceId, staffId, isUserLogin } = body;
         const result = await availableTimeslotServiceV2.getAvailableTimeslotV2(branchCode, bookingDate, serviceId, staffId ?? '', isUserLogin);
+        console.log("Received request with body:", result);
         const parsed = JSON.parse(result?.value || "null");
         return NextResponse.json(parsed);
     } catch (err: any) {

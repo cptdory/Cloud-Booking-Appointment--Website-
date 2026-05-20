@@ -8,13 +8,13 @@ class AvailableTimeslotServiceV2 {
     staffId: string,
     isUserLogin: string,
   ) {
-    return bcClient.post<{value: string}>(
+    return bcClient.post<{ value: string }>(
       "BookingAppointment_GetAvailableTimeSlotv2",
       {
-        _BranchCode:branchCode,
-        _BookingDate:bookingDate,
-        _ServiceId:serviceId,
-        _StaffId:staffId,
+        _BranchCode: branchCode,
+        _BookingDate: bookingDate,
+        _ServiceId: serviceId,
+        _StaffId: staffId,
         _IsUserLogin: isUserLogin
       }
     );
@@ -37,24 +37,24 @@ class AvailableTimeslotServiceV2 {
     customerAddress2: string,
     skipTimeSlotAvailabilityCheck: string,
   ) {
-    return bcClient.post<{value: string}>(
+    return bcClient.post<{ value: string }>(
       "BookingAppointment_BookAvailableTimeSlotv2",
       {
         _BranchCode: branchCode,
-        _BookingDate:bookingDate,
-        _StartTime:startTime,
-        _ServiceId:serviceId,
-        _StaffId:staffid,
-        _IsUserLogin:isUserLogin,
-        _BookingNote:bookingNote,
-        _BookingEntryNo:bookingEntryNo,
-        _CustomerNoOrEmailAdd:customerNoOrEmailAdd,
-        _CustomerName:customerName,
-        _CustomerPhoneNo:customerPhoneNo,
-        _CustomerBirthDate:customerBirthDate,
-        _CustomerAddress1:customerAddress1,
-        _CustomerAddress2:customerAddress2,
-        _SkipTimeSlotAvailabilityCheck:skipTimeSlotAvailabilityCheck
+        _BookingDate: bookingDate,
+        _StartTime: startTime,
+        _ServiceId: serviceId,
+        _StaffId: staffid,
+        _IsUserLogin: isUserLogin,
+        _BookingNote: bookingNote,
+        _BookingEntryNo: bookingEntryNo,
+        _CustomerNoOrEmailAdd: customerNoOrEmailAdd,
+        _CustomerName: customerName,
+        _CustomerPhoneNo: customerPhoneNo,
+        _CustomerBirthDate: customerBirthDate,
+        _CustomerAddress1: customerAddress1,
+        _CustomerAddress2: customerAddress2,
+        _SkipTimeSlotAvailabilityCheck: skipTimeSlotAvailabilityCheck
       }
     );
   }

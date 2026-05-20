@@ -612,6 +612,7 @@ export default function App() {
           startTime: selectedTime,
           serviceId: selectedService,
           staffid: selectedStaff,
+          isUserLogin: "false",
           bookingNote: notes,
           bookingEntryNo: "",
           customerNoOrEmailAdd: customerEmail,
