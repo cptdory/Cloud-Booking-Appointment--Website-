@@ -387,7 +387,6 @@ export default function App() {
   const [requestId, setRequestId] = useState<string>("");
   const [otpTimeRemaining, setOtpTimeRemaining] = useState<number>(0);
   const [canResend, setCanResend] = useState<boolean>(false);
-  const lastTrigger = useRef<'service' | 'staff'>('service');
   // Mobile tab state
   const [mobilePanel, setMobilePanel] = useState<string>("select");
   const [calendarDate, setCalendarDate] = useState<Date>(new Date());
@@ -474,7 +473,7 @@ export default function App() {
     finally { setLoadingServices(false); }
   }, [selectedBranch]);
 
-  const fetchTimeslots = useCallback(async (includeStaff: boolean = true) => {
+  const fetchTimeslots = useCallback(async () => {
     if (!selectedDate || !selectedBranch) return;
     try {
       setLoadingTimeslots(true);
@@ -515,21 +514,18 @@ export default function App() {
           allowBooking: Boolean(sl.AllowBooking),
         }))
       );
-      // STAFF (only update when requested)
-      if (includeStaff) {
-        const fetchedStaff = (Array.isArray(d?.ServiceStaffs) ? d.ServiceStaffs : []).map(
-          (s: any) => ({
-            staffId: String(s.StaffId ?? ""),
-            staffCode: String(s.StaffCode ?? ""),
-            staffName: String(s.StaffName ?? ""),
-            isAvailable: Boolean(s.IsAvailable),
-          })
-        );
-        setAssignedStaff(fetchedStaff);
-        // If no staff is explicitly selected (or sentinel "0"), default to the first returned staff
-        if ((selectedStaff === "0" || !selectedStaff) && fetchedStaff.length > 0) {
-          setSelectedStaff(fetchedStaff[0].staffId);
-        }
+      const fetchedStaff = (Array.isArray(d?.ServiceStaffs) ? d.ServiceStaffs : []).map(
+        (s: any) => ({
+          staffId: String(s.StaffId ?? ""),
+          staffCode: String(s.StaffCode ?? ""),
+          staffName: String(s.StaffName ?? ""),
+          isAvailable: Boolean(s.IsAvailable),
+        })
+      );
+      setAssignedStaff(fetchedStaff);
+      // If no staff is explicitly selected (or sentinel "0"), default to the first returned staff
+      if ((selectedStaff === "0" || !selectedStaff) && fetchedStaff.length > 0) {
+        setSelectedStaff(fetchedStaff[0].staffId);
       }
     } catch (err) {
       console.error(err);
@@ -639,9 +635,8 @@ export default function App() {
   // ── Selection helpers ──────────────────────────────────────────────────────
   const sel = {
     branch: (v: string) => { setSelectedBranch(v); setSelectedService(""); setSelectedStaff(""); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); },
-    service: (v: string) => { lastTrigger.current = 'service'; setSelectedService(v); setSelectedStaff("0"); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); },
+    service: (v: string) => { setSelectedService(v); setSelectedStaff("0"); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); },
     staff: (v: string) => {
-      lastTrigger.current = 'staff';
       setSelectedStaff(v);
       setSelectedTime("");
       setTimeslots([]);
@@ -661,7 +656,7 @@ export default function App() {
   // useEffect(() => { if (selectedService && selectedBranch) fetchStaff(); }, [selectedService, selectedBranch, fetchStaff]);
   useEffect(() => {
     if (selectedDate && selectedBranch && selectedService && selectedStaff) {
-      fetchTimeslots(lastTrigger.current === 'service');
+      fetchTimeslots();
     }
   }, [selectedDate, selectedBranch, selectedStaff, selectedService, fetchTimeslots]);
   // Auto-select today's date when user reaches the date step (4) and all other selections exist.

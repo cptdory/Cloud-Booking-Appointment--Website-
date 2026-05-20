@@ -3,7 +3,6 @@ import { NavRefresh } from "@/components/nav-refresh";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sileo";
-import { NextStepProvider, NextStep, type Tour } from 'nextstepjs';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,67 +19,6 @@ export const metadata: Metadata = {
   description: "Bookufy makes booking effortless. Customers can schedule appointments in seconds while businesses stay organized with a clear, real-time view of their calendar, services, and client activity.",
 };
 
-const steps: Tour[] = [
-  {
-    tour: "bookingTour",
-    steps: [
-      {
-        title: "Select Location",
-        content: "Choose the branch or location where you want to book your appointment.",
-        selector: "#location-card",
-        icon: "📍",
-        side: "bottom" as const,
-        showSkip: true,
-      },
-      {
-        title: "Select Service",
-        content: "Pick the service or procedure you need.",
-        selector: "#service-card",
-        icon: "💼",
-        side: "left" as const,
-        showSkip: true,
-      },
-      {
-        title: "Select Professional",
-        content: "Choose the professional or staff member you'd like to book with.",
-        selector: "#professional-card",
-        icon: "👨‍⚕️",
-        side: "bottom" as const,
-        showSkip: true,
-      },
-    ],
-  },
-  {
-    tour: "bookingTourMobile",
-    steps: [
-      {
-        title: "Select Location",
-        content: "Choose the branch or location where you want to book your appointment.",
-        selector: "#mobile-location-card",
-        icon: "📍",
-        side: "bottom" as const,
-        showSkip: true,
-      },
-      {
-        title: "Select Service",
-        content: "Pick the service or procedure you need.",
-        selector: "#mobile-service-card",
-        icon: "💼",
-        side: "bottom" as const,
-        showSkip: true,
-      },
-      {
-        title: "Select Professional",
-        content: "Choose the professional or staff member you'd like to book with.",
-        selector: "#mobile-professional-card",
-        icon: "👨‍⚕️",
-        side: "bottom" as const,
-        showSkip: true,
-      },
-    ],
-  },
-];
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -92,13 +30,11 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <NextStepProvider>
-          <NextStep steps={steps} clickThroughOverlay={true}>
             <NavRefresh />
-            <Toaster position="top-center" />
+            <div style={{ position: "relative", zIndex: 9999 }}>
+              <Toaster position="top-center" />
+            </div>
             {children}
-          </NextStep>
-        </NextStepProvider>
       </body>
     </html>
   );

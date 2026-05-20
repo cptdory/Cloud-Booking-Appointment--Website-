@@ -532,7 +532,6 @@ export default function BookNowPage() {
   const selectedBranchData = branches.find(
     (b: any) => b.code === selectedBranch
   );
-  const lastTrigger = useRef<'service' | 'staff'>('service');
   const fetchServices = useCallback(async () => {
     if (!selectedBranch) return;
     try {
@@ -551,7 +550,7 @@ export default function BookNowPage() {
     } catch (_) { } finally { setLoadingServices(false); }
   }, [selectedBranch]);
 
-  const fetchTimeslots = useCallback(async (includeStaff: boolean = true) => {
+  const fetchTimeslots = useCallback(async () => {
     if (!selectedDate || !selectedBranch) return;
 
     try {
@@ -599,19 +598,16 @@ export default function BookNowPage() {
           allowBooking: Boolean(sl.AllowBooking),
         }))
       );
-      // STAFF (update only when requested)
-      if (includeStaff) {
-        const fetchedStaff = (Array.isArray(d?.ServiceStaffs) ? d.ServiceStaffs : []).map((s: any) => ({
-          staffId: String(s.StaffId ?? ""),
-          staffCode: String(s.StaffCode ?? ""),
-          staffName: String(s.StaffName ?? ""),
-          isAvailable: Boolean(s.IsAvailable),
-        }));
-        setAssignedStaff(fetchedStaff);
-        // If sentinel '0' or no selection, default to first returned staff
-        if ((selectedStaff === "0" || !selectedStaff) && fetchedStaff.length > 0) {
-          setSelectedStaff(fetchedStaff[0].staffId);
-        }
+      const fetchedStaff = (Array.isArray(d?.ServiceStaffs) ? d.ServiceStaffs : []).map((s: any) => ({
+        staffId: String(s.StaffId ?? ""),
+        staffCode: String(s.StaffCode ?? ""),
+        staffName: String(s.StaffName ?? ""),
+        isAvailable: Boolean(s.IsAvailable),
+      }));
+      setAssignedStaff(fetchedStaff);
+      // If sentinel '0' or no selection, default to first returned staff
+      if ((selectedStaff === "0" || !selectedStaff) && fetchedStaff.length > 0) {
+        setSelectedStaff(fetchedStaff[0].staffId);
       }
     } catch (err) {
       console.error(err);
@@ -731,17 +727,17 @@ export default function BookNowPage() {
   // ── Selection helpers ──────────────────────────────────────────────────────
   const sel = {
     branch: (v: string) => { setSelectedBranch(v); setSelectedService(""); setSelectedStaff(""); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); },
-    service: (v: string) => { lastTrigger.current = 'service'; setSelectedService(v); setSelectedStaff("0"); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); },
-    staff: (v: string) => { lastTrigger.current = 'staff'; setSelectedStaff(v); setSelectedTime(""); setTimeslots([]); if (currentStep < 4) setSelectedDate(null); },
+    service: (v: string) => { setSelectedService(v); setSelectedStaff("0"); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); },
+    staff: (v: string) => { setSelectedStaff(v); setSelectedTime(""); setTimeslots([]); if (currentStep < 4) setSelectedDate(null); },
     date: (d: DateObj) => { setSelectedDate(d); setSelectedTime(""); setTimeslots([]); },
   };
 
   // ── Effects ────────────────────────────────────────────────────────────────
   useEffect(() => { fetchBranches(); fetchCustomers(); fetchOrgSetup(); }, [pathname]);
   useEffect(() => { if (selectedBranch) fetchServices(); }, [selectedBranch, fetchServices]);
-  useEffect(() => { if (selectedDate && selectedBranch && selectedService && selectedStaff) fetchTimeslots(lastTrigger.current === 'service'); }, [selectedDate, selectedBranch, selectedStaff, selectedService, fetchTimeslots]);
+  useEffect(() => { if (selectedDate && selectedBranch && selectedService && selectedStaff) fetchTimeslots(); }, [selectedDate, selectedBranch, selectedStaff, selectedService, fetchTimeslots]);
   useEffect(() => { if (rescheduleEntryNo) loadRescheduleData(rescheduleEntryNo); }, []);
-  useEffect(() => { if (rescheduleEntryNo && rescheduleData && selectedDate && selectedBranch && selectedService && selectedStaff) fetchTimeslots(true); }, [selectedDate, rescheduleData]);
+  useEffect(() => { if (rescheduleEntryNo && rescheduleData && selectedDate && selectedBranch && selectedService && selectedStaff) fetchTimeslots(); }, [selectedDate, rescheduleData]);
 
   // ── Confirm data ───────────────────────────────────────────────────────────
   usePageActivation(() => {
@@ -755,7 +751,7 @@ export default function BookNowPage() {
 
     if (selectedBranch) fetchServices();
     if (selectedDate && selectedBranch && selectedService && selectedStaff) {
-      fetchTimeslots(lastTrigger.current === 'service');
+      fetchTimeslots();
     }
     if (rescheduleEntryNo) {
       loadRescheduleData(rescheduleEntryNo);
