@@ -196,21 +196,21 @@ export default function CalendarPage() {
     min: moment().startOf("day").toDate(),
     max: moment().endOf("day").toDate(),
   });
-const calendarContainerRef = useRef<HTMLDivElement>(null);
+  const calendarContainerRef = useRef<HTMLDivElement>(null);
 
-useEffect(() => {
-  if (!calendarContainerRef.current) return;
+  useEffect(() => {
+    if (!calendarContainerRef.current) return;
 
-  const observer = new ResizeObserver(() => {
-    window.dispatchEvent(new Event("resize"));
-  });
+    const observer = new ResizeObserver(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
 
-  observer.observe(calendarContainerRef.current);
-  return () => observer.disconnect();
-}, []);
+    observer.observe(calendarContainerRef.current);
+    return () => observer.disconnect();
+  }, []);
   // ── Session ─────────────────────────────────────────────────────────────────
   useEffect(() => {
-fetch("/api/me", { cache: "no-store" })
+    fetch("/api/me", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => setSessionUser(data.user ?? null))
       .catch(console.error);
@@ -222,7 +222,7 @@ fetch("/api/me", { cache: "no-store" })
   // ── Staff list ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!sessionUser?.booking_setup_code) return;
-fetch("/api/booking-branch-setup/get-booking-setup", { cache: "no-store" })
+    fetch("/api/booking-branch-setup/get-booking-setup", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
         const staffParam = data?.[0]?.BookingParameter?.find(
@@ -299,7 +299,7 @@ fetch("/api/booking-branch-setup/get-booking-setup", { cache: "no-store" })
 
   // ── Calendar handlers ────────────────────────────────────────────────────────
   usePageActivation(() => {
-fetch("/api/me", { cache: "no-store" })
+    fetch("/api/me", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => setSessionUser(data.user ?? null))
       .catch(console.error);
@@ -308,7 +308,7 @@ fetch("/api/me", { cache: "no-store" })
 
     handleGetBusinessStartTime();
 
-fetch("/api/booking-branch-setup/get-booking-setup", { cache: "no-store" })
+    fetch("/api/booking-branch-setup/get-booking-setup", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
         const staffParam = data?.[0]?.BookingParameter?.find(
@@ -663,11 +663,11 @@ fetch("/api/booking-branch-setup/get-booking-setup", { cache: "no-store" })
           </button>
         </div>
       </header>
-{/* Main */}
-<div className="flex min-h-0 min-w-0 flex-1 flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50 p-4 sm:p-6">
-  <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-blue-100 bg-white p-3 shadow-sm sm:p-6">
-    <div className="relative flex min-h-[70vh] min-w-0 flex-1 overflow-hidden rounded-lg compact-calendar sm:min-h-[calc(100svh-11rem)]" ref={calendarContainerRef}>
-      <style>{`
+      {/* Main */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50 p-4 sm:p-6">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-blue-100 bg-white p-3 shadow-sm sm:p-6">
+          <div className="relative flex min-h-[70vh] min-w-0 flex-1 overflow-hidden rounded-lg compact-calendar sm:min-h-[calc(100svh-11rem)]" ref={calendarContainerRef}>
+            <style>{`
         .compact-calendar { width: 100%; }
         .compact-calendar .rbc-calendar { width: 100% !important; min-width: 0; }
         .compact-calendar .rbc-toolbar {
@@ -693,450 +693,447 @@ fetch("/api/booking-branch-setup/get-booking-setup", { cache: "no-store" })
         .compact-calendar .rbc-month-view { width: 100% !important; }
       `}</style>
 
-      {loadingCalendar && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70 backdrop-blur-[2px]">
-          <div className="flex flex-col items-center gap-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
-            <span className="text-sm font-medium text-slate-500">Loading appointments…</span>
+            {loadingCalendar && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70 backdrop-blur-[2px]">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
+                  <span className="text-sm font-medium text-slate-500">Loading appointments…</span>
+                </div>
+              </div>
+            )}
+
+            <Calendar
+              key={currentView}
+              localizer={localizer}
+              events={filteredEvents}
+              startAccessor="start"
+              endAccessor="end"
+              min={businessHours.min}
+              max={businessHours.max}
+              popup
+              style={{ height: "100%", width: "100%", minHeight: "100%" }}
+              onRangeChange={handleRangeChange}
+              onSelectEvent={handleSelectEvent}
+              view={currentView}
+              onView={(view) => setCurrentView(view)}
+              formats={{ eventTimeRangeFormat: () => "" }}
+              eventPropGetter={(event: any) => {
+                const entry = calendarEvents.find((c) => String(c.EntryNo) === String(event.id));
+                const isCancelled = entry?.BookingStatus === "Cancelled" || entry?.BookingStatus === "No Show";
+                const backgroundColor = isCancelled
+                  ? "#818182"
+                  : (currentView === "week" || currentView === "day")
+                    ? event.color || "#3b82f6"
+                    : "transparent";
+                return {
+                  style: {
+                    backgroundColor,
+                    opacity: 0.9,
+                    color: "black",
+                    borderRadius: "4px",
+                    border: "none",
+                    padding: "1px 4px",
+                    fontSize: "11px",
+                  },
+                };
+              }}
+              components={{
+                event: ({ event }: any) => {
+                  const entry = calendarEvents.find((c) => String(c.EntryNo) === String(event.id));
+                  const isNoShow = entry?.BookingStatus === "No Show";
+                  const isFinalized = entry?.BookingStatus === "Finalized";
+                  const isRescheduled = entry?.Rescheduled;
+                  return (
+                    <div className="text-[11px] leading-tight overflow-hidden">
+                      <div className="flex items-start gap-1">
+                        {currentView !== "week" && currentView !== "day" && (
+                          <Badge style={{ backgroundColor: event.color }} className="p-0.5 shrink-0" />
+                        )}
+                        {isNoShow ? (
+                          <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+                        ) : isFinalized ? (
+                          <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                        ) : isRescheduled && !isNoShow && !isFinalized ? (
+                          <RefreshCw className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                        ) : null}
+                        <span className="block truncate text-[13px]">{event.title}</span>
+                      </div>
+                    </div>
+                  );
+                },
+              }}
+            />
           </div>
         </div>
-      )}
+      </div>
+      {/* ── Event Details Dialog ── */}
+      <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
+        <DialogContent className="sm:max-w-2xl p-0 gap-0">
 
-      <Calendar
-        key={currentView}
-        localizer={localizer}
-        events={filteredEvents}
-        startAccessor="start"
-        endAccessor="end"
-        min={businessHours.min}
-        max={businessHours.max}
-        popup
-        style={{ height: "100%", width: "100%", minHeight: "100%" }}
-        onRangeChange={handleRangeChange}
-        onSelectEvent={handleSelectEvent}
-        view={currentView}
-        onView={(view) => setCurrentView(view)}
-        formats={{ eventTimeRangeFormat: () => "" }}
-        eventPropGetter={(event: any) => {
-          const entry = calendarEvents.find((c) => String(c.EntryNo) === String(event.id));
-          const isCancelled = entry?.BookingStatus === "Cancelled" || entry?.BookingStatus === "No Show";
-          const backgroundColor = isCancelled
-            ? "#818182"
-            : (currentView === "week" || currentView === "day")
-              ? event.color || "#3b82f6"
-              : "transparent";
-          return {
-            style: {
-              backgroundColor,
-              opacity: 0.9,
-              color: "black",
-              borderRadius: "4px",
-              border: "none",
-              padding: "1px 4px",
-              fontSize: "11px",
-            },
-          };
-        }}
-        components={{
-          event: ({ event }: any) => {
-            const entry = calendarEvents.find((c) => String(c.EntryNo) === String(event.id));
-            const isNoShow = entry?.BookingStatus === "No Show";
-            const isFinalized = entry?.BookingStatus === "Finalized";
-            const isRescheduled = entry?.Rescheduled;
-            return (
-              <div className="text-[11px] leading-tight overflow-hidden">
-                <div className="flex items-start gap-1">
-                  {currentView !== "week" && currentView !== "day" && (
-                    <Badge style={{ backgroundColor: event.color }} className="p-0.5 shrink-0" />
+          {/* Header */}
+          <DialogHeader className="px-5 py-4 border-b border-slate-100">
+            {selectedEvent && (
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2 flex-wrap">
+                  {isTimeOff(selectedEvent) ? "Time Off Details" : selectedEvent?.ServiceName || "Event Details"}
+                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${selectedEvent.BookingStatus === "Active" ? "bg-green-100 text-green-700" :
+                      selectedEvent.BookingStatus === "Cancelled" ? "bg-red-100 text-red-700" :
+                        selectedEvent.BookingStatus === "Finalized" ? "bg-blue-100 text-blue-700" :
+                          selectedEvent.BookingStatus === "No Show" ? "bg-orange-100 text-orange-700" :
+                            "bg-slate-100 text-slate-700"
+                    }`}>
+                    {selectedEvent.BookingStatus}
+                  </span>
+                  {String(selectedEvent.Rescheduled).toLowerCase() === "true" && (
+                    <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                      Rescheduled
+                    </span>
                   )}
-                  {isNoShow ? (
-                    <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
-                  ) : isRescheduled ? (
-                    <RefreshCw className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                  ) : isFinalized ? (
-                    <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                  ) : null}
-                  <span className="block truncate text-[13px]">{event.title}</span>
-                </div>
-              </div>
-            );
-          },
-        }}
-      />
-    </div>
-  </div>
-</div>
-{/* ── Event Details Dialog ── */}
-<Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
-  <DialogContent className="sm:max-w-2xl p-0 gap-0">
-
-    {/* Header */}
-    <DialogHeader className="px-5 py-4 border-b border-slate-100">
-      {selectedEvent && (
-        <div className="flex-1 min-w-0">
-          <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2 flex-wrap">
-            {isTimeOff(selectedEvent) ? "Time Off Details" : selectedEvent?.ServiceName || "Event Details"}
-            <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${
-              selectedEvent.BookingStatus === "Active" ? "bg-green-100 text-green-700" :
-              selectedEvent.BookingStatus === "Cancelled" ? "bg-red-100 text-red-700" :
-              selectedEvent.BookingStatus === "Finalized" ? "bg-blue-100 text-blue-700" :
-              selectedEvent.BookingStatus === "No Show" ? "bg-orange-100 text-orange-700" :
-              "bg-slate-100 text-slate-700"
-            }`}>
-              {selectedEvent.BookingStatus}
-            </span>
-            {String(selectedEvent.Rescheduled).toLowerCase() === "true" && (
-              <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
-                Rescheduled
-              </span>
-            )}
-          </DialogTitle>
-          {!isTimeOff(selectedEvent) && (
-            <DialogDescription className="text-xs text-slate-500 mt-0.5">
-              {selectedEvent?.ServiceDuration ? `${selectedEvent.ServiceDuration} mins` : ""}
-              {selectedEvent?.ServicePrice != null && (
-                <>
-                  {selectedEvent?.ServiceDuration ? " · " : ""}
-                  {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(Number(selectedEvent.ServicePrice))}
-                </>
-              )}
-            </DialogDescription>
-          )}
-        </div>
-      )}
-    </DialogHeader>
-
-    {/* Body */}
-    {selectedEvent && (
-      <div className="px-5 py-4 space-y-4">
-
-        {/* Schedule + Professional */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Schedule</h3>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-slate-800">
-                <CalendarIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                {moment(selectedEvent.BookingStartDate).format("MMM DD, YYYY")}
-              </div>
-              <div className="flex items-center gap-2 text-sm text-slate-800">
-                <ClockIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                {moment(selectedEvent.BookingStartTime, "HH:mm:ss").format("hh:mm A")}
-                {" – "}
-                {moment(selectedEvent.BookingEndTime, "HH:mm:ss").format("hh:mm A")}
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Professional</h3>
-            <div className="flex items-center gap-2 text-sm text-slate-800">
-              <UserIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-              {selectedEvent.StaffName || "—"}
-            </div>
-            {selectedEvent.BookingParameters?.ROOM && (
-              <div className="flex items-center gap-2 text-sm text-slate-800">
-                <DoorOpenIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                {selectedEvent.BookingParameters.ROOM.BookingParameterValueCode}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Customer Information */}
-        {!isTimeOff(selectedEvent) && (
-          <>
-            <div className="border-t border-slate-100" />
-            <div className="space-y-1.5">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Customer Information</h3>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                <div className="flex items-center gap-2 text-sm text-slate-800 min-w-0">
-                  <UserIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                  <span className="truncate">{`${selectedEvent.Name} ${selectedEvent.Name2 || ""}`.trim() || "—"}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-slate-800 min-w-0">
-                  <PhoneIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                  <span className="truncate">{selectedEvent.PhoneNo || "—"}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-slate-800 min-w-0">
-                  <MailIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                  <span className="truncate">{selectedEvent.EMail || "—"}</span>
-                </div>
-                {(`${selectedEvent.Address} ${selectedEvent.Address2 || ""}`.trim()) && (
-                  <div className="flex items-center gap-2 text-sm text-slate-800 min-w-0">
-                    <MapPinIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                    <span className="truncate">{`${selectedEvent.Address} ${selectedEvent.Address2 || ""}`.trim()}</span>
-                  </div>
+                </DialogTitle>
+                {!isTimeOff(selectedEvent) && (
+                  <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                    {selectedEvent?.ServiceDuration ? `${selectedEvent.ServiceDuration} mins` : ""}
+                    {selectedEvent?.ServicePrice != null && (
+                      <>
+                        {selectedEvent?.ServiceDuration ? " · " : ""}
+                        {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(Number(selectedEvent.ServicePrice))}
+                      </>
+                    )}
+                  </DialogDescription>
                 )}
               </div>
-            </div>
-          </>
-        )}
-
-        {/* Notes */}
-        <div className="border-t border-slate-100" />
-        <div className="space-y-1.5">
-          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Notes</h3>
-          <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-800 whitespace-pre-line min-h-[2.5rem]">
-            {selectedEvent.BookingNote || "—"}
-          </div>
-        </div>
-
-      </div>
-    )}
-
-    {/* Footer — plain div to avoid DialogFooter overflow quirks */}
-    <div className="px-5 py-3 border-t border-slate-100 flex items-center gap-2 w-full">
-      {selectedEvent && isTimeOff(selectedEvent) ? (
-        canManageTimeOff ? (
-          <>
-            <button
-              onClick={handleDeleteTimeOff}
-              disabled={loadingCalendar}
-              className="px-3 py-1.5 text-sm font-semibold text-white bg-red-600 rounded-lg shadow-sm transition hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loadingCalendar ? "Deleting..." : "Delete"}
-            </button>
-            <div className="flex gap-2 ml-auto">
-              <button
-                onClick={handleOpenEditTimeOffDialog}
-                className="px-3 py-1.5 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-sm transition hover:bg-blue-700"
-              >
-                Update
-              </button>
-              <button
-                onClick={() => setShowEventDialog(false)}
-                className="px-3 py-1.5 text-sm font-semibold text-slate-700 bg-slate-100 rounded-lg transition hover:bg-slate-200"
-              >
-                Close
-              </button>
-            </div>
-          </>
-        ) : (
-          <button
-            onClick={() => setShowEventDialog(false)}
-            className="ml-auto px-3 py-1.5 text-sm font-semibold text-slate-700 bg-slate-100 rounded-lg transition hover:bg-slate-200"
-          >
-            Close
-          </button>
-        )
-      ) : (
-        <>
-          {!isTimeOff(selectedEvent) && (
-            <button
-              onClick={() => setShowStatusDialog(true)}
-              className="px-3 py-1.5 text-sm font-semibold text-white bg-slate-600 rounded-lg shadow-sm transition hover:bg-slate-700"
-            >
-              Update Status
-            </button>
-          )}
-          <div className="flex gap-2 ml-auto">
-            {selectedEvent?.BookingStatus === "Active" && (
-              <button
-                onClick={() => {
-                  if (!selectedEvent) return;
-                  window.location.href = `/book-now?reschedule=${selectedEvent.EntryNo}`;
-                }}
-                className="px-3 py-1.5 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-sm transition hover:bg-blue-700"
-              >
-                Reschedule
-              </button>
             )}
-            <button
-              onClick={() => setShowEventDialog(false)}
-              className="px-3 py-1.5 text-sm font-semibold text-slate-700 bg-slate-100 rounded-lg transition hover:bg-slate-200"
-            >
-              Close
-            </button>
+          </DialogHeader>
+
+          {/* Body */}
+          {selectedEvent && (
+            <div className="px-5 py-4 space-y-4">
+
+              {/* Schedule + Professional */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Schedule</h3>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm text-slate-800">
+                      <CalendarIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                      {moment(selectedEvent.BookingStartDate).format("MMM DD, YYYY")}
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-800">
+                      <ClockIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                      {moment(selectedEvent.BookingStartTime, "HH:mm:ss").format("hh:mm A")}
+                      {" – "}
+                      {moment(selectedEvent.BookingEndTime, "HH:mm:ss").format("hh:mm A")}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Professional</h3>
+                  <div className="flex items-center gap-2 text-sm text-slate-800">
+                    <UserIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    {selectedEvent.StaffName || "—"}
+                  </div>
+                  {selectedEvent.BookingParameters?.ROOM && (
+                    <div className="flex items-center gap-2 text-sm text-slate-800">
+                      <DoorOpenIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                      {selectedEvent.BookingParameters.ROOM.BookingParameterValueCode}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Customer Information */}
+              {!isTimeOff(selectedEvent) && (
+                <>
+                  <div className="border-t border-slate-100" />
+                  <div className="space-y-1.5">
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Customer Information</h3>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                      <div className="flex items-center gap-2 text-sm text-slate-800 min-w-0">
+                        <UserIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                        <span className="truncate">{`${selectedEvent.Name} ${selectedEvent.Name2 || ""}`.trim() || "—"}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-slate-800 min-w-0">
+                        <PhoneIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                        <span className="truncate">{selectedEvent.PhoneNo || "—"}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-slate-800 min-w-0">
+                        <MailIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                        <span className="truncate">{selectedEvent.EMail || "—"}</span>
+                      </div>
+                      {(`${selectedEvent.Address} ${selectedEvent.Address2 || ""}`.trim()) && (
+                        <div className="flex items-center gap-2 text-sm text-slate-800 min-w-0">
+                          <MapPinIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                          <span className="truncate">{`${selectedEvent.Address} ${selectedEvent.Address2 || ""}`.trim()}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Notes */}
+              <div className="border-t border-slate-100" />
+              <div className="space-y-1.5">
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Notes</h3>
+                <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-800 whitespace-pre-line min-h-[2.5rem]">
+                  {selectedEvent.BookingNote || "—"}
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* Footer — plain div to avoid DialogFooter overflow quirks */}
+          <div className="px-5 py-3 border-t border-slate-100 flex items-center gap-2 w-full">
+            {selectedEvent && isTimeOff(selectedEvent) ? (
+              canManageTimeOff ? (
+                <>
+                  <button
+                    onClick={handleDeleteTimeOff}
+                    disabled={loadingCalendar}
+                    className="px-3 py-1.5 text-sm font-semibold text-white bg-red-600 rounded-lg shadow-sm transition hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loadingCalendar ? "Deleting..." : "Delete"}
+                  </button>
+                  <div className="flex gap-2 ml-auto">
+                    <button
+                      onClick={handleOpenEditTimeOffDialog}
+                      className="px-3 py-1.5 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-sm transition hover:bg-blue-700"
+                    >
+                      Update
+                    </button>
+                    <button
+                      onClick={() => setShowEventDialog(false)}
+                      className="px-3 py-1.5 text-sm font-semibold text-slate-700 bg-slate-100 rounded-lg transition hover:bg-slate-200"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <button
+                  onClick={() => setShowEventDialog(false)}
+                  className="ml-auto px-3 py-1.5 text-sm font-semibold text-slate-700 bg-slate-100 rounded-lg transition hover:bg-slate-200"
+                >
+                  Close
+                </button>
+              )
+            ) : (
+              <>
+                {!isTimeOff(selectedEvent) && (
+                  <button
+                    onClick={() => setShowStatusDialog(true)}
+                    className="px-3 py-1.5 text-sm font-semibold text-white bg-slate-600 rounded-lg shadow-sm transition hover:bg-slate-700"
+                  >
+                    Update Status
+                  </button>
+                )}
+                <div className="flex gap-2 ml-auto">
+                  {selectedEvent?.BookingStatus === "Active" && (
+                    <button
+                      onClick={() => {
+                        if (!selectedEvent) return;
+                        window.location.href = `/book-now?reschedule=${selectedEvent.EntryNo}`;
+                      }}
+                      className="px-3 py-1.5 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-sm transition hover:bg-blue-700"
+                    >
+                      Reschedule
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowEventDialog(false)}
+                    className="px-3 py-1.5 text-sm font-semibold text-slate-700 bg-slate-100 rounded-lg transition hover:bg-slate-200"
+                  >
+                    Close
+                  </button>
+                </div>
+              </>
+            )}
           </div>
-        </>
-      )}
-    </div>
 
-  </DialogContent>
-</Dialog>
-{/* ── Add / Edit Time Off Dialog ── */}
-<Dialog open={showAddTimeOffDialog} onOpenChange={setShowAddTimeOffDialog}>
-  <DialogContent className="sm:max-w-2xl p-0 gap-0">
+        </DialogContent>
+      </Dialog>
+      {/* ── Add / Edit Time Off Dialog ── */}
+      <Dialog open={showAddTimeOffDialog} onOpenChange={setShowAddTimeOffDialog}>
+        <DialogContent className="sm:max-w-2xl p-0 gap-0">
 
-    {/* Header */}
-    <DialogHeader className="px-5 py-4 border-b border-slate-100">
-      <DialogTitle className="text-xl font-bold text-slate-900">
-        {isEditMode ? "Update Time Off" : "Add Time Off"}
-      </DialogTitle>
-      <DialogDescription className="text-xs text-slate-500 mt-0.5">
-        {isEditMode
-          ? "Update the time off entry for staff"
-          : "Create a new time off entry for staff"}
-      </DialogDescription>
-    </DialogHeader>
+          {/* Header */}
+          <DialogHeader className="px-5 py-4 border-b border-slate-100">
+            <DialogTitle className="text-xl font-bold text-slate-900">
+              {isEditMode ? "Update Time Off" : "Add Time Off"}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 mt-0.5">
+              {isEditMode
+                ? "Update the time off entry for staff"
+                : "Create a new time off entry for staff"}
+            </DialogDescription>
+          </DialogHeader>
 
-    {/* Body */}
-    <div className="px-5 py-4 space-y-4">
+          {/* Body */}
+          <div className="px-5 py-4 space-y-4">
 
-      {/* Staff */}
-      {isEditMode ? (
-        <div className="space-y-1.5">
-          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Staff</h3>
-          <div className="flex items-center gap-2 text-sm text-slate-800">
-            <UserIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-            {timeOffForm.staffName
-              ? `${timeOffForm.staffName} (${timeOffForm.staffCode})`
-              : timeOffForm.staffCode}
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
-            Select Staff <span className="text-red-400">*</span>
-          </label>
-          <select
-            value={timeOffForm.staffCode}
-            onChange={(e) => handleTimeOffFormChange("staffCode", e.target.value)}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
-          >
-            <option value="">— Select Staff —</option>
-            {staffList.map((staff) => (
-              <option key={staff.id} value={staff.code}>
-                {staff.description} ({staff.code})
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      <div className="border-t border-slate-100" />
-
-      {/* Dates */}
-      <div className="space-y-1.5">
-        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Schedule</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-500">
-              Start Date <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="date"
-              value={timeOffForm.startDate}
-              onChange={(e) => handleTimeOffFormChange("startDate", e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-500">
-              End Date <span className="text-red-400">*</span>
-            </label>
+            {/* Staff */}
             {isEditMode ? (
-              <div className="flex items-center gap-2 text-sm text-slate-800 px-3 py-2 rounded-lg border border-slate-100 bg-slate-50">
-                {timeOffForm.endDate || "—"}
+              <div className="space-y-1.5">
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Staff</h3>
+                <div className="flex items-center gap-2 text-sm text-slate-800">
+                  <UserIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                  {timeOffForm.staffName
+                    ? `${timeOffForm.staffName} (${timeOffForm.staffCode})`
+                    : timeOffForm.staffCode}
+                </div>
               </div>
             ) : (
-              <input
-                type="date"
-                value={timeOffForm.endDate}
-                min={timeOffForm.startDate}
-                readOnly={timeOffForm.singleDay}
-                onChange={(e) =>
-                  !timeOffForm.singleDay && handleTimeOffFormChange("endDate", e.target.value)
-                }
-                className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 focus:outline-none ${
-                  timeOffForm.singleDay
-                    ? "border-slate-100 bg-slate-50 text-slate-400 cursor-not-allowed"
-                    : "border-slate-200 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                }`}
-              />
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
+                  Select Staff <span className="text-red-400">*</span>
+                </label>
+                <select
+                  value={timeOffForm.staffCode}
+                  onChange={(e) => handleTimeOffFormChange("staffCode", e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  <option value="">— Select Staff —</option>
+                  {staffList.map((staff) => (
+                    <option key={staff.id} value={staff.code}>
+                      {staff.description} ({staff.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
+
+            <div className="border-t border-slate-100" />
+
+            {/* Dates */}
+            <div className="space-y-1.5">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Schedule</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-500">
+                    Start Date <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={timeOffForm.startDate}
+                    onChange={(e) => handleTimeOffFormChange("startDate", e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-500">
+                    End Date <span className="text-red-400">*</span>
+                  </label>
+                  {isEditMode ? (
+                    <div className="flex items-center gap-2 text-sm text-slate-800 px-3 py-2 rounded-lg border border-slate-100 bg-slate-50">
+                      {timeOffForm.endDate || "—"}
+                    </div>
+                  ) : (
+                    <input
+                      type="date"
+                      value={timeOffForm.endDate}
+                      min={timeOffForm.startDate}
+                      readOnly={timeOffForm.singleDay}
+                      onChange={(e) =>
+                        !timeOffForm.singleDay && handleTimeOffFormChange("endDate", e.target.value)
+                      }
+                      className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 focus:outline-none ${timeOffForm.singleDay
+                          ? "border-slate-100 bg-slate-50 text-slate-400 cursor-not-allowed"
+                          : "border-slate-200 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                        }`}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Toggles */}
+            <div className="flex items-center gap-6">
+              <label className={`flex items-center gap-2 text-sm font-medium ${isEditMode ? "text-slate-400 cursor-not-allowed" : "text-slate-700 cursor-pointer"
+                }`}>
+                <input
+                  type="checkbox"
+                  checked={timeOffForm.singleDay}
+                  disabled={isEditMode}
+                  onChange={(e) => !isEditMode && handleTimeOffFormChange("singleDay", e.target.checked)}
+                  className={`rounded accent-blue-600 ${isEditMode ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                />
+                Single Day
+              </label>
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={timeOffForm.wholeDay}
+                  onChange={(e) => handleTimeOffFormChange("wholeDay", e.target.checked)}
+                  className="rounded accent-blue-600 cursor-pointer"
+                />
+                Whole Day
+              </label>
+            </div>
+
+            {/* Times */}
+            {!timeOffForm.wholeDay && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-500">Start Time</label>
+                  <input
+                    type="time"
+                    value={timeOffForm.startTime}
+                    onChange={(e) => handleTimeOffFormChange("startTime", e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-500">End Time</label>
+                  <input
+                    type="time"
+                    value={timeOffForm.endTime}
+                    onChange={(e) => handleTimeOffFormChange("endTime", e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="border-t border-slate-100" />
+
+            {/* Reason */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-500">Reason</label>
+              <input
+                type="text"
+                value={timeOffForm.reason}
+                onChange={(e) => handleTimeOffFormChange("reason", e.target.value)}
+                placeholder="e.g., Vacation, Sick Leave, Personal"
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+            </div>
+
           </div>
-        </div>
-      </div>
 
-      {/* Toggles */}
-      <div className="flex items-center gap-6">
-        <label className={`flex items-center gap-2 text-sm font-medium ${
-          isEditMode ? "text-slate-400 cursor-not-allowed" : "text-slate-700 cursor-pointer"
-        }`}>
-          <input
-            type="checkbox"
-            checked={timeOffForm.singleDay}
-            disabled={isEditMode}
-            onChange={(e) => !isEditMode && handleTimeOffFormChange("singleDay", e.target.checked)}
-            className={`rounded accent-blue-600 ${isEditMode ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-          />
-          Single Day
-        </label>
-        <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={timeOffForm.wholeDay}
-            onChange={(e) => handleTimeOffFormChange("wholeDay", e.target.checked)}
-            className="rounded accent-blue-600 cursor-pointer"
-          />
-          Whole Day
-        </label>
-      </div>
-
-      {/* Times */}
-      {!timeOffForm.wholeDay && (
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-500">Start Time</label>
-            <input
-              type="time"
-              value={timeOffForm.startTime}
-              onChange={(e) => handleTimeOffFormChange("startTime", e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            />
+          {/* Footer */}
+          <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-end gap-2">
+            <button
+              onClick={handleCloseAddTimeOffDialog}
+              disabled={isSubmittingTimeOff}
+              className="px-3 py-1.5 text-sm font-semibold text-slate-700 bg-slate-100 rounded-lg transition hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={isEditMode ? handleUpdateTimeOff : handleCreateTimeOff}
+              disabled={isSubmittingTimeOff}
+              className="px-3 py-1.5 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-sm transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmittingTimeOff
+                ? isEditMode ? "Updating..." : "Adding..."
+                : isEditMode ? "Update" : "Add"}
+            </button>
           </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-500">End Time</label>
-            <input
-              type="time"
-              value={timeOffForm.endTime}
-              onChange={(e) => handleTimeOffFormChange("endTime", e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            />
-          </div>
-        </div>
-      )}
 
-      <div className="border-t border-slate-100" />
-
-      {/* Reason */}
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-slate-500">Reason</label>
-        <input
-          type="text"
-          value={timeOffForm.reason}
-          onChange={(e) => handleTimeOffFormChange("reason", e.target.value)}
-          placeholder="e.g., Vacation, Sick Leave, Personal"
-          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
-        />
-      </div>
-
-    </div>
-
-    {/* Footer */}
-    <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-end gap-2">
-      <button
-        onClick={handleCloseAddTimeOffDialog}
-        disabled={isSubmittingTimeOff}
-        className="px-3 py-1.5 text-sm font-semibold text-slate-700 bg-slate-100 rounded-lg transition hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        Cancel
-      </button>
-      <button
-        onClick={isEditMode ? handleUpdateTimeOff : handleCreateTimeOff}
-        disabled={isSubmittingTimeOff}
-        className="px-3 py-1.5 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-sm transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isSubmittingTimeOff
-          ? isEditMode ? "Updating..." : "Adding..."
-          : isEditMode ? "Update" : "Add"}
-      </button>
-    </div>
-
-  </DialogContent>
-</Dialog>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Update Status Dialog ── */}
       <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
@@ -1159,8 +1156,8 @@ fetch("/api/booking-branch-setup/get-booking-setup", { cache: "no-store" })
                 }}
                 disabled={loadingCalendar}
                 className={`w-full flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold transition-all ${selectedStatus === status
-                    ? "bg-blue-100 text-blue-700 border-2 border-blue-500"
-                    : "bg-slate-50 text-slate-700 border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50"
+                  ? "bg-blue-100 text-blue-700 border-2 border-blue-500"
+                  : "bg-slate-50 text-slate-700 border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50"
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 <span>{status}</span>
