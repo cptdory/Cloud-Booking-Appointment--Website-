@@ -810,7 +810,7 @@ export default function BookNowPage() {
               key={st.staffId}
               value={st.staffId}
             >
-              {st.staffName} {Number(st.staffId) === 0 ? "🟠" : (st.isAvailable ? "🟢 Available" : "🔴 Unavailable")}
+              {Number(st.staffId) === 0 ? "🟠" : (st.isAvailable ? "🟢" : "🔴")}{st.staffName} 
             </option>
           ))}
         </select>
