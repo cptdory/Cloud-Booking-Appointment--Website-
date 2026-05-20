@@ -8,7 +8,7 @@ async function getBookingParameters() {
     const cookieHeader = cookieStore.toString();
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_BASE_URL}/api/booking-branch-setup/get-booking-setup`,
-      { cache: "force-cache", headers: { Cookie: cookieHeader } }
+      { cache: "no-store", headers: { Cookie: cookieHeader } }
     );
     if (!res.ok) return [];
     return res.json();
@@ -24,7 +24,7 @@ async function getBookingSetupList() {
     const cookieHeader = cookieStore.toString();
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_BASE_URL}/api/booking-branch-setup/get-booking-setup-list`,
-      { cache: "force-cache", headers: { Cookie: cookieHeader } }
+      { cache: "no-store", headers: { Cookie: cookieHeader } }
     );
     if (!res.ok) return [];
     return res.json();

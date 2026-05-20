@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { NavRefresh } from "@/components/nav-refresh";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sileo";
@@ -93,6 +94,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <NextStepProvider>
           <NextStep steps={steps} clickThroughOverlay={true}>
+            <NavRefresh />
             <Toaster position="top-center" />
             {children}
           </NextStep>

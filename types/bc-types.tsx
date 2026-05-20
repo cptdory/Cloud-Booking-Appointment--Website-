@@ -131,4 +131,6 @@ export type BookingEntriesData  ={
   Address2: string; 
   BookingParameters: any
   Rescheduled?: string;
+  ServiceDuration?: number;
+  ServicePrice?: number;
 }

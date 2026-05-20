@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { CalendarCheck, Plus, AlertCircle, CheckCircle, RefreshCw } from "lucide-react";
+import { Plus, PhoneIcon, MailIcon, MapPinIcon, AlertCircle, CheckCircle, RefreshCw, CalendarIcon, ClockIcon, UserIcon, BriefcaseIcon, DoorOpenIcon, RefreshCwIcon } from "lucide-react";
 import { Calendar, momentLocalizer, View } from "react-big-calendar";
 import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
@@ -161,14 +161,6 @@ const ReadonlyField = ({ label, value }: { label: string; value: string }) => (
     </div>
   </div>
 );
-
-const DetailRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <div>
-    <span className="font-semibold text-gray-700">{label}: </span>
-    <span className="text-gray-600">{value}</span>
-  </div>
-);
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CalendarPage() {
@@ -197,6 +189,7 @@ export default function CalendarPage() {
   const [isSubmittingTimeOff, setIsSubmittingTimeOff] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editEntryNo, setEditEntryNo] = useState<string>("");
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
 
   const [businessHours, setBusinessHours] = useState({
     min: moment().startOf("day").toDate(),
@@ -274,6 +267,16 @@ export default function CalendarPage() {
     if (sessionUser) fetchBookingEntries(dateRange.start, dateRange.end);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionUser]);
+
+  // ── Update selected event when calendar events change ──────────────────────
+  useEffect(() => {
+    if (selectedEvent && showEventDialog) {
+      const updatedEvent = calendarEvents.find((e) => e.EntryNo === selectedEvent.EntryNo);
+      if (updatedEvent) {
+        setSelectedEvent(updatedEvent);
+      }
+    }
+  }, [calendarEvents, selectedEvent, showEventDialog]);
 
   useLayoutEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -353,7 +356,7 @@ export default function CalendarPage() {
   };
 
   // ── update booking ───────────────────────────────────────────────────────────
-  const handleUpdateBookingEntry = async (status: string = "Cancelled") => {
+  const handleUpdateBookingEntry = async (status: string = "Cancelled", keepDialogOpen: boolean = false) => {
     if (!selectedEvent) return;
     try {
       setLoadingCalendar(true);
@@ -366,8 +369,10 @@ export default function CalendarPage() {
         }),
       });
       if (!res.ok) throw new Error();
-      setShowEventDialog(false);
-      setSelectedEvent(null);
+      if (!keepDialogOpen) {
+        setShowEventDialog(false);
+        setSelectedEvent(null);
+      }
       await fetchBookingEntries(dateRange.start, dateRange.end);
       sileo.success({ title: `Booking status updated to ${status}.`, fill: SILEO_FILL });
     } catch {
@@ -659,7 +664,7 @@ export default function CalendarPage() {
               min={businessHours.min}
               max={businessHours.max}
               popup
-              style={{ height: currentView === "month" ? "auto" : "100%", minHeight: 500 }}
+              style={{ height: currentView === "month" ? "auto" : "100%", minHeight: 500, width: "auto" }}
               onRangeChange={handleRangeChange}
               onSelectEvent={handleSelectEvent}
               view={currentView}
@@ -727,307 +732,424 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* ── Event Details Dialog ── */}
-      <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
-        <DialogContent className="max-w-md rounded-3xl border border-slate-200 bg-white shadow-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {isTimeOff(selectedEvent)
-                ? "Time Off Details"
-                : selectedEvent?.ServiceName || "Event Details"}
-            </DialogTitle>
-            <DialogDescription>
-              {isTimeOff(selectedEvent) ? "Time Off" : "Booking Details"}
-            </DialogDescription>
-          </DialogHeader>
+{/* ── Event Details Dialog ── */}
+<Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
+  <DialogContent className="sm:max-w-2xl p-0 gap-0">
 
-          {selectedEvent && (
-            <div className="space-y-4 rounded-3xl border border-slate-100 bg-slate-50 p-5 text-sm text-slate-800">
-              {!isTimeOff(selectedEvent) && (
+    {/* Header */}
+    <DialogHeader className="px-5 py-4 border-b border-slate-100">
+      {selectedEvent && (
+        <div className="flex-1 min-w-0">
+          <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2 flex-wrap">
+            {isTimeOff(selectedEvent) ? "Time Off Details" : selectedEvent?.ServiceName || "Event Details"}
+            <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${
+              selectedEvent.BookingStatus === "Active" ? "bg-green-100 text-green-700" :
+              selectedEvent.BookingStatus === "Cancelled" ? "bg-red-100 text-red-700" :
+              selectedEvent.BookingStatus === "Finalized" ? "bg-blue-100 text-blue-700" :
+              selectedEvent.BookingStatus === "No Show" ? "bg-orange-100 text-orange-700" :
+              "bg-slate-100 text-slate-700"
+            }`}>
+              {selectedEvent.BookingStatus}
+            </span>
+            {String(selectedEvent.Rescheduled).toLowerCase() === "true" && (
+              <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                Rescheduled
+              </span>
+            )}
+          </DialogTitle>
+          {!isTimeOff(selectedEvent) && (
+            <DialogDescription className="text-xs text-slate-500 mt-0.5">
+              {selectedEvent?.ServiceDuration ? `${selectedEvent.ServiceDuration} mins` : ""}
+              {selectedEvent?.ServicePrice != null && (
                 <>
-                  <DetailRow label="Customer" value={`${selectedEvent.Name} ${selectedEvent.Name2 || ""}`.trim()} />
-                  <DetailRow label="Phone" value={selectedEvent.PhoneNo || "N/A"} />
-                  <DetailRow label="Email" value={selectedEvent.EMail || "N/A"} />
-                  <DetailRow label="Address" value={`${selectedEvent.Address} ${selectedEvent.Address2 || ""}`.trim()} />
+                  {selectedEvent?.ServiceDuration ? " · " : ""}
+                  {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(Number(selectedEvent.ServicePrice))}
                 </>
               )}
-              <DetailRow label="Staff" value={selectedEvent.StaffName || "N/A"} />
-              {selectedEvent.BookingParameters?.ROOM && (
-                <DetailRow label="Room" value={selectedEvent.BookingParameters.ROOM.BookingParameterValueCode} />
-              )}
-              <DetailRow
-                label="Date & Time"
-                value={`${moment(selectedEvent.BookingStartDate).format("MMM DD, YYYY")} ${moment(selectedEvent.BookingStartTime, "HH:mm:ss").format("hh:mm A")} - ${moment(selectedEvent.BookingEndTime, "HH:mm:ss").format("hh:mm A")}`}
-              />
-              <DetailRow label="Status" value={selectedEvent.BookingStatus} />
-              {String(selectedEvent.Rescheduled).toLowerCase() === "true" && (
-                <DetailRow
-                  label="Rescheduled"
-                  value={
-                    <span className="inline-flex rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
-                      Yes
-                    </span>
-                  }
-                />
-              )}
-              {!isTimeOff(selectedEvent) && (
-                <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="text-sm font-semibold text-slate-700">Update Booking Status</div>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <select
-                      value={selectedStatus}
-                      onChange={(event) => setSelectedStatus(event.target.value)}
-                      className="h-11 w-full rounded-2xl border border-slate-300 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-500"
-                    >
-                      <option value="Active">Active</option>
-                      <option value="Finalized">Finalized</option>
-                      <option value="Cancelled">Cancelled</option>
-                      <option value="No Show">No Show</option>
-                    </select>
-                    <button
-                      onClick={() => handleUpdateBookingEntry(selectedStatus)}
-                      disabled={loadingCalendar}
-                      className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-2xl shadow-sm transition hover:bg-blue-700"
-                    >
-                      {loadingCalendar ? "Updating..." : "Update"}
-                    </button>
-                  </div>
-                </div>
-              )}
-              {selectedEvent.BookingNote && (
-                <DetailRow label="Notes" value={selectedEvent.BookingNote} />
-              )}
-            </div>
+            </DialogDescription>
           )}
+        </div>
+      )}
+    </DialogHeader>
 
-          <DialogFooter className="flex w-full items-center gap-3">
-            {selectedEvent && isTimeOff(selectedEvent) ? (
-              canManageTimeOff ? (
-                <>
-                  <div className="pr-4 border-r border-gray-200">
-                    <button
-                      onClick={handleDeleteTimeOff}
-                      disabled={loadingCalendar}
-                      className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-2xl shadow-sm transition hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {loadingCalendar ? "Deleting..." : "Delete"}
-                    </button>
-                  </div>
-                  <div className="flex gap-2 ml-auto pl-4">
-                    <button
-                      onClick={handleOpenEditTimeOffDialog}
-                      className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-2xl shadow-sm transition hover:bg-blue-700"
-                    >
-                      Update
-                    </button>
-                    <button
-                      onClick={() => setShowEventDialog(false)}
-                      className="px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-100 rounded-2xl transition hover:bg-slate-200"
-                    >
-                      Close
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="ml-auto">
-                  <button
-                    onClick={() => setShowEventDialog(false)}
-                    className="px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-100 rounded-2xl transition hover:bg-slate-200"
-                  >
-                    Close
-                  </button>
-                </div>
-              )
-            ) : (
-              <>
-                <div className="flex gap-2 ml-auto pl-4">
-                  {selectedEvent?.BookingStatus === "Active" && (
-                    <button
-                      onClick={() => {
-                        if (!selectedEvent) return;
-                        window.location.href = `/book-now?reschedule=${selectedEvent.EntryNo}`;
-                      }}
-                      className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-2xl shadow-sm transition hover:bg-blue-700"
-                    >
-                      Reschedule
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setShowEventDialog(false)}
-                    className="px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-100 rounded-2xl transition hover:bg-slate-200"
-                  >
-                    Close
-                  </button>
-                </div>
-              </>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+    {/* Body */}
+    {selectedEvent && (
+      <div className="px-5 py-4 space-y-4">
 
-      {/* ── Add / Edit Time Off Dialog ── */}
-      <Dialog open={showAddTimeOffDialog} onOpenChange={setShowAddTimeOffDialog}>
-        <DialogContent className="max-w-md rounded-3xl border border-slate-200 bg-white shadow-2xl">
-          <DialogHeader>
-            <DialogTitle>{isEditMode ? "Update" : "Add"}</DialogTitle>
-            <DialogDescription>
-              {isEditMode
-                ? "Update the time off entry for staff"
-                : "Create a new time off entry for staff"}
-            </DialogDescription>
-          </DialogHeader>
+        {/* Schedule + Professional */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Schedule</h3>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-sm text-slate-800">
+                <CalendarIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                {moment(selectedEvent.BookingStartDate).format("MMM DD, YYYY")}
+              </div>
+              <div className="flex items-center gap-2 text-sm text-slate-800">
+                <ClockIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                {moment(selectedEvent.BookingStartTime, "HH:mm:ss").format("hh:mm A")}
+                {" – "}
+                {moment(selectedEvent.BookingEndTime, "HH:mm:ss").format("hh:mm A")}
+              </div>
+            </div>
+          </div>
 
-          <div className="space-y-4">
-            {/* Staff */}
-            {isEditMode ? (
-              <ReadonlyField
-                label="Staff"
-                value={
-                  timeOffForm.staffName
-                    ? `${timeOffForm.staffName} (${timeOffForm.staffCode})`
-                    : timeOffForm.staffCode
-                }
-              />
-            ) : (
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-700">
-                  Select Staff *
-                </label>
-                <select
-                  value={timeOffForm.staffCode}
-                  onChange={(e) => handleTimeOffFormChange("staffCode", e.target.value)}
-                  className="w-full rounded-lg border border-blue-200 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                >
-                  <option value="">-- Select Staff --</option>
-                  {staffList.map((staff) => (
-                    <option key={staff.id} value={staff.code}>
-                      {staff.description} ({staff.code})
-                    </option>
-                  ))}
-                </select>
+          <div className="space-y-1.5">
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Professional</h3>
+            <div className="flex items-center gap-2 text-sm text-slate-800">
+              <UserIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+              {selectedEvent.StaffName || "—"}
+            </div>
+            {selectedEvent.BookingParameters?.ROOM && (
+              <div className="flex items-center gap-2 text-sm text-slate-800">
+                <DoorOpenIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                {selectedEvent.BookingParameters.ROOM.BookingParameterValueCode}
               </div>
             )}
+          </div>
+        </div>
 
-            {/* Dates */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-700">Start Date *</label>
-                <input
-                  type="date"
-                  value={timeOffForm.startDate}
-                  onChange={(e) => handleTimeOffFormChange("startDate", e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-700">End Date *</label>
-                {isEditMode ? (
-                  <ReadonlyField label="" value={timeOffForm.endDate} />
-                ) : (
-                  <input
-                    type="date"
-                    value={timeOffForm.endDate}
-                    min={timeOffForm.startDate}
-                    readOnly={timeOffForm.singleDay}
-                    onChange={(e) =>
-                      !timeOffForm.singleDay && handleTimeOffFormChange("endDate", e.target.value)
-                    }
-                    className={`w-full rounded-2xl border px-3 py-2 text-sm text-slate-900 focus:outline-none ${timeOffForm.singleDay
-                      ? "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
-                      : "border-blue-200 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                      }`}
-                  />
+        {/* Customer Information */}
+        {!isTimeOff(selectedEvent) && (
+          <>
+            <div className="border-t border-slate-100" />
+            <div className="space-y-1.5">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Customer Information</h3>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                <div className="flex items-center gap-2 text-sm text-slate-800 min-w-0">
+                  <UserIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                  <span className="truncate">{`${selectedEvent.Name} ${selectedEvent.Name2 || ""}`.trim() || "—"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-slate-800 min-w-0">
+                  <PhoneIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                  <span className="truncate">{selectedEvent.PhoneNo || "—"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-slate-800 min-w-0">
+                  <MailIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                  <span className="truncate">{selectedEvent.EMail || "—"}</span>
+                </div>
+                {(`${selectedEvent.Address} ${selectedEvent.Address2 || ""}`.trim()) && (
+                  <div className="flex items-center gap-2 text-sm text-slate-800 min-w-0">
+                    <MapPinIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    <span className="truncate">{`${selectedEvent.Address} ${selectedEvent.Address2 || ""}`.trim()}</span>
+                  </div>
                 )}
               </div>
             </div>
+          </>
+        )}
 
-            {/* Toggles */}
-            <div className="flex items-center gap-6">
-              <label
-                className={`flex items-center gap-2 text-sm font-semibold ${isEditMode ? "text-gray-400 cursor-not-allowed" : "text-gray-700 cursor-pointer"
-                  }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={timeOffForm.singleDay}
-                  disabled={isEditMode}
-                  onChange={(e) => !isEditMode && handleTimeOffFormChange("singleDay", e.target.checked)}
-                  className={`rounded accent-blue-600 cursor-pointer ${isEditMode ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                />
-                Single Day
-              </label>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={timeOffForm.wholeDay}
-                  onChange={(e) => handleTimeOffFormChange("wholeDay", e.target.checked)}
-                  className="rounded accent-blue-600 cursor-pointer"
-                />
-                Whole Day
-              </label>
-            </div>
-
-            {/* Times */}
-            {!timeOffForm.wholeDay && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-gray-700">Start Time</label>
-                  <input
-                    type="time"
-                    value={timeOffForm.startTime}
-                    onChange={(e) => handleTimeOffFormChange("startTime", e.target.value)}
-                    className="w-full rounded-lg border border-blue-200 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-gray-700">End Time</label>
-                  <input
-                    type="time"
-                    value={timeOffForm.endTime}
-                    onChange={(e) => handleTimeOffFormChange("endTime", e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Reason */}
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-gray-700">Reason</label>
-              <input
-                type="text"
-                value={timeOffForm.reason}
-                onChange={(e) => handleTimeOffFormChange("reason", e.target.value)}
-                placeholder="e.g., Vacation, Sick Leave, Personal"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              />
-            </div>
-
-            {/* Actions */}
-            <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-              <button
-                onClick={handleCloseAddTimeOffDialog}
-                disabled={isSubmittingTimeOff}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={isEditMode ? handleUpdateTimeOff : handleCreateTimeOff}
-                disabled={isSubmittingTimeOff}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:from-blue-700 hover:to-blue-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-              >
-                {isSubmittingTimeOff
-                  ? isEditMode
-                    ? "Updating..."
-                    : "Adding..."
-                  : isEditMode
-                    ? "Update"
-                    : "Add"}
-              </button>
-            </div>
+        {/* Notes */}
+        <div className="border-t border-slate-100" />
+        <div className="space-y-1.5">
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Notes</h3>
+          <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-800 whitespace-pre-line min-h-[2.5rem]">
+            {selectedEvent.BookingNote || "—"}
           </div>
+        </div>
+
+      </div>
+    )}
+
+    {/* Footer — plain div to avoid DialogFooter overflow quirks */}
+    <div className="px-5 py-3 border-t border-slate-100 flex items-center gap-2 w-full">
+      {selectedEvent && isTimeOff(selectedEvent) ? (
+        canManageTimeOff ? (
+          <>
+            <button
+              onClick={handleDeleteTimeOff}
+              disabled={loadingCalendar}
+              className="px-3 py-1.5 text-sm font-semibold text-white bg-red-600 rounded-lg shadow-sm transition hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loadingCalendar ? "Deleting..." : "Delete"}
+            </button>
+            <div className="flex gap-2 ml-auto">
+              <button
+                onClick={handleOpenEditTimeOffDialog}
+                className="px-3 py-1.5 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-sm transition hover:bg-blue-700"
+              >
+                Update
+              </button>
+              <button
+                onClick={() => setShowEventDialog(false)}
+                className="px-3 py-1.5 text-sm font-semibold text-slate-700 bg-slate-100 rounded-lg transition hover:bg-slate-200"
+              >
+                Close
+              </button>
+            </div>
+          </>
+        ) : (
+          <button
+            onClick={() => setShowEventDialog(false)}
+            className="ml-auto px-3 py-1.5 text-sm font-semibold text-slate-700 bg-slate-100 rounded-lg transition hover:bg-slate-200"
+          >
+            Close
+          </button>
+        )
+      ) : (
+        <>
+          {!isTimeOff(selectedEvent) && (
+            <button
+              onClick={() => setShowStatusDialog(true)}
+              className="px-3 py-1.5 text-sm font-semibold text-white bg-slate-600 rounded-lg shadow-sm transition hover:bg-slate-700"
+            >
+              Update Status
+            </button>
+          )}
+          <div className="flex gap-2 ml-auto">
+            {selectedEvent?.BookingStatus === "Active" && (
+              <button
+                onClick={() => {
+                  if (!selectedEvent) return;
+                  window.location.href = `/book-now?reschedule=${selectedEvent.EntryNo}`;
+                }}
+                className="px-3 py-1.5 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-sm transition hover:bg-blue-700"
+              >
+                Reschedule
+              </button>
+            )}
+            <button
+              onClick={() => setShowEventDialog(false)}
+              className="px-3 py-1.5 text-sm font-semibold text-slate-700 bg-slate-100 rounded-lg transition hover:bg-slate-200"
+            >
+              Close
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+
+  </DialogContent>
+</Dialog>
+{/* ── Add / Edit Time Off Dialog ── */}
+<Dialog open={showAddTimeOffDialog} onOpenChange={setShowAddTimeOffDialog}>
+  <DialogContent className="sm:max-w-2xl p-0 gap-0">
+
+    {/* Header */}
+    <DialogHeader className="px-5 py-4 border-b border-slate-100">
+      <DialogTitle className="text-xl font-bold text-slate-900">
+        {isEditMode ? "Update Time Off" : "Add Time Off"}
+      </DialogTitle>
+      <DialogDescription className="text-xs text-slate-500 mt-0.5">
+        {isEditMode
+          ? "Update the time off entry for staff"
+          : "Create a new time off entry for staff"}
+      </DialogDescription>
+    </DialogHeader>
+
+    {/* Body */}
+    <div className="px-5 py-4 space-y-4">
+
+      {/* Staff */}
+      {isEditMode ? (
+        <div className="space-y-1.5">
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Staff</h3>
+          <div className="flex items-center gap-2 text-sm text-slate-800">
+            <UserIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+            {timeOffForm.staffName
+              ? `${timeOffForm.staffName} (${timeOffForm.staffCode})`
+              : timeOffForm.staffCode}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
+            Select Staff <span className="text-red-400">*</span>
+          </label>
+          <select
+            value={timeOffForm.staffCode}
+            onChange={(e) => handleTimeOffFormChange("staffCode", e.target.value)}
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          >
+            <option value="">— Select Staff —</option>
+            {staffList.map((staff) => (
+              <option key={staff.id} value={staff.code}>
+                {staff.description} ({staff.code})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div className="border-t border-slate-100" />
+
+      {/* Dates */}
+      <div className="space-y-1.5">
+        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Schedule</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-slate-500">
+              Start Date <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="date"
+              value={timeOffForm.startDate}
+              onChange={(e) => handleTimeOffFormChange("startDate", e.target.value)}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-slate-500">
+              End Date <span className="text-red-400">*</span>
+            </label>
+            {isEditMode ? (
+              <div className="flex items-center gap-2 text-sm text-slate-800 px-3 py-2 rounded-lg border border-slate-100 bg-slate-50">
+                {timeOffForm.endDate || "—"}
+              </div>
+            ) : (
+              <input
+                type="date"
+                value={timeOffForm.endDate}
+                min={timeOffForm.startDate}
+                readOnly={timeOffForm.singleDay}
+                onChange={(e) =>
+                  !timeOffForm.singleDay && handleTimeOffFormChange("endDate", e.target.value)
+                }
+                className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 focus:outline-none ${
+                  timeOffForm.singleDay
+                    ? "border-slate-100 bg-slate-50 text-slate-400 cursor-not-allowed"
+                    : "border-slate-200 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                }`}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Toggles */}
+      <div className="flex items-center gap-6">
+        <label className={`flex items-center gap-2 text-sm font-medium ${
+          isEditMode ? "text-slate-400 cursor-not-allowed" : "text-slate-700 cursor-pointer"
+        }`}>
+          <input
+            type="checkbox"
+            checked={timeOffForm.singleDay}
+            disabled={isEditMode}
+            onChange={(e) => !isEditMode && handleTimeOffFormChange("singleDay", e.target.checked)}
+            className={`rounded accent-blue-600 ${isEditMode ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+          />
+          Single Day
+        </label>
+        <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={timeOffForm.wholeDay}
+            onChange={(e) => handleTimeOffFormChange("wholeDay", e.target.checked)}
+            className="rounded accent-blue-600 cursor-pointer"
+          />
+          Whole Day
+        </label>
+      </div>
+
+      {/* Times */}
+      {!timeOffForm.wholeDay && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-slate-500">Start Time</label>
+            <input
+              type="time"
+              value={timeOffForm.startTime}
+              onChange={(e) => handleTimeOffFormChange("startTime", e.target.value)}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-slate-500">End Time</label>
+            <input
+              type="time"
+              value={timeOffForm.endTime}
+              onChange={(e) => handleTimeOffFormChange("endTime", e.target.value)}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="border-t border-slate-100" />
+
+      {/* Reason */}
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-slate-500">Reason</label>
+        <input
+          type="text"
+          value={timeOffForm.reason}
+          onChange={(e) => handleTimeOffFormChange("reason", e.target.value)}
+          placeholder="e.g., Vacation, Sick Leave, Personal"
+          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        />
+      </div>
+
+    </div>
+
+    {/* Footer */}
+    <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-end gap-2">
+      <button
+        onClick={handleCloseAddTimeOffDialog}
+        disabled={isSubmittingTimeOff}
+        className="px-3 py-1.5 text-sm font-semibold text-slate-700 bg-slate-100 rounded-lg transition hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Cancel
+      </button>
+      <button
+        onClick={isEditMode ? handleUpdateTimeOff : handleCreateTimeOff}
+        disabled={isSubmittingTimeOff}
+        className="px-3 py-1.5 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-sm transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isSubmittingTimeOff
+          ? isEditMode ? "Updating..." : "Adding..."
+          : isEditMode ? "Update" : "Add"}
+      </button>
+    </div>
+
+  </DialogContent>
+</Dialog>
+
+      {/* ── Update Status Dialog ── */}
+      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
+        <DialogContent showCloseButton={false} className="max-w-md w-full rounded-3xl border border-slate-200 bg-white shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Update Booking Status</DialogTitle>
+            <DialogDescription>
+              Select a new status for this booking
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-4">
+            {(["Active", "Finalized", "Cancelled", "No Show"] as const).map((status) => (
+              <button
+                key={status}
+                onClick={async () => {
+                  setSelectedStatus(status);
+                  await handleUpdateBookingEntry(status, true);
+                  setShowStatusDialog(false);
+                }}
+                disabled={loadingCalendar}
+                className={`w-full flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold transition-all ${selectedStatus === status
+                    ? "bg-blue-100 text-blue-700 border-2 border-blue-500"
+                    : "bg-slate-50 text-slate-700 border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50"
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <span>{status}</span>
+                {selectedStatus === status && (
+                  loadingCalendar ? (
+                    <Spinner className="h-5 w-5" />
+                  ) : (
+                    <CheckCircle className="h-5 w-5" />
+                  )
+                )}
+              </button>
+            ))}
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            <button
+              onClick={() => setShowStatusDialog(false)}
+              disabled={loadingCalendar}
+              className="flex-1 px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-100 rounded-2xl transition hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cancel
+            </button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

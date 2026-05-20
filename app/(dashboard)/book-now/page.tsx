@@ -675,6 +675,32 @@ export default function BookNowPage() {
 
   // ── Effects ────────────────────────────────────────────────────────────────
   useEffect(() => { fetchBranches(); fetchCustomers(); }, [pathname]);
+
+  // Refetch when returning to the page (back/forward, bfcache, tab focus)
+  useEffect(() => {
+    const refetchAll = () => {
+      try {
+        fetchBranches();
+        fetchCustomers();
+        if (selectedBranch) fetchServices();
+        if (selectedService && selectedBranch) fetchStaff();
+        if (selectedDate && selectedBranch && selectedService && (selectedStaff || noPreferenceStaff)) fetchTimeslots();
+      } catch (e) {
+        // swallow errors from refetch triggers
+        console.error(e);
+      }
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refetchAll();
+    };
+
+    window.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [selectedBranch, selectedService, selectedStaff, selectedDate, noPreferenceStaff, fetchBranches, fetchCustomers, fetchServices, fetchStaff, fetchTimeslots]);
   useEffect(() => { if (selectedBranch) fetchServices(); }, [selectedBranch, fetchServices]);
   useEffect(() => { if (selectedService && selectedBranch) fetchStaff(); }, [selectedService, selectedBranch, fetchStaff]);
   useEffect(() => { if (selectedDate && selectedBranch && selectedService && (selectedStaff || noPreferenceStaff)) fetchTimeslots(); }, [selectedDate, selectedBranch, selectedStaff, selectedService, noPreferenceStaff, fetchTimeslots]);
