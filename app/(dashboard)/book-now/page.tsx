@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   CheckCircle2, MapPin, Briefcase, Users, Calendar, User, Clock,
   Phone, Mail, FileText, RefreshCw, ChevronLeft, ChevronRight, X,
@@ -367,7 +367,7 @@ export default function BookNowPage() {
   const [selectedBranch, setSelectedBranch] = useState("");
   const [selectedService, setSelectedService] = useState("");
   const [selectedStaff, setSelectedStaff] = useState("");
-  const [noPreferenceStaff, setNoPreferenceStaff] = useState(true);
+  
   const [selectedDate, setSelectedDate] = useState<DateObj | null>(null);
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerData | null>(null);
@@ -417,7 +417,7 @@ export default function BookNowPage() {
     ? (!selectedDate || !selectedTime || selectedTimeWarning) ? 4 : 5
     : !selectedBranch ? 1
       : !selectedService ? 2
-        : (!selectedStaff && !noPreferenceStaff) ? 3
+        : (!selectedStaff) ? 3
           : (!selectedDate || !selectedTime || selectedTimeWarning) ? 4
             : 5;
 
@@ -455,19 +455,14 @@ export default function BookNowPage() {
 
   // ── Auto-select today when reaching date step ──────────────────────────────
   useEffect(() => {
-    if (currentStep >= 4 && !selectedDate && (selectedStaff || noPreferenceStaff || isRescheduling)) {
+    if (currentStep >= 4 && !selectedDate && (selectedStaff || isRescheduling)) {
       const d = new Date();
       setSelectedDate({ day: d.getDate(), month: d.getMonth(), year: d.getFullYear() });
     }
-  }, [currentStep, selectedStaff, noPreferenceStaff, isRescheduling, selectedDate]);
+  }, [currentStep, selectedStaff, isRescheduling, selectedDate]);
 
   // ── Auto-select today when service selected with no preference ────────────
-  useEffect(() => {
-    if (selectedService && noPreferenceStaff && !selectedDate && selectedBranch && !isRescheduling) {
-      const d = new Date();
-      setSelectedDate({ day: d.getDate(), month: d.getMonth(), year: d.getFullYear() });
-    }
-  }, [selectedService, noPreferenceStaff, selectedBranch, selectedDate, isRescheduling]);
+  // removed no-preference auto-select behavior; selecting a service now sets sentinel staff '0'
 
   // ── Prevent past date if not allowed ──────────────────────────────────────
   useEffect(() => {
@@ -501,6 +496,7 @@ export default function BookNowPage() {
   const selectedBranchData = branches.find(
     (b: any) => b.code === selectedBranch
   );
+  const lastTrigger = useRef<'service' | 'staff'>('service');
   const fetchServices = useCallback(async () => {
     if (!selectedBranch) return;
     try {
@@ -519,7 +515,7 @@ export default function BookNowPage() {
     } catch (_) { } finally { setLoadingServices(false); }
   }, [selectedBranch]);
 
-  const fetchTimeslots = useCallback(async () => {
+  const fetchTimeslots = useCallback(async (includeStaff: boolean = true) => {
     if (!selectedDate || !selectedBranch) return;
 
     try {
@@ -544,7 +540,7 @@ export default function BookNowPage() {
             branchCode: selectedBranch,
             bookingDate: fmt,
             serviceId: selectedService,
-            staffId: noPreferenceStaff ? "" : selectedStaff,
+            staffId: (selectedStaff === "0" || selectedStaff === "") ? "" : selectedStaff,
             isUserLogin: sessionUser?.role === 'user' ? "true" : "false",
           }),
         }
@@ -567,18 +563,20 @@ export default function BookNowPage() {
           allowBooking: Boolean(sl.AllowBooking),
         }))
       );
-      // STAFF
-      setAssignedStaff(
-        (Array.isArray(d?.ServiceStaffs)
-          ? d.ServiceStaffs
-          : []
-        ).map((s: any) => ({
+      // STAFF (update only when requested)
+      if (includeStaff) {
+        const fetchedStaff = (Array.isArray(d?.ServiceStaffs) ? d.ServiceStaffs : []).map((s: any) => ({
           staffId: String(s.StaffId ?? ""),
           staffCode: String(s.StaffCode ?? ""),
           staffName: String(s.StaffName ?? ""),
           isAvailable: Boolean(s.IsAvailable),
-        }))
-      );
+        }));
+        setAssignedStaff(fetchedStaff);
+        // If sentinel '0' or no selection, default to first returned staff
+        if ((selectedStaff === "0" || !selectedStaff) && fetchedStaff.length > 0) {
+          setSelectedStaff(fetchedStaff[0].staffId);
+        }
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -590,7 +588,6 @@ export default function BookNowPage() {
     selectedBranch,
     selectedStaff,
     selectedService,
-    noPreferenceStaff,
   ]);
 
   const fetchCustomers = async () => {
@@ -627,7 +624,6 @@ export default function BookNowPage() {
       setSelectedBranch(entry.BookingSetupCode ?? "");
       setSelectedService(serviceId);
       setSelectedStaff(staffId);
-      setNoPreferenceStaff(!hasStaff);
       setSelectedCustomer({ CustomerNo: entry.CustomerNo ?? "", Name: entry.Name ?? "", PhoneNo: entry.PhoneNo ?? "", EMail: entry.EMail ?? "", Address: entry.Address ?? "", Address2: entry.Address2 ?? "" });
       setCustomerName(entry.Name ?? "");
       setCustomerEmail(entry.EMail ?? "");
@@ -669,7 +665,7 @@ export default function BookNowPage() {
           bookingDate: fmt,
           startTime: selectedTime,
           serviceId: selectedService,
-          staffid: noPreferenceStaff ? "" : selectedStaff,
+          staffid: (selectedStaff === "0" || selectedStaff === "") ? "" : selectedStaff,
           bookingNote: notes,
           bookingEntryNo: isRescheduling ? rescheduleEntryNo : "",
           customerNoOrEmailAdd: selectedCustomer?.CustomerNo ?? effectiveEmail,
@@ -686,7 +682,7 @@ export default function BookNowPage() {
       sileo.success({ title: isRescheduling ? "Reschedule confirmed!" : "Booking confirmed successfully!", fill: "#171717" });
       if (isRescheduling) { window.location.href = "/book-now"; return; }
       // Reset
-      setSelectedBranch(""); setSelectedService(""); setSelectedStaff(""); setNoPreferenceStaff(false);
+      setSelectedBranch(""); setSelectedService(""); setSelectedStaff("");
       setSelectedDate(null); setSelectedTime(""); setSelectedCustomer(null); setIsNewCustomer(false);
       setCustomerName(""); setCustomerEmail(""); setCustomerPhone(""); setCustomerAddress1(""); setCustomerAddress2(""); setNotes("");
       setSkipAvailabilityCheck("false");
@@ -697,18 +693,18 @@ export default function BookNowPage() {
 
   // ── Selection helpers ──────────────────────────────────────────────────────
   const sel = {
-    branch: (v: string) => { setSelectedBranch(v); setSelectedService(""); setSelectedStaff(""); setNoPreferenceStaff(true); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); },
-    service: (v: string) => { setSelectedService(v); setSelectedStaff(""); setNoPreferenceStaff(true); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); },
-    staff: (v: string) => { setSelectedStaff(v); setNoPreferenceStaff(false); setSelectedTime(""); setTimeslots([]); if (currentStep < 4) setSelectedDate(null); },
+    branch: (v: string) => { setSelectedBranch(v); setSelectedService(""); setSelectedStaff(""); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); },
+    service: (v: string) => { lastTrigger.current = 'service'; setSelectedService(v); setSelectedStaff("0"); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); },
+    staff: (v: string) => { lastTrigger.current = 'staff'; setSelectedStaff(v); setSelectedTime(""); setTimeslots([]); if (currentStep < 4) setSelectedDate(null); },
     date: (d: DateObj) => { setSelectedDate(d); setSelectedTime(""); setTimeslots([]); },
   };
 
   // ── Effects ────────────────────────────────────────────────────────────────
   useEffect(() => { fetchBranches(); fetchCustomers(); }, [pathname]);
   useEffect(() => { if (selectedBranch) fetchServices(); }, [selectedBranch, fetchServices]);
-  useEffect(() => { if (selectedDate && selectedBranch && selectedService && (selectedStaff || noPreferenceStaff)) fetchTimeslots(); }, [selectedDate, selectedBranch, selectedStaff, selectedService, noPreferenceStaff, fetchTimeslots]);
+  useEffect(() => { if (selectedDate && selectedBranch && selectedService && selectedStaff) fetchTimeslots(lastTrigger.current === 'service'); }, [selectedDate, selectedBranch, selectedStaff, selectedService, fetchTimeslots]);
   useEffect(() => { if (rescheduleEntryNo) loadRescheduleData(rescheduleEntryNo); }, []);
-  useEffect(() => { if (rescheduleEntryNo && rescheduleData && selectedDate && selectedBranch && selectedService && selectedStaff) fetchTimeslots(); }, [selectedDate, rescheduleData]);
+  useEffect(() => { if (rescheduleEntryNo && rescheduleData && selectedDate && selectedBranch && selectedService && selectedStaff) fetchTimeslots(true); }, [selectedDate, rescheduleData]);
 
   // ── Confirm data ───────────────────────────────────────────────────────────
   usePageActivation(() => {
@@ -721,8 +717,8 @@ export default function BookNowPage() {
     fetchCustomers();
 
     if (selectedBranch) fetchServices();
-    if (selectedDate && selectedBranch && selectedService && (selectedStaff || noPreferenceStaff)) {
-      fetchTimeslots();
+    if (selectedDate && selectedBranch && selectedService && selectedStaff) {
+      fetchTimeslots(lastTrigger.current === 'service');
     }
     if (rescheduleEntryNo) {
       loadRescheduleData(rescheduleEntryNo);
@@ -747,7 +743,7 @@ export default function BookNowPage() {
     const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
     const isSel = selectedDate?.day === day && selectedDate?.month === month && selectedDate?.year === year;
     const hasTime = isSel && !!selectedTime;
-    const isDisabled = isPast || (!selectedStaff && !noPreferenceStaff && !isRescheduling);
+    const isDisabled = isPast || (!selectedStaff && !isRescheduling);
     return (
       <button key={day} disabled={isDisabled}
         onClick={() => !isDisabled && sel.date({ day, month, year })}
@@ -780,18 +776,20 @@ export default function BookNowPage() {
             <option
               key={st.staffId}
               value={st.staffId}
-              disabled={!st.isAvailable}
             >
-              {st.staffName} {st.isAvailable ? "🟢 Available" : "🔴 Unavailable"}
+              {st.staffName} {Number(st.staffId) === 0 ? "🟠" : (st.isAvailable ? "🟢 Available" : "🔴 Unavailable")}
             </option>
           ))}
         </select>
+        {selectedService && assignedStaff.length === 1 && !loadingStaff && (
+          (assignedStaff[0].staffCode === "ANY" && assignedStaff[0].staffName === "Any/No Preference") || !assignedStaff[0].isAvailable
+        ) && (
+          <p className="mt-2 text-xs text-amber-700">No staff available for the selected service.</p>
+        )}
       </div>
       <label className="flex items-center gap-2.5 cursor-pointer px-1">
-        <input type="checkbox" checked={noPreferenceStaff}
-          onChange={e => { setNoPreferenceStaff(e.target.checked); if (e.target.checked) setSelectedStaff(""); }}
-          disabled={!selectedService} className="w-4 h-4 accent-blue-600 cursor-pointer" />
-        <span className="text-xs text-slate-600">No Preference</span>
+        {/* No Preference removed — staff must be selected */}
+        <span className="text-xs text-slate-600">Choose a professional</span>
       </label>
     </div>
   );
@@ -1023,7 +1021,7 @@ export default function BookNowPage() {
           <div className="flex-1 flex gap-4 min-h-0 items-stretch">
             {/* Calendar */}
             <div className={`flex-1 min-h-[32rem] max-h-[32rem] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-opacity
-              ${(!selectedStaff && !noPreferenceStaff && !isRescheduling) ? "opacity-40 pointer-events-none" : ""}`}>
+              ${(!selectedStaff && !isRescheduling) ? "opacity-40 pointer-events-none" : ""}`}>
               <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
                 <StepBadge number={4} done={currentStep > 4} active={currentStep === 4} />
                 <Calendar size={13} strokeWidth={2} className={currentStep >= 4 ? "text-blue-600" : "text-slate-400"} />
@@ -1057,7 +1055,7 @@ export default function BookNowPage() {
 
             {/* Timeslots */}
             <div className={`flex-1 min-h-[32rem] max-h-[32rem] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-opacity
-              ${(!selectedStaff && !noPreferenceStaff && !isRescheduling) ? "opacity-40 pointer-events-none" : ""}`}>
+              ${(!selectedStaff && !isRescheduling) ? "opacity-40 pointer-events-none" : ""}`}>
               <TimeslotPanel selectedDate={selectedDate} timeslots={timeslots} loading={loadingTimeslots}
                 selectedTime={selectedTime} onSelectTime={t => setSelectedTime(t)} stepNumber={4} currentStep={currentStep} skipAvailabilityCheck={skipAvailabilityCheck} onSkipAvailabilityCheckChange={checked => setSkipAvailabilityCheck(checked ? "true" : "false")} isCustomerRole={isCustomerRole} />
             </div>
@@ -1441,7 +1439,7 @@ export default function BookNowPage() {
 
           {/* Mobile: Schedule tab */}
           {mobilePanel === "schedule" && (
-            <div className={`space-y-4 ${(!selectedStaff && !noPreferenceStaff && !isRescheduling) ? "opacity-40 pointer-events-none" : ""}`}>
+            <div className={`space-y-4 ${(!selectedStaff && !isRescheduling) ? "opacity-40 pointer-events-none" : ""}`}>
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
                   <StepBadge number={4} done={currentStep > 4} active={currentStep === 4} />
@@ -1486,7 +1484,7 @@ export default function BookNowPage() {
                     {[
                       { icon: MapPin, val: selectedBranchObj?.description ?? selectedBranch },
                       { icon: Briefcase, val: selectedServiceObj?.name },
-                      { icon: User, val: selectedStaffObj?.staffName ?? (noPreferenceStaff ? "No Preference" : null) ?? (rescheduleData?.StaffName ?? null) },
+                      { icon: User, val: selectedStaffObj?.staffName ?? (rescheduleData?.StaffName ?? null) },
                       { icon: Calendar, val: `${MONTH_NAMES[selectedDate.month]} ${selectedDate.day}, ${selectedDate.year}` },
                       { icon: Clock, val: selectedTime },
                     ].filter(x => x.val).map((x, i) => (

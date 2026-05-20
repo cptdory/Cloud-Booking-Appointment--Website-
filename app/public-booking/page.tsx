@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNextStep } from "nextstepjs";
 import { CheckCircle2, MapPin, Briefcase, Users, Calendar, User, Clock, Phone, Mail, FileText, RefreshCw, ChevronLeft, ChevronRight, X, ShieldCheck, Stethoscope, ArrowRight, Sparkles, Clock10Icon } from "lucide-react";
 import { sileo } from "sileo";
 import { usePathname } from "next/navigation";
@@ -253,8 +252,8 @@ function MobileProgress({ currentStep }: { currentStep: number }) {
   );
 }
 // ─── Inline Timeslot Panel ─────────────────────────────────────────────────────
-function TimeslotPanel({ selectedDate, timeslots, loading, selectedTime, onSelectTime, currentStep }: {
-  selectedDate: any; timeslots: any[]; loading: boolean; selectedTime: string; onSelectTime: (time: string) => void; currentStep: number;
+function TimeslotPanel({ selectedDate, timeslots, loading, selectedTime, onSelectTime, currentStep, noStaffAvailable, contactNumber }: {
+  selectedDate: any; timeslots: any[]; loading: boolean; selectedTime: string; onSelectTime: (time: string) => void; currentStep: number; noStaffAvailable?: boolean; contactNumber?: string;
 }) {
   const slots = timeslots || [];
   const selectedSlot = slots.find((ts: any) => ts.time === selectedTime) ?? null;
@@ -271,6 +270,25 @@ function TimeslotPanel({ selectedDate, timeslots, loading, selectedTime, onSelec
       </div>
       {/* Body */}
       <div className="flex-1 overflow-y-auto p-4">
+        {noStaffAvailable && (
+          <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm font-semibold px-4 py-3">
+            <div className="flex items-start gap-3">
+              <div className="text-2xl leading-6">⚠️</div>
+              <div className="flex-1">
+                <div className="text-sm font-bold">No staff available for this service</div>
+                <div className="text-[12px] text-amber-800 mt-1">
+                  Please contact us for assistance{contactNumber ? ':' : '.'}
+                </div>
+                {contactNumber && (
+                  <a href={`tel:${contactNumber.replace(/\s+/g, '')}`} className="mt-2 inline-flex items-center gap-2 text-amber-900 font-semibold text-sm">
+                    <span className="text-lg">📞</span>
+                    <span className="underline">{contactNumber}</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         {!selectedDate ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-300 py-10">
             <Calendar size={32} strokeWidth={1.2} className="mb-3" />
@@ -338,6 +356,7 @@ export default function App() {
   const tenantId = "9903ED01-A73C-4874-8ABF-D2678E3AE23D";
   const [orgName, setOrgName] = useState<string>("");
   const [headline, setHeadline] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
   const [logo, setLogo] = useState<string>("");
   const [orgSetupLoading, setOrgSetupLoading] = useState<boolean>(true);
   const [otpValidityPeriod, setOtpValidityPeriod] = useState<number>(5);
@@ -353,7 +372,6 @@ export default function App() {
   const [selectedBranch, setSelectedBranch] = useState<string>("");
   const [selectedService, setSelectedService] = useState<string>("");
   const [selectedStaff, setSelectedStaff] = useState<string>("");
-  const [noPreferenceStaff, setNoPreferenceStaff] = useState<boolean>(true);
   const [selectedDate, setSelectedDate] = useState<any>(null);
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [customerName, setCustomerName] = useState<string>("");
@@ -369,6 +387,7 @@ export default function App() {
   const [requestId, setRequestId] = useState<string>("");
   const [otpTimeRemaining, setOtpTimeRemaining] = useState<number>(0);
   const [canResend, setCanResend] = useState<boolean>(false);
+  const lastTrigger = useRef<'service' | 'staff'>('service');
   // Mobile tab state
   const [mobilePanel, setMobilePanel] = useState<string>("select");
   const [calendarDate, setCalendarDate] = useState<Date>(new Date());
@@ -382,10 +401,11 @@ export default function App() {
   const selectedBranchObj = branches.find((b) => b.code === selectedBranch) ?? null;
   const selectedTimeslot = (timeslots || []).find((ts: any) => ts.time === selectedTime) ?? null;
   const selectedTimeWarning = Boolean(selectedTimeslot?.availability && !selectedTimeslot?.allowBooking);
+  const noStaffAvailable = Boolean(selectedService && assignedStaff.length === 1 && !loadingStaff && ((assignedStaff[0].staffCode === "ANY" && assignedStaff[0].staffName === "Any/No Preference") || !assignedStaff[0].isAvailable));
   const isFormValid = customerName !== "" && customerEmail !== "" && selectedTime !== "" && !selectedTimeWarning;
   const currentStep = !selectedBranch ? 1
     : !selectedService ? 2
-      : !selectedStaff && !noPreferenceStaff ? 3
+      : !selectedStaff ? 3
         : !selectedDate ? 4
           : !selectedTime ? 5
             : selectedTimeWarning ? 5 : 6;
@@ -415,6 +435,7 @@ export default function App() {
       setLogo(d?.Logo ?? "");
       setOtpValidityPeriod(d?.OTPValidityPeriod ?? 5);
       setHeadline(d?.Headline ?? "");
+      setContactNumber(d?.MobileNumber ?? "");
     } catch (_) { }
     finally { setOrgSetupLoading(false); }
   };
@@ -453,99 +474,76 @@ export default function App() {
     finally { setLoadingServices(false); }
   }, [selectedBranch]);
 
-const fetchTimeslots = useCallback(async () => {
-  if (!selectedDate || !selectedBranch) return;
+  const fetchTimeslots = useCallback(async (includeStaff: boolean = true) => {
+    if (!selectedDate || !selectedBranch) return;
+    try {
+      setLoadingTimeslots(true);
+      setLoadingStaff(true);
+      const fullYear =
+        String(selectedDate.year).length === 2
+          ? `20${selectedDate.year}`
+          : selectedDate.year;
 
-  try {
-    setLoadingTimeslots(true);
-    setLoadingStaff(true);
-
-    const fullYear =
-      String(selectedDate.year).length === 2
-        ? `20${selectedDate.year}`
-        : selectedDate.year;
-
-    const fmt = `${String(selectedDate.month + 1).padStart(2, "0")}/${String(
-      selectedDate.day
-    ).padStart(2, "0")}/${fullYear}`;
-
-    const res = await fetch(
-      "/api/available-timeslot-v2/get-available-timeslot-v2",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          branchCode: selectedBranch,
-          bookingDate: fmt,
-          serviceId: selectedService,
-          staffId: noPreferenceStaff ? "" : selectedStaff,
-          isUserLogin: "false",
-        }),
+      const fmt = `${String(selectedDate.month + 1).padStart(2, "0")}/${String(
+        selectedDate.day
+      ).padStart(2, "0")}/${fullYear}`;
+      const res = await fetch(
+        "/api/available-timeslot-v2/get-available-timeslot-v2",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            branchCode: selectedBranch,
+            bookingDate: fmt,
+            serviceId: selectedService,
+            staffId: selectedStaff,
+            isUserLogin: "false",
+          }),
+        }
+      );
+      const d = await res.json();
+      // TIMESLOTS
+      setTimeslots(
+        (Array.isArray(d?.TimeSlots) ? d.TimeSlots : []).map((sl: any) => ({
+          id: String(sl.Id ?? ""),
+          time: new Date(`1970-01-01T${sl.Time}`).toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          }),
+          availability: Boolean(sl.IsAvailable),
+          allowBooking: Boolean(sl.AllowBooking),
+        }))
+      );
+      // STAFF (only update when requested)
+      if (includeStaff) {
+        const fetchedStaff = (Array.isArray(d?.ServiceStaffs) ? d.ServiceStaffs : []).map(
+          (s: any) => ({
+            staffId: String(s.StaffId ?? ""),
+            staffCode: String(s.StaffCode ?? ""),
+            staffName: String(s.StaffName ?? ""),
+            isAvailable: Boolean(s.IsAvailable),
+          })
+        );
+        setAssignedStaff(fetchedStaff);
+        // If no staff is explicitly selected (or sentinel "0"), default to the first returned staff
+        if ((selectedStaff === "0" || !selectedStaff) && fetchedStaff.length > 0) {
+          setSelectedStaff(fetchedStaff[0].staffId);
+        }
       }
-    );
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingTimeslots(false);
+      setLoadingStaff(false);
+    }
+  }, [
+    selectedDate,
+    selectedBranch,
+    selectedStaff,
+    selectedService,
+  ]);
 
-    const d = await res.json();
-
-    console.log(d);
-
-    // TIMESLOTS
-    setTimeslots(
-      (Array.isArray(d?.TimeSlots) ? d.TimeSlots : []).map((sl: any) => ({
-        id: String(sl.Id ?? ""),
-        time: new Date(`1970-01-01T${sl.Time}`).toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        }),
-        availability: Boolean(sl.IsAvailable),
-        allowBooking: Boolean(sl.AllowBooking),
-      }))
-    );
-
-    // STAFF
-    setAssignedStaff(
-      (Array.isArray(d?.ServiceStaffs) ? d.ServiceStaffs : []).map(
-        (s: any) => ({
-          staffId: String(s.StaffId ?? ""),
-          staffCode: String(s.StaffCode ?? ""),
-          staffName: String(s.StaffName ?? ""),
-          isAvailable: Boolean(s.IsAvailable),
-        })
-      )
-    );
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setLoadingTimeslots(false);
-    setLoadingStaff(false);
-  }
-}, [
-  selectedDate,
-  selectedBranch,
-  selectedStaff,
-  selectedService,
-  noPreferenceStaff,
-]);
-  
-  //   const fetchStaff = useCallback(async () => {
-  //   if (!selectedBranch || !selectedDate) return;
-  //   try {
-  //     setLoadingStaff(true);
-  //     const res = await fetch("/api/", {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({ }),
-  //     });
-  //     const d = await res.json();
-  //     setAssignedStaff((Array.isArray(d) ? d : []).map((s: any) => ({
-  //       staffId: String(s.StaffId ?? ""),
-  //       staffCode: String(s.StaffCode ?? ""),
-  //       staffName: String(s.StaffName ?? ""),
-  //       isAvailable: Boolean(s.IsAvailable),
-  //     })));
-  //   } catch (_) { }
-  //   finally { setLoadingStaff(false); }
-  // }, [selectedBranch, selectedService]);
   // ── OTP handlers ──────────────────────────────────────────────────────────
   const handleRequestOtp = async () => {
     if (!customerEmail) { sileo.error({ title: "Email is required", fill: "#171717" }); return; }
@@ -613,7 +611,7 @@ const fetchTimeslots = useCallback(async () => {
           bookingDate: fmt,
           startTime: selectedTime,
           serviceId: selectedService,
-          staffid: noPreferenceStaff ? "" : selectedStaff,
+          staffid: selectedStaff,
           bookingNote: notes,
           bookingEntryNo: "",
           customerNoOrEmailAdd: customerEmail,
@@ -632,18 +630,18 @@ const fetchTimeslots = useCallback(async () => {
       setSelectedDate(null); setSelectedTime("");
       setCustomerName(""); setCustomerEmail(""); setCustomerPhone("");
       setCustomerAddress1(""); setCustomerAddress2(""); setNotes("");
-      setNoPreferenceStaff(false); setRequestId(""); setMobilePanel("select");
+      setRequestId(""); setMobilePanel("select");
     } catch (e) {
       sileo.error({ title: e instanceof Error ? e.message : "Booking failed. Please try again.", fill: "#171717" });
     } finally { setIsBookingLoading(false); }
   };
   // ── Selection helpers ──────────────────────────────────────────────────────
   const sel = {
-    branch: (v: string) => { setSelectedBranch(v); setSelectedService(""); setSelectedStaff(""); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); setNoPreferenceStaff(true); },
-    service: (v: string) => { setSelectedService(v); setSelectedStaff(""); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); setNoPreferenceStaff(true); },
+    branch: (v: string) => { setSelectedBranch(v); setSelectedService(""); setSelectedStaff(""); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); },
+    service: (v: string) => { lastTrigger.current = 'service'; setSelectedService(v); setSelectedStaff("0"); setSelectedDate(null); setSelectedTime(""); setTimeslots([]); },
     staff: (v: string) => {
+      lastTrigger.current = 'staff';
       setSelectedStaff(v);
-      setNoPreferenceStaff(false);
       setSelectedTime("");
       setTimeslots([]);
       // If user is already at/after date selection, keep the selected date and let the effect re-fetch timeslots.
@@ -661,33 +659,18 @@ const fetchTimeslots = useCallback(async () => {
   useEffect(() => { if (selectedBranch) fetchServices(); }, [selectedBranch, fetchServices]);
   // useEffect(() => { if (selectedService && selectedBranch) fetchStaff(); }, [selectedService, selectedBranch, fetchStaff]);
   useEffect(() => {
-    if (selectedDate && selectedBranch && selectedService && (selectedStaff || noPreferenceStaff)) {
-      fetchTimeslots();
+    if (selectedDate && selectedBranch && selectedService && selectedStaff) {
+      fetchTimeslots(lastTrigger.current === 'service');
     }
-  }, [selectedDate, selectedBranch, selectedStaff, selectedService, noPreferenceStaff, fetchTimeslots]);
+  }, [selectedDate, selectedBranch, selectedStaff, selectedService, fetchTimeslots]);
   // Auto-select today's date when user reaches the date step (4) and all other selections exist.
   useEffect(() => {
-    if (currentStep >= 4 && !selectedDate && selectedBranch && selectedService && (selectedStaff || noPreferenceStaff)) {
+    if (currentStep >= 4 && !selectedDate && selectedBranch && selectedService && selectedStaff) {
       const d = new Date();
       setSelectedDate({ day: d.getDate(), month: d.getMonth(), year: d.getFullYear() });
     }
-  }, [currentStep, selectedBranch, selectedService, selectedStaff, noPreferenceStaff, selectedDate]);
+  }, [currentStep, selectedBranch, selectedService, selectedStaff, selectedDate]);
 
-  // ── Auto-select today when service selected with no preference ────────────
-  useEffect(() => {
-    if (selectedService && noPreferenceStaff && !selectedDate && selectedBranch) {
-      const d = new Date();
-      setSelectedDate({ day: d.getDate(), month: d.getMonth(), year: d.getFullYear() });
-    }
-  }, [selectedService, noPreferenceStaff, selectedBranch, selectedDate]);
-
-  // ── Auto-select today when service selected with no preference ────────────
-  useEffect(() => {
-    if (selectedService && noPreferenceStaff && !selectedDate && selectedBranch) {
-      const d = new Date();
-      setSelectedDate({ day: d.getDate(), month: d.getMonth(), year: d.getFullYear() });
-    }
-  }, [selectedService, noPreferenceStaff, selectedBranch, selectedDate]);
 
   const confirmData = {
     branch: selectedBranchObj?.description ?? selectedBranch,
@@ -804,26 +787,10 @@ const fetchTimeslots = useCallback(async () => {
                   <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
                     <User size={14} strokeWidth={2} />
                   </div>
-                  <select value={selectedStaff || ""} onChange={e => sel.staff(e.target.value)} disabled={!selectedService || loadingStaff} className="w-full pl-11 pr-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 text-sm appearance-none cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <option value="">{loadingStaff ? "Loading…" : "Choose staff"}</option>
-                    {assignedStaff.map((staff: any) => <option key={staff.staffId} value={staff.staffId}>{staff.staffName}</option>)}
+                  <select value={selectedStaff === "0" ? "" : selectedStaff || ""} onChange={e => sel.staff(e.target.value)} disabled={!selectedService || loadingStaff} className="w-full pl-11 pr-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 text-sm appearance-none cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                    {assignedStaff.map((staff: any) => <option key={staff.staffId} value={staff.staffId}>{staff.staffName} {Number(staff.staffId) === 0 ? "🟠" : (staff.isAvailable ? "🟢 Available" : "🔴 Unavailable")}</option>)}
                   </select>
                 </div>
-                <label className="flex items-center justify-between px-3 py-2 cursor-pointer">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={noPreferenceStaff}
-                      onChange={(e) => {
-                        setNoPreferenceStaff(e.target.checked);
-                        if (e.target.checked) setSelectedStaff("");
-                      }}
-                      disabled={!selectedService}
-                      className="w-4 h-4 accent-blue-600 cursor-pointer"
-                    />
-                    <span className="text-xs text-slate-600">No Preference</span>
-                  </div>
-                </label>
               </div>
             </HorizontalSetupCard>
           </div>
@@ -833,7 +800,7 @@ const fetchTimeslots = useCallback(async () => {
           {/* Left: Calendar + Timeslots side by side */}
           <div className="flex-1 flex gap-4 min-h-0 items-stretch">
             {/* Calendar */}
-            <div id="calendar-card" className={`flex-1 min-h-[32rem] max-h-[32rem] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-opacity ${!selectedStaff && !noPreferenceStaff ? "opacity-40 pointer-events-none" : ""}`}>
+            <div id="calendar-card" className={`flex-1 min-h-[32rem] max-h-[32rem] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-opacity ${!selectedStaff ? "opacity-40 pointer-events-none" : ""}`}>
               <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
                 <StepBadge number={4} done={currentStep > 4} active={currentStep === 4} />
                 <Calendar size={13} strokeWidth={2} className={currentStep >= 4 ? "text-blue-600" : "text-slate-400"} />
@@ -872,7 +839,7 @@ const fetchTimeslots = useCallback(async () => {
                     return (
                       <button
                         key={day}
-                        disabled={isPast || (!selectedStaff && !noPreferenceStaff)}
+                        disabled={isPast || !selectedStaff}
                         onClick={() => sel.date({ day, month, year })}
                         className={`aspect-square flex items-center justify-center text-xs rounded-xl transition-all relative
                           ${isPast ? "text-slate-200 cursor-not-allowed" : "hover:bg-blue-50 hover:text-blue-600"}
@@ -889,7 +856,7 @@ const fetchTimeslots = useCallback(async () => {
               </div>
             </div>
             {/* Timeslots Panel — inline beside calendar */}
-            <div id="timeslot-card" className={`flex-1 min-h-[32rem] max-h-[32rem] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-opacity ${!selectedStaff && !noPreferenceStaff ? "opacity-40 pointer-events-none" : ""}`}>
+            <div id="timeslot-card" className={`flex-1 min-h-[32rem] max-h-[32rem] bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-opacity ${!selectedStaff ? "opacity-40 pointer-events-none" : ""}`}>
               <TimeslotPanel
                 selectedDate={selectedDate}
                 timeslots={timeslots}
@@ -897,6 +864,8 @@ const fetchTimeslots = useCallback(async () => {
                 selectedTime={selectedTime}
                 onSelectTime={(time) => setSelectedTime(time)}
                 currentStep={currentStep}
+                noStaffAvailable={noStaffAvailable}
+                contactNumber={contactNumber}
               />
             </div>
           </div>
@@ -1018,25 +987,12 @@ const fetchTimeslots = useCallback(async () => {
                         <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 z-10">
                           <User size={14} strokeWidth={2} />
                         </div>
-                        <select value={selectedStaff || ""} onChange={e => sel.staff(e.target.value)} disabled={!selectedService || loadingStaff} className="w-full pl-11 pr-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 text-sm appearance-none cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <select value={selectedStaff === "0" ? "" : selectedStaff || ""} onChange={e => sel.staff(e.target.value)} disabled={!selectedService || loadingStaff} className="w-full pl-11 pr-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 text-sm appearance-none cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
                           <option value="">{loadingStaff ? "Loading…" : "Choose staff"}</option>
-                          {assignedStaff.map((staff: any) => <option key={staff.staffId} value={staff.staffId}>{staff.staffName}</option>)}
+                          {assignedStaff.map((staff: any) => <option key={staff.staffId} value={staff.staffId}>{staff.staffName} {Number(staff.staffId) === 0 ? "🟠 Any" : (staff.isAvailable ? "🟢 Available" : "🔴 Unavailable")}</option>)}
                         </select>
                       </div>
-                      <label className="flex items-center gap-2.5 cursor-pointer px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={noPreferenceStaff}
-                          onChange={(e) => {
-                            setNoPreferenceStaff(e.target.checked);
-                            if (e.target.checked) setSelectedStaff("");
-                          }}
-                          disabled={!selectedService}
-                          className="w-4 h-4 rounded border-slate-300 cursor-pointer"
-                        />
-                        <span className="text-sm font-medium text-slate-700">No Preference</span>
-                      </label>
-                    </div>
+                              </div>
                   )
                 },
               ].map((card) => (
@@ -1048,7 +1004,7 @@ const fetchTimeslots = useCallback(async () => {
           )}
           {/* Mobile: Schedule tab — calendar + timeslots stacked */}
           {mobilePanel === "schedule" && (
-            <div className={`space-y-4 ${!selectedStaff && !noPreferenceStaff ? "opacity-40 pointer-events-none" : ""}`}>
+            <div className={`space-y-4 ${!selectedStaff ? "opacity-40 pointer-events-none" : ""}`}>
               {/* Calendar */}
               <div id="mobile-calendar-card" className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
@@ -1073,7 +1029,7 @@ const fetchTimeslots = useCallback(async () => {
                       const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
                       const isSel = selectedDate?.day === day && selectedDate?.month === month && selectedDate?.year === year;
                       return (
-                        <button key={day} disabled={isPast || (!selectedStaff && !noPreferenceStaff)} onClick={() => sel.date({ day, month, year })}
+                        <button key={day} disabled={isPast || !selectedStaff} onClick={() => sel.date({ day, month, year })}
                           className={`aspect-square flex items-center justify-center text-xs rounded-xl transition-all
                             ${isPast ? "text-slate-200 cursor-not-allowed" : "hover:bg-blue-50 hover:text-blue-600"}
                             ${isSel ? "!bg-blue-600 !text-white font-bold shadow-md shadow-blue-200" : ""}
@@ -1094,6 +1050,7 @@ const fetchTimeslots = useCallback(async () => {
                   selectedTime={selectedTime}
                   onSelectTime={(time) => setSelectedTime(time)}
                   currentStep={currentStep}
+                  noStaffAvailable={noStaffAvailable}
                 />
               </div>
             </div>
